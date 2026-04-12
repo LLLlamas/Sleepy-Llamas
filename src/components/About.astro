@@ -65,6 +65,25 @@ import { site } from '../config/site';
       <a href="#contact" class="btn btn-secondary">Let&rsquo;s talk</a>
     </div>
   </div>
+
+  <!-- Families we've helped — inline testimonials -->
+  <div class="container about-testimonials reveal">
+    <span class="eyebrow">Families we&rsquo;ve helped</span>
+    <div class="about-quotes">
+      <figure class="about-quote reveal reveal-delay-1">
+        <blockquote>After three nights of working with her, our daughter slept through for the first time in four months. I actually cried.</blockquote>
+        <figcaption>&mdash; Sarah &amp; Marcus, <span>parents of a 5-month-old</span></figcaption>
+      </figure>
+      <figure class="about-quote reveal reveal-delay-2">
+        <blockquote>The care and knowledge she brought to our postpartum days was unmatched. I felt seen, rested, and supported in ways I didn&rsquo;t know I needed.</blockquote>
+        <figcaption>&mdash; Priya, <span>first-time mom</span></figcaption>
+      </figure>
+      <figure class="about-quote reveal reveal-delay-3">
+        <blockquote>She built a sleep plan around our twins that actually worked for our family. No guilt, no one-size-fits-all. Just real help, every night.</blockquote>
+        <figcaption>&mdash; Jenna &amp; Dave, <span>parents of twins</span></figcaption>
+      </figure>
+    </div>
+  </div>
 </section>
 
 <style>
@@ -155,11 +174,66 @@ import { site } from '../config/site';
     margin-top: 1px;
   }
 
+  /* Inline testimonials in About */
+  .about-testimonials {
+    margin-top: clamp(3rem, 6vw, 5rem);
+    padding-top: clamp(2.5rem, 5vw, 4rem);
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .about-quotes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(1rem, 2.5vw, 1.5rem);
+    margin-top: 1.75rem;
+  }
+
+  .about-quote {
+    background: var(--color-cream);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 1.25rem 1.25rem;
+    margin: 0;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-soft);
+    text-align: left;
+    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  .about-quote:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-medium);
+  }
+
+  .about-quote blockquote {
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: var(--color-maroon-900);
+    margin: 0 0 1rem;
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .about-quote figcaption {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .about-quote figcaption span {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    opacity: 0.8;
+    margin-top: 0.15rem;
+  }
+
   @media (max-width: 860px) {
     .about-inner {
       grid-template-columns: 1fr;
     }
     .credentials { grid-template-columns: 1fr; }
     .about-portrait { max-width: 280px; }
+    .about-quotes { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; }
   }
 </style>
