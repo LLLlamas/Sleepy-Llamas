@@ -138,6 +138,11 @@ const packages = [
     position: relative;
     display: flex;
     flex-direction: column;
+    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  .service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
   }
   .service-card.featured {
     background: linear-gradient(180deg, var(--color-cream) 0%, var(--color-blush-100) 100%);
