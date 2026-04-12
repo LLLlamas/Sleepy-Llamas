@@ -46,26 +46,40 @@
     </div>
 
     <div class="service-picker reveal reveal-delay-1">
-      <h3>What service are you looking for?</h3>
+      <h3>Select your service &amp; package</h3>
       <p class="service-picker-sub">
-        Pick one below. Overnight Sleep Training is our most requested service.
+        Pick a service, then we&rsquo;ll suggest a package based on the nights you selected.
       </p>
 
       <div class="service-select-wrap">
         <select class="service-select" id="cal-service-select" aria-label="Select a service">
           <option value="">&mdash; Select a service &mdash;</option>
-          <option value="sleep-training">&#127769; Overnight Sleep Training</option>
-          <option value="doula">&#128151; Doula Support</option>
-          <option value="consultation">&#128172; Consultation</option>
+          <option value="overnight-doula">&#128151; Overnight Doula Support</option>
+          <option value="overnight-sleep-training">&#127769; Overnight Sleep Training</option>
+          <option value="consultation">&#128172; Consultation(s)</option>
         </select>
       </div>
 
       <div class="service-detail" id="cal-service-detail">
-        <div class="service-detail-row">
-          <p class="service-detail-name" id="cal-service-name"></p>
-          <p class="service-detail-price" id="cal-service-price"></p>
-        </div>
+        <p class="service-detail-name" id="cal-service-name"></p>
         <p class="service-detail-desc" id="cal-service-desc"></p>
+      </div>
+
+      <!-- Package suggestion (populated by JS when dates + service are selected) -->
+      <div class="pkg-suggestion" id="cal-pkg-suggestion" hidden>
+        <p class="pkg-suggestion-label">Suggested package based on your selection:</p>
+        <div class="pkg-suggestion-card" id="cal-pkg-card"></div>
+        <div class="pkg-override">
+          <label class="vm-label" for="cal-pkg-override">Or choose a different package:</label>
+          <select id="cal-pkg-override" class="service-select">
+            <option value="">Use suggested package</option>
+            <option value="4-nights">Starter &mdash; 4 nights ($2,480)</option>
+            <option value="8-nights">Standard &mdash; 8 nights ($4,800)</option>
+            <option value="12-nights">Extended &mdash; 12 nights ($6,900)</option>
+            <option value="16-nights">Comprehensive &mdash; 16 nights ($9,000)</option>
+            <option value="not-sure">Not sure yet</option>
+          </select>
+        </div>
       </div>
 
       <div class="service-picker-cta">
@@ -73,7 +87,7 @@
         <button class="btn-book" id="cal-confirm-btn" type="button" disabled>
           Send booking request &rarr;
         </button>
-        <p class="book-note">No account needed &middot; invoice sent after we talk &middot; reply within 24 hours</p>
+        <p class="book-note">No account needed &middot; we&rsquo;ll discuss details &middot; reply within 24 hours</p>
       </div>
     </div>
   </div>
@@ -121,6 +135,7 @@
       <div class="vm-summary">
         <span class="vm-line"><span class="vm-line-label">Dates</span><span id="vm-dateline"></span></span>
         <span class="vm-line"><span class="vm-line-label">Service</span><span id="vm-serviceline"></span></span>
+        <span class="vm-line" id="vm-pkgline-wrap" hidden><span class="vm-line-label">Package</span><span id="vm-pkgline"></span></span>
       </div>
 
       <label class="vm-label" for="vm-child-name">Child&rsquo;s name</label>
@@ -129,20 +144,42 @@
       <label class="vm-label" for="vm-client-name">Your name</label>
       <input type="text" id="vm-client-name" placeholder="Jane Doe" maxlength="80" autocomplete="name" />
 
-      <label class="vm-label" for="vm-email">Email</label>
-      <input type="email" id="vm-email" placeholder="you@example.com" maxlength="120" autocomplete="email" />
-
-      <label class="vm-label" for="vm-phone">Phone <span style="color:var(--color-muted);font-weight:400;">(optional)</span></label>
-      <input type="tel" id="vm-phone" placeholder="555-555-1234" maxlength="32" autocomplete="tel" />
+      <div class="vm-row">
+        <div>
+          <label class="vm-label" for="vm-email">Email</label>
+          <input type="email" id="vm-email" placeholder="you@example.com" maxlength="120" autocomplete="email" />
+        </div>
+        <div>
+          <label class="vm-label" for="vm-phone">Phone <span class="vm-opt">(optional)</span></label>
+          <input type="tel" id="vm-phone" placeholder="555-555-1234" maxlength="32" autocomplete="tel" />
+        </div>
+      </div>
 
       <div class="vm-row">
         <div>
-          <label class="vm-label" for="vm-weeks">Weeks of service</label>
-          <input type="number" id="vm-weeks" min="1" max="52" placeholder="e.g. 4" />
+          <label class="vm-label" for="vm-weeks">How many weeks?</label>
+          <div class="vm-optional-field">
+            <input type="number" id="vm-weeks" min="1" max="52" placeholder="e.g. 4" />
+            <label class="vm-notsure"><input type="checkbox" id="vm-weeks-unsure" /> Not sure yet</label>
+          </div>
         </div>
         <div>
-          <label class="vm-label" for="vm-days">Days per week</label>
-          <input type="number" id="vm-days" min="1" max="7" placeholder="e.g. 3" />
+          <label class="vm-label" for="vm-nights-pw">Nights per week?</label>
+          <div class="vm-optional-field">
+            <input type="number" id="vm-nights-pw" min="1" max="7" placeholder="e.g. 2" />
+            <label class="vm-notsure"><input type="checkbox" id="vm-nights-unsure" /> Not sure yet</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Special care -->
+      <div class="vm-special-care">
+        <label class="vm-special-check">
+          <input type="checkbox" id="vm-special-care" />
+          <span>My child has special care needs</span>
+        </label>
+        <div class="vm-special-detail" id="vm-special-detail" hidden>
+          <input type="text" id="vm-special-notes" placeholder="e.g. twins, cleft palate, G-Tube&hellip;" maxlength="200" />
         </div>
       </div>
 
@@ -157,8 +194,8 @@
         </div>
       </div>
 
-      <label class="vm-label" for="vm-notes">Notes <span style="color:var(--color-muted);font-weight:400;">(optional)</span></label>
-      <textarea id="vm-notes" placeholder="Anything we should know &mdash; sleep challenges, routines, questions&hellip;" maxlength="2000"></textarea>
+      <label class="vm-label" for="vm-notes">Notes <span class="vm-opt">(optional)</span></label>
+      <textarea id="vm-notes" placeholder="Sleep challenges, routines, questions, anything that would help us prepare&hellip;" maxlength="2000"></textarea>
 
       <p class="vm-error" id="vm-error"></p>
 
@@ -340,6 +377,34 @@
   body.admin-mode .cal-day.unavailable { cursor: pointer; }
   body.admin-mode .cal-day:not(.empty):not(.past):hover { transform: scale(1.14); box-shadow: 0 0 0 2px var(--color-gold); }
 
+  /* Package suggestion */
+  .pkg-suggestion { margin-bottom: 1.25rem; }
+  .pkg-suggestion[hidden] { display: none; }
+  .pkg-suggestion-label { font-size: 0.82rem; color: var(--color-muted); margin: 0 0 0.6rem; font-weight: 500; }
+  .pkg-suggestion-card { background: var(--color-blush-100); border: 1px solid var(--color-maroon-300); border-radius: var(--radius-md); padding: 1rem 1.25rem; text-align: center; margin-bottom: 0.75rem; }
+  .pkg-suggestion-card .pkg-s-name { font-family: var(--font-display); font-size: 1.1rem; font-weight: 500; color: var(--color-maroon-900); margin: 0 0 0.25rem; }
+  .pkg-suggestion-card .pkg-s-price { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--color-maroon-700); margin: 0; }
+  .pkg-suggestion-card .pkg-s-detail { font-size: 0.82rem; color: var(--color-muted); margin: 0.25rem 0 0; }
+  .pkg-override { margin-top: 0.5rem; }
+  .pkg-override .vm-label { margin-top: 0; }
+  .pkg-override select { font-size: 0.9rem; padding: 0.7rem 2rem 0.7rem 0.9rem; }
+
+  /* Optional field with "not sure" toggle */
+  .vm-optional-field { position: relative; }
+  .vm-optional-field input[type="number"] { width: 100%; }
+  .vm-optional-field input[type="number"].greyed { opacity: 0.4; pointer-events: none; }
+  .vm-notsure { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--color-muted); margin-top: 0.35rem; cursor: pointer; }
+  .vm-notsure input { accent-color: var(--color-maroon-700); }
+  .vm-opt { color: var(--color-muted); font-weight: 400; font-size: 0.72rem; }
+
+  /* Special care */
+  .vm-special-care { margin: 1rem 0; }
+  .vm-special-check { display: flex; align-items: center; gap: 0.6rem; font-size: 0.92rem; color: var(--color-ink); cursor: pointer; padding: 0.7rem 1rem; background: var(--color-blush-100); border-radius: var(--radius-sm); border: 1.5px solid var(--color-border); transition: border-color 0.2s; }
+  .vm-special-check:has(input:checked) { border-color: var(--color-maroon-500); background: var(--color-blush-200); }
+  .vm-special-check input { accent-color: var(--color-maroon-700); width: 18px; height: 18px; }
+  .vm-special-detail { margin-top: 0.6rem; }
+  .vm-special-detail[hidden] { display: none; }
+
   @media (max-width: 720px) { .calendar-months { grid-template-columns: 1fr; gap: 1rem; } }
   @media (max-width: 480px) { .cal-day { font-size: 0.78rem; min-height: 30px; } .vm-row { grid-template-columns: 1fr; } }
 </style>
@@ -362,11 +427,24 @@
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
-  const SERVICES: Record<string, { name: string; desc: string; price: number; unit: string; perNight: boolean }> = {
-    'sleep-training': { name: 'Overnight Sleep Training', desc: 'In-home overnight care tailored to your baby\u2019s temperament.', price: 150, unit: 'night', perNight: true },
-    'doula':          { name: 'Doula Support', desc: 'Birth and postpartum doula services grounded in warmth and deep experience.', price: 200, unit: 'visit', perNight: false },
-    'consultation':   { name: 'Consultation', desc: 'A calm, no-pressure conversation to explore your options.', price: 75, unit: 'session', perNight: false },
+  const SERVICES: Record<string, { name: string; desc: string }> = {
+    'overnight-doula':           { name: 'Overnight Doula Support', desc: 'In-home overnight doula care focused on your postpartum recovery. Nighttime feeds, soothing, and newborn care while you rest.' },
+    'overnight-sleep-training':  { name: 'Overnight Sleep Training', desc: 'Gentle, evidence-based overnight sleep training tailored to your baby\u2019s temperament. Full overnight shifts.' },
+    'consultation':              { name: 'Consultation(s)', desc: 'A calm, no-pressure conversation to explore your options and build a plan that fits your life.' },
   };
+
+  const PACKAGES: { key: string; name: string; nights: number; timeframe: string; price: number; specialPrice: number }[] = [
+    { key: '4-nights',  name: 'Starter',        nights: 4,  timeframe: 'Over 2 weeks',    price: 2480, specialPrice: 2600 },
+    { key: '8-nights',  name: 'Standard',        nights: 8,  timeframe: 'Over 2\u20134 weeks',  price: 4800, specialPrice: 5200 },
+    { key: '12-nights', name: 'Extended',         nights: 12, timeframe: 'Over 2\u20135 weeks',  price: 6900, specialPrice: 7500 },
+    { key: '16-nights', name: 'Comprehensive',    nights: 16, timeframe: 'Over 6\u20138 weeks',  price: 9000, specialPrice: 9800 },
+  ];
+
+  function suggestPackage(nights: number) {
+    // Find the smallest package that covers the selected nights, or the largest if none fit
+    const sorted = [...PACKAGES].sort((a, b) => a.nights - b.nights);
+    return sorted.find(p => p.nights >= nights) || sorted[sorted.length - 1];
+  }
 
   // ── Helpers ────────────────────────────────
   function padZ(n: number) { return String(n).padStart(2, '0'); }
@@ -505,40 +583,64 @@
   const serviceSelect = document.getElementById('cal-service-select') as HTMLSelectElement;
   const serviceDetail = document.getElementById('cal-service-detail')!;
   const serviceName = document.getElementById('cal-service-name')!;
-  const servicePrice = document.getElementById('cal-service-price')!;
   const serviceDesc = document.getElementById('cal-service-desc')!;
   const bookingSummary = document.getElementById('cal-booking-summary')!;
   const confirmBtn = document.getElementById('cal-confirm-btn') as HTMLButtonElement;
+
+  const pkgSuggestion = document.getElementById('cal-pkg-suggestion')!;
+  const pkgCard = document.getElementById('cal-pkg-card')!;
+  const pkgOverride = document.getElementById('cal-pkg-override') as HTMLSelectElement;
 
   serviceSelect.addEventListener('change', () => {
     const key = serviceSelect.value;
     if (!key || !SERVICES[key]) { serviceDetail.classList.remove('show'); updateBookingSummary(); return; }
     const s = SERVICES[key];
     serviceName.textContent = s.name;
-    servicePrice.innerHTML = `$${s.price}<em>/${s.unit}</em>`;
     serviceDesc.textContent = s.desc;
     serviceDetail.classList.add('show');
     updateBookingSummary();
   });
 
+  pkgOverride.addEventListener('change', updateBookingSummary);
+
+  function getSelectedPackage(): typeof PACKAGES[0] | null {
+    const override = pkgOverride.value;
+    if (override && override !== 'not-sure') return PACKAGES.find(p => p.key === override) || null;
+    if (!visitorPick.start) return null;
+    const nights = Math.max(nightsBetween(visitorPick.start, visitorPick.end || visitorPick.start), 1);
+    return suggestPackage(nights);
+  }
+
   function updateBookingSummary() {
     const svc = serviceSelect.value;
     const hasDates = !!visitorPick.start;
     const parts: string[] = [];
+    let nights = 0;
+
     if (hasDates) {
+      nights = Math.max(nightsBetween(visitorPick.start!, visitorPick.end || visitorPick.start!), 1);
       if (visitorPick.start === visitorPick.end) parts.push(`<strong>${fmtPretty(visitorPick.start!)}</strong>`);
-      else {
-        const n = nightsBetween(visitorPick.start!, visitorPick.end!);
-        parts.push(`<strong>${fmtPretty(visitorPick.start!)} \u2192 ${fmtPretty(visitorPick.end!)}</strong> (${n} night${n===1?'':'s'})`);
-      }
+      else parts.push(`<strong>${fmtPretty(visitorPick.start!)} \u2192 ${fmtPretty(visitorPick.end!)}</strong> (${nights} night${nights===1?'':'s'})`);
     } else parts.push('No dates selected yet.');
+
     if (svc && SERVICES[svc]) {
-      const s = SERVICES[svc];
-      let qty = 1;
-      if (hasDates) { qty = s.perNight ? Math.max(nightsBetween(visitorPick.start!, visitorPick.end!), 1) : nightsBetween(visitorPick.start!, visitorPick.end!) + 1; }
-      const total = s.price * qty;
-      parts.push(`Service: <strong>${s.name}</strong> &middot; Est. <strong>$${total}</strong>`);
-    } else if (hasDates) parts.push('Pick a service below to continue.');
+      parts.push(`Service: <strong>${SERVICES[svc].name}</strong>`);
+    } else if (hasDates) {
+      parts.push('Pick a service below to continue.');
+    }
+
+    // Package suggestion
+    if (hasDates && svc && svc !== 'consultation') {
+      const pkg = getSelectedPackage();
+      if (pkg) {
+        pkgCard.innerHTML = `<p class="pkg-s-name">${pkg.name} &mdash; ${pkg.nights} nights</p><p class="pkg-s-price">$${pkg.price.toLocaleString()}</p><p class="pkg-s-detail">${pkg.timeframe} &middot; Special care: $${pkg.specialPrice.toLocaleString()}</p>`;
+        pkgSuggestion.removeAttribute('hidden');
+        parts.push(`Package: <strong>${pkg.name} ($${pkg.price.toLocaleString()})</strong>`);
+      }
+    } else {
+      pkgSuggestion.setAttribute('hidden', '');
+    }
+
     bookingSummary.innerHTML = parts.join(' &middot; ');
     bookingSummary.classList.toggle('has-selection', hasDates);
     const ready = !!(hasDates && svc);
@@ -555,12 +657,23 @@
   const vmEmail = document.getElementById('vm-email') as HTMLInputElement;
   const vmPhone = document.getElementById('vm-phone') as HTMLInputElement;
   const vmWeeks = document.getElementById('vm-weeks') as HTMLInputElement;
-  const vmDays = document.getElementById('vm-days') as HTMLInputElement;
+  const vmWeeksUnsure = document.getElementById('vm-weeks-unsure') as HTMLInputElement;
+  const vmNightsPw = document.getElementById('vm-nights-pw') as HTMLInputElement;
+  const vmNightsUnsure = document.getElementById('vm-nights-unsure') as HTMLInputElement;
+  const vmSpecialCare = document.getElementById('vm-special-care') as HTMLInputElement;
+  const vmSpecialDetail = document.getElementById('vm-special-detail')!;
+  const vmSpecialNotes = document.getElementById('vm-special-notes') as HTMLInputElement;
   const vmArrival = document.getElementById('vm-arrival') as HTMLInputElement;
   const vmDeparture = document.getElementById('vm-departure') as HTMLInputElement;
   const vmNotes = document.getElementById('vm-notes') as HTMLTextAreaElement;
   const vmError = document.getElementById('vm-error')!;
   const vmSendBtn = document.getElementById('vm-send-btn') as HTMLButtonElement;
+
+  // "Not sure yet" toggles
+  vmWeeksUnsure.addEventListener('change', () => { vmWeeks.classList.toggle('greyed', vmWeeksUnsure.checked); if (vmWeeksUnsure.checked) vmWeeks.value = ''; });
+  vmNightsUnsure.addEventListener('change', () => { vmNightsPw.classList.toggle('greyed', vmNightsUnsure.checked); if (vmNightsUnsure.checked) vmNightsPw.value = ''; });
+  // Special care toggle
+  vmSpecialCare.addEventListener('change', () => { if (vmSpecialCare.checked) vmSpecialDetail.removeAttribute('hidden'); else { vmSpecialDetail.setAttribute('hidden', ''); vmSpecialNotes.value = ''; } });
 
   function vmShowError(msg: string) { vmError.textContent = msg; vmError.classList.add('show'); }
   function vmClearError() { vmError.classList.remove('show'); }
@@ -568,9 +681,17 @@
   function openVisitorModal() {
     if (!visitorPick.start || !serviceSelect.value) return;
     const svc = SERVICES[serviceSelect.value];
+    const pkg = getSelectedPackage();
     document.getElementById('vm-dateline')!.textContent = visitorPick.start === visitorPick.end
       ? fmtPretty(visitorPick.start) : `${fmtPretty(visitorPick.start)} \u2192 ${fmtPretty(visitorPick.end!)}`;
     document.getElementById('vm-serviceline')!.textContent = svc.name;
+    const pkgWrap = document.getElementById('vm-pkgline-wrap')!;
+    if (pkg && serviceSelect.value !== 'consultation') {
+      document.getElementById('vm-pkgline')!.textContent = `${pkg.name} \u2014 ${pkg.nights} nights ($${pkg.price.toLocaleString()})`;
+      pkgWrap.removeAttribute('hidden');
+    } else {
+      pkgWrap.setAttribute('hidden', '');
+    }
     vmClearError();
     vmForm.removeAttribute('hidden'); vmSuccess.setAttribute('hidden', '');
     vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request';
@@ -591,6 +712,15 @@
 
     vmSendBtn.disabled = true; vmSendBtn.textContent = 'Sending\u2026';
 
+    const pkg = getSelectedPackage();
+    // Build notes with extra context
+    const notesParts: string[] = [];
+    if (pkg) notesParts.push(`Package: ${pkg.name} (${pkg.nights} nights, $${pkg.price})`);
+    if (vmSpecialCare.checked) notesParts.push(`Special care: ${vmSpecialNotes.value.trim() || 'Yes'}`);
+    if (vmWeeksUnsure.checked) notesParts.push('Weeks: not sure yet');
+    if (vmNightsUnsure.checked) notesParts.push('Nights/week: not sure yet');
+    if (vmNotes.value.trim()) notesParts.push(vmNotes.value.trim());
+
     if (supabase) {
       try {
         const { error } = await supabase.rpc('sl_create_booking_request', {
@@ -601,23 +731,25 @@
           p_child_name: childName,
           p_start_date: visitorPick.start,
           p_end_date: visitorPick.end || visitorPick.start,
-          p_weeks_needed: vmWeeks.value ? parseInt(vmWeeks.value) : null,
-          p_days_per_week: vmDays.value ? parseInt(vmDays.value) : null,
+          p_weeks_needed: (!vmWeeksUnsure.checked && vmWeeks.value) ? parseInt(vmWeeks.value) : null,
+          p_days_per_week: (!vmNightsUnsure.checked && vmNightsPw.value) ? parseInt(vmNightsPw.value) : null,
           p_arrival_time: vmArrival.value || null,
           p_departure_time: vmDeparture.value || null,
-          p_notes: vmNotes.value.trim() || null,
+          p_notes: notesParts.join(' | ') || null,
         });
         if (error) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError(error.message || 'Something went wrong.'); }
       } catch (e: any) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError('Network error. Please try again.'); }
     } else {
-      // Offline stub
       await new Promise(r => setTimeout(r, 900));
     }
 
     vmForm.setAttribute('hidden', ''); vmSuccess.removeAttribute('hidden');
     clearVisitorPick();
     vmChildName.value = ''; vmClientName.value = ''; vmEmail.value = ''; vmPhone.value = '';
-    vmWeeks.value = ''; vmDays.value = ''; vmNotes.value = '';
+    vmWeeks.value = ''; vmNightsPw.value = ''; vmNotes.value = '';
+    vmWeeksUnsure.checked = false; vmNightsUnsure.checked = false;
+    vmSpecialCare.checked = false; vmSpecialNotes.value = '';
+    vmSpecialDetail.setAttribute('hidden', '');
   }
 
   confirmBtn.addEventListener('click', () => { if (!confirmBtn.disabled) openVisitorModal(); });

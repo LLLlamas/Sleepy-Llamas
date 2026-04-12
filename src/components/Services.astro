@@ -1,74 +1,64 @@
 ---
 const services = [
   {
+    title: 'Overnight Doula Support',
+    icon: 'heart',
+    description:
+      'In-home overnight doula care focused on your postpartum recovery. I handle nighttime feeds, soothing, and newborn care while you rest and heal.',
+    bullets: ['Newborn through toddler', 'Postpartum recovery support', 'Nighttime feeding assistance'],
+  },
+  {
     title: 'Overnight Sleep Training',
     featured: true,
     icon: 'moon',
     tag: 'Most requested',
     description:
-      'In-home overnight care tailored to your baby&rsquo;s temperament. I work while you sleep, using gentle, evidence-based methods that build healthy sleep habits for the whole family.',
-    bullets: ['Newborn through toddler', 'Gentle, responsive methods', 'Full sleep-plan handoff'],
+      'Gentle, evidence-based overnight sleep training tailored to your baby&rsquo;s temperament. I work while you sleep, building healthy habits the whole family can sustain.',
+    bullets: ['Gentle, responsive methods', 'Custom sleep plan handoff', 'Full overnight shifts'],
   },
   {
-    title: 'Doula Support',
-    featured: false,
-    icon: 'heart',
-    tag: '',
-    description:
-      'Birth and postpartum doula services grounded in warmth, non-judgment, and deep experience. I&rsquo;m there for the moments that matter &mdash; before, during, and after.',
-    bullets: ['Birth support', 'Postpartum care', 'Newborn guidance'],
-  },
-  {
-    title: 'Consultations',
-    featured: false,
+    title: 'Consultation(s)',
     icon: 'chat',
-    tag: '',
     description:
       'Not sure what you need yet? A consultation is a calm, no-pressure conversation to help you understand your options and build a plan that actually fits your life.',
     bullets: ['Phone or video', 'Personalized advice', 'No commitment'],
   },
+];
+
+const packages = [
+  { name: 'Starter', nights: 4, timeframe: 'Over 2 weeks', price: 2480, specialPrice: 2600 },
+  { name: 'Standard', nights: 8, timeframe: 'Over 2\u20134 weeks', price: 4800, specialPrice: 5200 },
+  { name: 'Extended', nights: 12, timeframe: 'Over 2\u20135 weeks', price: 6900, specialPrice: 7500 },
+  { name: 'Comprehensive', nights: 16, timeframe: 'Over 6\u20138 weeks', price: 9000, specialPrice: 9800 },
 ];
 ---
 
 <section class="section services" id="services">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">What I offer</span>
-      <h2>Support, right where you need it.</h2>
+      <span class="eyebrow">What we offer</span>
+      <h2>Services &amp; Packages</h2>
       <p class="lead">
-        Every service is tailored. No two families sleep alike, and no two
-        plans should either.
+        Every family is different. Choose the service that fits, and a package
+        that matches your timeline &mdash; or reach out and we&rsquo;ll figure
+        it out together.
       </p>
     </div>
 
+    <!-- Service cards -->
     <div class="services-grid">
       {services.map((service, i) => (
         <article class:list={["service-card", "card", "reveal", `reveal-delay-${i + 1}`, service.featured && 'featured']}>
           {service.tag && <span class="service-tag">{service.tag}</span>}
           <div class="service-icon" aria-hidden="true">
             {service.icon === 'moon' && (
-              <svg viewBox="0 0 32 32">
-                <path
-                  d="M22 6c-2 4-6 6-10 5 1 6 7 10 13 7 5-2 7-8 5-13-1-3-6-2-8 1Z"
-                  fill="currentColor"
-                />
-              </svg>
+              <svg viewBox="0 0 32 32"><path d="M22 6c-2 4-6 6-10 5 1 6 7 10 13 7 5-2 7-8 5-13-1-3-6-2-8 1Z" fill="currentColor" /></svg>
             )}
             {service.icon === 'heart' && (
-              <svg viewBox="0 0 32 32">
-                <path
-                  d="M16 27s-11-7-11-15a6 6 0 0 1 11-3 6 6 0 0 1 11 3c0 8-11 15-11 15Z"
-                  fill="currentColor"
-                />
-              </svg>
+              <svg viewBox="0 0 32 32"><path d="M16 27s-11-7-11-15a6 6 0 0 1 11-3 6 6 0 0 1 11 3c0 8-11 15-11 15Z" fill="currentColor" /></svg>
             )}
             {service.icon === 'chat' && (
-              <svg viewBox="0 0 32 32">
-                <path
-                  d="M6 8a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v9a4 4 0 0 1-4 4h-5l-6 5v-5h-1a4 4 0 0 1-4-4V8Z"
-                  fill="currentColor"
-                />
-              </svg>
+              <svg viewBox="0 0 32 32"><path d="M6 8a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v9a4 4 0 0 1-4 4h-5l-6 5v-5h-1a4 4 0 0 1-4-4V8Z" fill="currentColor" /></svg>
             )}
           </div>
           <h3>{service.title}</h3>
@@ -79,6 +69,39 @@ const services = [
           <a href="#contact" class="service-link">Learn more &rarr;</a>
         </article>
       ))}
+    </div>
+
+    <!-- Packages pricing grid -->
+    <div class="packages-section reveal">
+      <div class="packages-head">
+        <span class="eyebrow">Overnight Packages</span>
+        <h3>Choose the right fit for your family.</h3>
+        <p class="packages-sub">
+          All overnight packages apply to both Doula Support and Sleep Training
+          services. Nights can be spread across your preferred schedule.
+        </p>
+      </div>
+
+      <div class="packages-grid">
+        {packages.map((pkg, i) => (
+          <div class:list={["pkg-card", "reveal", `reveal-delay-${i + 1}`, i === 1 && 'pkg-popular']}>
+            {i === 1 && <span class="pkg-badge">Most popular</span>}
+            <h4 class="pkg-name">{pkg.name}</h4>
+            <div class="pkg-nights">{pkg.nights} <span>nights</span></div>
+            <p class="pkg-timeframe">{pkg.timeframe}</p>
+            <div class="pkg-price">${pkg.price.toLocaleString()}</div>
+            <p class="pkg-special">Special care: ${pkg.specialPrice.toLocaleString()}</p>
+            <a href="#availability" class="pkg-cta">Book this package &rarr;</a>
+          </div>
+        ))}
+      </div>
+
+      <p class="packages-note reveal">
+        <strong>Special care</strong> includes twins, cleft palate, G-Tube
+        babies, and other conditions requiring additional attention.
+        Pricing can be adjusted based on your family&rsquo;s needs &mdash;
+        <a href="#contact">reach out</a> and we&rsquo;ll discuss.
+      </p>
     </div>
   </div>
 </section>
@@ -93,14 +116,13 @@ const services = [
     margin: 0 auto 3rem;
     text-align: center;
   }
-  .section-head .lead {
-    margin-inline: auto;
-  }
+  .section-head .lead { margin-inline: auto; }
 
   .services-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: clamp(1.25rem, 3vw, 2rem);
+    margin-bottom: clamp(3rem, 6vw, 5rem);
   }
 
   .service-card {
@@ -179,11 +201,146 @@ const services = [
     border-bottom: 1.5px solid transparent;
     transition: border-color 0.2s var(--ease-out);
   }
-  .service-link:hover {
-    border-bottom-color: var(--color-maroon-500);
+  .service-link:hover { border-bottom-color: var(--color-maroon-500); }
+
+  /* ── Packages section ────────────────────────── */
+  .packages-section {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .packages-head {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .packages-head h3 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: 0.4em;
+  }
+  .packages-sub {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+    max-width: 52ch;
+    margin: 0 auto;
+  }
+
+  .packages-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  .pkg-card {
+    background: var(--color-cream);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 1.5rem;
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-soft);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  .pkg-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
+  }
+
+  .pkg-popular {
+    border-color: var(--color-maroon-500);
+    box-shadow: var(--shadow-medium);
+    background: linear-gradient(180deg, var(--color-cream) 0%, var(--color-blush-100) 100%);
+  }
+  .pkg-badge {
+    position: absolute;
+    top: -12px;
+    background: var(--color-maroon-700);
+    color: var(--color-cream);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.85rem;
+    border-radius: var(--radius-pill);
+  }
+
+  .pkg-name {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-maroon-500);
+    margin: 0 0 0.75rem;
+  }
+
+  .pkg-nights {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 500;
+    color: var(--color-maroon-900);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .pkg-nights span {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+
+  .pkg-timeframe {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    margin: 0 0 1.25rem;
+  }
+
+  .pkg-price {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--color-maroon-700);
+    margin-bottom: 0.25rem;
+  }
+
+  .pkg-special {
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    margin: 0 0 1.25rem;
+    font-style: italic;
+  }
+
+  .pkg-cta {
+    margin-top: auto;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--color-maroon-700);
+    padding: 0.55rem 1rem;
+    border: 1.5px solid var(--color-maroon-700);
+    border-radius: var(--radius-pill);
+    transition: all 0.2s var(--ease-out);
+  }
+  .pkg-cta:hover {
+    background: var(--color-maroon-700);
+    color: var(--color-cream);
+  }
+
+  .packages-note {
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--color-muted);
+    margin-top: 2rem;
+    max-width: 60ch;
+    margin-inline: auto;
+    line-height: 1.6;
   }
 
   @media (max-width: 900px) {
     .services-grid { grid-template-columns: 1fr; max-width: 520px; margin-inline: auto; }
+    .packages-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .packages-grid { grid-template-columns: 1fr; max-width: 340px; margin-inline: auto; }
   }
 </style>
