@@ -15,7 +15,7 @@ export const site = {
   email: 'sleepyllamas@gmail.com',
   phone: '(555) 123-4567',              // TODO
   phoneHref: '+15551234567',            // TODO — digits only for tel: links
-  serviceArea: 'the Greater Area',      // TODO — e.g. "the Greater Houston Area"
+  serviceArea: 'the New York Area',
   responseTime: 'within 24 hours',
 
   // --- Payment handles (shown AFTER consultation — informational only) ---

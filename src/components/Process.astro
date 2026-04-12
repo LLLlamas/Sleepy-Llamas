@@ -1,22 +1,26 @@
 ---
 const steps = [
   {
-    n: '01',
+    n: '1',
     title: 'Reach Out',
     body: 'Send a short note with what you&rsquo;re looking for. I&rsquo;ll respond within a day.',
+    linkText: 'Reach out',
+    linkHref: '#contact',
   },
   {
-    n: '02',
+    n: '2',
     title: 'Free Consultation',
     body: 'We talk &mdash; by phone, text, or video &mdash; about your baby, your family, and your goals.',
   },
   {
-    n: '03',
+    n: '3',
     title: 'Custom Plan',
     body: 'I build a plan shaped to your values, your schedule, and your home.',
+    linkText: 'Custom plan',
+    linkHref: '#availability',
   },
   {
-    n: '04',
+    n: '4',
     title: 'Restful Nights',
     body: 'Support begins. We adjust as we go &mdash; every family finds their rhythm.',
   },
@@ -35,11 +39,14 @@ const steps = [
       {steps.map((step, i) => (
         <li class:list={["timeline-step", "reveal", `reveal-delay-${i + 1}`]}>
           <div class="step-number">{step.n}</div>
+          {i < steps.length - 1 && <div class="step-connector" aria-hidden="true"></div>}
           <div class="step-body">
             <h3>{step.title}</h3>
             <p set:html={step.body}></p>
+            {step.linkText && (
+              <a href={step.linkHref} class="step-link">{step.linkText} &rarr;</a>
+            )}
           </div>
-          {i < steps.length - 1 && <div class="step-connector" aria-hidden="true"></div>}
         </li>
       ))}
     </ol>
@@ -53,7 +60,7 @@ const steps = [
 
   .section-head {
     max-width: 680px;
-    margin: 0 auto 3.5rem;
+    margin: 0 auto 3rem;
     text-align: center;
   }
   .section-head .lead { margin-inline: auto; }
@@ -71,6 +78,11 @@ const steps = [
   .timeline-step {
     position: relative;
     padding-top: 0.5rem;
+    transition: transform 0.3s var(--ease-out);
+    cursor: default;
+  }
+  .timeline-step:hover {
+    transform: translateY(-6px);
   }
 
   .step-number {
@@ -83,12 +95,26 @@ const steps = [
     border: 2px solid var(--color-maroon-700);
     color: var(--color-maroon-700);
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 500;
     margin-bottom: 1rem;
     box-shadow: var(--shadow-soft);
     position: relative;
     z-index: 2;
+    transition: background 0.3s var(--ease-out), transform 0.1s;
+  }
+  .timeline-step:hover .step-number {
+    background: var(--color-blush-200);
+    animation: shake 0.5s var(--ease-out);
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(-8deg); }
+    30% { transform: rotate(6deg); }
+    45% { transform: rotate(-5deg); }
+    60% { transform: rotate(3deg); }
+    75% { transform: rotate(-2deg); }
   }
 
   .step-body h3 {
@@ -98,6 +124,19 @@ const steps = [
   .step-body p {
     color: var(--color-muted);
     font-size: 0.95rem;
+  }
+
+  .step-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-maroon-700);
+    border-bottom: 1.5px solid transparent;
+    transition: border-color 0.2s var(--ease-out);
+  }
+  .step-link:hover {
+    border-bottom-color: var(--color-maroon-500);
   }
 
   .step-connector {
@@ -112,6 +151,21 @@ const steps = [
       transparent 6px 12px
     );
     z-index: 1;
+    transition: transform 0.3s var(--ease-out);
+  }
+  .timeline-step:hover .step-connector {
+    transform: translateY(-6px);
+  }
+
+  /* Step 4 — "Restful Nights" glow on hover */
+  .timeline-step:last-child:hover {
+    filter: drop-shadow(0 0 0 transparent);
+    animation: restfulGlow 1.5s ease-in-out forwards;
+  }
+  @keyframes restfulGlow {
+    0% { filter: drop-shadow(0 0 0px transparent); }
+    40% { filter: drop-shadow(0 4px 12px rgba(168, 50, 70, 0.18)); }
+    100% { filter: drop-shadow(0 6px 20px rgba(200, 155, 106, 0.25)); }
   }
 
   @media (max-width: 900px) {
@@ -142,6 +196,9 @@ const steps = [
         var(--color-maroon-300) 0 6px,
         transparent 6px 12px
       );
+    }
+    .timeline-step:hover .step-connector {
+      transform: none;
     }
   }
 </style>

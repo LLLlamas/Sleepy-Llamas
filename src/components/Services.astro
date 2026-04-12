@@ -6,6 +6,8 @@ const services = [
     description:
       'In-home overnight doula care focused on your postpartum recovery. I handle nighttime feeds, soothing, and newborn care while you rest and heal.',
     bullets: ['Newborn through toddler', 'Postpartum recovery support', 'Nighttime feeding assistance'],
+    linkText: 'See booking availability with Catalina',
+    linkHref: '#availability',
   },
   {
     title: 'Overnight Sleep Training',
@@ -15,6 +17,8 @@ const services = [
     description:
       'Gentle, evidence-based overnight sleep training tailored to your baby&rsquo;s temperament. I work while you sleep, building healthy habits the whole family can sustain.',
     bullets: ['Gentle, responsive methods', 'Custom sleep plan handoff', 'Full overnight shifts'],
+    linkText: 'See booking availability with Catalina',
+    linkHref: '#availability',
   },
   {
     title: 'Consultation(s)',
@@ -22,6 +26,8 @@ const services = [
     description:
       'Not sure what you need yet? A consultation is a calm, no-pressure conversation to help you understand your options and build a plan that actually fits your life.',
     bullets: ['Phone or video', 'Personalized advice', 'No commitment'],
+    linkText: 'Learn more',
+    linkHref: '#contact',
   },
 ];
 
@@ -66,7 +72,7 @@ const packages = [
           <ul class="service-bullets" role="list">
             {service.bullets.map((b) => <li>{b}</li>)}
           </ul>
-          <a href="#contact" class="service-link">Learn more &rarr;</a>
+          <a href={service.linkHref} class="service-link">{service.linkText} &rarr;</a>
         </article>
       ))}
     </div>
