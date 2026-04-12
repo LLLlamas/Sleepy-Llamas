@@ -1,0 +1,844 @@
+---
+// Availability calendar — Supabase-powered.
+// Renders calendar from live data, supports visitor booking + admin mode.
+---
+
+<section class="availability-section" id="availability">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">See when I&rsquo;m open</span>
+      <h2>Pick your nights.</h2>
+      <p class="lead">
+        Tap an open day to start. Tap a second day to select a range. Then
+        choose a service and send your request &mdash; I&rsquo;ll reply within 24 hours.
+      </p>
+    </div>
+
+    <!-- Admin banner (hidden unless admin mode active) -->
+    <div class="admin-banner" id="admin-banner" hidden>
+      &#9998; Admin Mode &mdash; Click days to manage. Changes sync to Supabase.
+      <button class="admin-exit-btn" id="exit-admin-btn" type="button">Exit admin</button>
+    </div>
+
+    <!-- Admin: Pending requests panel -->
+    <div class="admin-panel" id="admin-requests" hidden>
+      <h3>Pending booking requests</h3>
+      <p class="admin-count" id="req-count">Loading&hellip;</p>
+      <div id="req-list"></div>
+    </div>
+
+    <!-- Admin: Awaiting payment panel -->
+    <div class="admin-panel" id="admin-payments" hidden>
+      <h3>Awaiting payment</h3>
+      <p class="admin-count" id="pay-count">Loading&hellip;</p>
+      <div id="pay-list"></div>
+    </div>
+
+    <div class="legend reveal">
+      <div class="legend-item"><span class="legend-dot legend-available"></span> Available</div>
+      <div class="legend-item"><span class="legend-dot legend-booked"></span> Booked</div>
+      <div class="legend-item"><span class="legend-dot legend-today"></span> Today</div>
+      <div class="legend-item"><span class="legend-dot legend-unavailable"></span> Unavailable</div>
+    </div>
+
+    <div class="calendar-months reveal" id="calendar-months">
+      <noscript><p class="calendar-fallback">Please enable JavaScript to view the calendar.</p></noscript>
+    </div>
+
+    <div class="service-picker reveal reveal-delay-1">
+      <h3>What service are you looking for?</h3>
+      <p class="service-picker-sub">
+        Pick one below. Overnight Sleep Training is our most requested service.
+      </p>
+
+      <div class="service-select-wrap">
+        <select class="service-select" id="cal-service-select" aria-label="Select a service">
+          <option value="">&mdash; Select a service &mdash;</option>
+          <option value="sleep-training">&#127769; Overnight Sleep Training</option>
+          <option value="doula">&#128151; Doula Support</option>
+          <option value="consultation">&#128172; Consultation</option>
+        </select>
+      </div>
+
+      <div class="service-detail" id="cal-service-detail">
+        <div class="service-detail-row">
+          <p class="service-detail-name" id="cal-service-name"></p>
+          <p class="service-detail-price" id="cal-service-price"></p>
+        </div>
+        <p class="service-detail-desc" id="cal-service-desc"></p>
+      </div>
+
+      <div class="service-picker-cta">
+        <p class="booking-summary" id="cal-booking-summary">No dates selected yet.</p>
+        <button class="btn-book" id="cal-confirm-btn" type="button" disabled>
+          Send booking request &rarr;
+        </button>
+        <p class="book-note">No account needed &middot; invoice sent after we talk &middot; reply within 24 hours</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Admin FAB -->
+<button class="admin-fab" id="admin-fab" title="Admin login" aria-label="Admin settings">&#9965;</button>
+
+<!-- Admin PIN modal -->
+<div class="modal-overlay" id="pin-modal" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title">
+  <div class="modal">
+    <h3 id="pin-modal-title">Admin Access</h3>
+    <p>Enter your PIN to manage the calendar.</p>
+    <input type="password" id="pin-input" maxlength="10" placeholder="&bull;&bull;&bull;&bull;" autocomplete="off" aria-label="PIN" />
+    <p class="vm-error" id="pin-error"></p>
+    <div class="vm-btns">
+      <button class="btn-vm-cancel" id="pin-cancel-btn" type="button">Cancel</button>
+      <button class="btn-vm-send" id="pin-ok-btn" type="button">Enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin state-picker modal -->
+<div class="modal-overlay" id="state-modal" role="dialog" aria-modal="true" aria-labelledby="state-modal-title">
+  <div class="modal">
+    <h3 id="state-modal-title">Set day state</h3>
+    <p>Currently: <strong id="state-modal-current">&mdash;</strong></p>
+    <div class="state-picker-actions">
+      <button class="state-btn state-btn-available" id="state-btn-available" type="button">Mark Available</button>
+      <button class="state-btn state-btn-unavailable" id="state-btn-unavailable" type="button">Mark Unavailable</button>
+    </div>
+    <div class="vm-btns" style="margin-top:16px;justify-content:center;">
+      <button class="btn-vm-cancel" id="state-cancel-btn" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Visitor booking modal -->
+<div class="modal-overlay" id="visitor-modal" role="dialog" aria-modal="true" aria-labelledby="visitor-modal-title">
+  <div class="modal">
+    <div id="vm-form">
+      <h3 id="visitor-modal-title">Confirm your request</h3>
+      <p class="vm-intro">I&rsquo;ll email you back within 24 hours.</p>
+
+      <div class="vm-summary">
+        <span class="vm-line"><span class="vm-line-label">Dates</span><span id="vm-dateline"></span></span>
+        <span class="vm-line"><span class="vm-line-label">Service</span><span id="vm-serviceline"></span></span>
+      </div>
+
+      <label class="vm-label" for="vm-child-name">Child&rsquo;s name</label>
+      <input type="text" id="vm-child-name" placeholder="e.g. Noah" maxlength="60" autocomplete="off" />
+
+      <label class="vm-label" for="vm-client-name">Your name</label>
+      <input type="text" id="vm-client-name" placeholder="Jane Doe" maxlength="80" autocomplete="name" />
+
+      <label class="vm-label" for="vm-email">Email</label>
+      <input type="email" id="vm-email" placeholder="you@example.com" maxlength="120" autocomplete="email" />
+
+      <label class="vm-label" for="vm-phone">Phone <span style="color:var(--color-muted);font-weight:400;">(optional)</span></label>
+      <input type="tel" id="vm-phone" placeholder="555-555-1234" maxlength="32" autocomplete="tel" />
+
+      <div class="vm-row">
+        <div>
+          <label class="vm-label" for="vm-weeks">Weeks of service</label>
+          <input type="number" id="vm-weeks" min="1" max="52" placeholder="e.g. 4" />
+        </div>
+        <div>
+          <label class="vm-label" for="vm-days">Days per week</label>
+          <input type="number" id="vm-days" min="1" max="7" placeholder="e.g. 3" />
+        </div>
+      </div>
+
+      <div class="vm-row">
+        <div>
+          <label class="vm-label" for="vm-arrival">Preferred arrival</label>
+          <input type="time" id="vm-arrival" value="20:00" />
+        </div>
+        <div>
+          <label class="vm-label" for="vm-departure">Preferred departure</label>
+          <input type="time" id="vm-departure" value="07:00" />
+        </div>
+      </div>
+
+      <label class="vm-label" for="vm-notes">Notes <span style="color:var(--color-muted);font-weight:400;">(optional)</span></label>
+      <textarea id="vm-notes" placeholder="Anything we should know &mdash; sleep challenges, routines, questions&hellip;" maxlength="2000"></textarea>
+
+      <p class="vm-error" id="vm-error"></p>
+
+      <div class="vm-btns">
+        <button class="btn-vm-cancel" id="vm-cancel-btn" type="button">Cancel</button>
+        <button class="btn-vm-send" id="vm-send-btn" type="button">Send request</button>
+      </div>
+    </div>
+
+    <div id="vm-success" hidden>
+      <div class="vm-success-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2.5" />
+          <path d="M20 33l9 9 16-18" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h4>Request sent!</h4>
+      <p>I&rsquo;ll email you within 24 hours to confirm. Check your inbox (and spam folder, just in case).</p>
+      <div class="vm-btns" style="justify-content:center">
+        <button class="btn-vm-send" id="vm-done-btn" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  /* See previous version for full styling — carried forward unchanged.
+     Adding new styles for admin mode at the end. */
+
+  .availability-section {
+    padding-block: var(--section-py);
+    background: var(--color-blush-200);
+  }
+  .availability-section .section-head {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto 2rem;
+  }
+  .availability-section .section-head .lead { margin-inline: auto; }
+
+  .legend { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--color-muted); }
+  .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .legend-available   { background: var(--color-maroon-700); }
+  .legend-booked      { background: linear-gradient(150deg, var(--color-gold) 0%, #a07a3f 100%); }
+  .legend-today       { background: var(--color-gold); box-shadow: 0 0 0 2px var(--color-cream) inset; }
+  .legend-unavailable { background: var(--color-cream); border: 2px solid var(--color-border); }
+
+  .calendar-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; max-width: 960px; margin: 0 auto 2.5rem; }
+
+  .cal-month { background: var(--color-cream); border-radius: var(--radius-md); border: 1px solid var(--color-border); box-shadow: var(--shadow-soft); overflow: hidden; }
+  .cal-month-header { background: var(--color-maroon-700); padding: 0.9rem 1.1rem; font-family: var(--font-display); font-weight: 500; font-size: 1.05rem; color: var(--color-cream); text-align: center; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--color-blush-100); border-bottom: 1px solid var(--color-border); }
+  .cal-weekday { text-align: center; padding: 0.4rem 0.15rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-maroon-500); }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0.5rem; gap: 3px; }
+  .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-family: var(--font-body); font-size: 0.84rem; font-weight: 500; cursor: default; user-select: none; transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out); position: relative; min-height: 34px; }
+  .cal-day.empty { pointer-events: none; }
+  .cal-day.available { background: var(--color-maroon-700); color: var(--color-cream); font-weight: 600; cursor: pointer; }
+  .cal-day.available:hover { transform: scale(1.14); box-shadow: 0 4px 12px rgba(107,26,40,0.3); }
+  .cal-day.booked { background: linear-gradient(150deg, var(--color-gold) 0%, #a07a3f 100%); color: var(--color-cream); font-weight: 700; cursor: not-allowed; box-shadow: 0 2px 6px rgba(200,155,106,0.35); }
+  .cal-day.unavailable, .cal-day.past { background: var(--color-cream); color: var(--color-muted); border: 2px solid var(--color-border); font-weight: 500; cursor: not-allowed; }
+  .cal-day.today-ring::after { content: ''; position: absolute; inset: -3px; border: 2px solid var(--color-gold); border-radius: 50%; pointer-events: none; }
+  .cal-day.in-range { background: rgba(168,50,70,0.22); color: var(--color-maroon-900); }
+  .cal-day.range-end { background: var(--color-gold); color: var(--color-maroon-900); font-weight: 700; box-shadow: 0 2px 8px rgba(200,155,106,0.45); }
+  .cal-day.available.in-range, .cal-day.available.range-end { color: var(--color-maroon-900); }
+  @keyframes cal-bounce { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  .cal-day.bounce { animation: cal-bounce 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+
+  .calendar-fallback { grid-column: 1 / -1; text-align: center; color: var(--color-muted); padding: 2rem 0; }
+
+  .service-picker { background: var(--color-cream); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-medium); padding: clamp(1.75rem,4vw,2.5rem); max-width: 720px; margin: 0 auto; position: relative; }
+  .service-picker h3 { margin: 0 0 0.4em; font-size: 1.35rem; }
+  .service-picker-sub { font-size: 0.92rem; color: var(--color-muted); margin: 0 0 1.5rem; }
+  .service-select-wrap { position: relative; margin-bottom: 1rem; }
+  .service-select { width: 100%; padding: 0.95rem 2.5rem 0.95rem 1.1rem; font-size: 1rem; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-blush-100); color: var(--color-ink); appearance: none; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+  .service-select:hover { background: var(--color-blush-200); transform: translateY(-1px); }
+  .service-select:focus { outline: none; border-color: var(--color-maroon-500); box-shadow: 0 0 0 4px rgba(168,50,70,0.12); }
+  .service-select-wrap::after { content: ''; position: absolute; right: 1rem; top: 50%; width: 10px; height: 10px; border-right: 2px solid var(--color-maroon-700); border-bottom: 2px solid var(--color-maroon-700); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+  .service-detail { display: none; padding: 1rem 1.1rem; margin-bottom: 1.25rem; background: var(--color-blush-100); border-radius: var(--radius-sm); border-left: 3px solid var(--color-maroon-500); }
+  .service-detail.show { display: block; animation: detail-slide 0.4s var(--ease-out); }
+  @keyframes detail-slide { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .service-detail-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.35em; flex-wrap: wrap; }
+  .service-detail-name { font-family: var(--font-display); font-size: 1.1rem; font-weight: 500; color: var(--color-maroon-900); margin: 0; }
+  .service-detail-price { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; color: var(--color-maroon-700); margin: 0; white-space: nowrap; }
+  .service-detail-price em { font-style: normal; font-size: 0.8rem; font-weight: 400; color: var(--color-muted); margin-left: 2px; }
+  .service-detail-desc { font-size: 0.9rem; color: var(--color-muted); margin: 0; line-height: 1.55; }
+  .service-picker-cta { display: flex; flex-direction: column; gap: 0.85rem; text-align: center; }
+  .booking-summary { font-size: 0.95rem; color: var(--color-muted); margin: 0; padding: 0.85rem 1rem; background: var(--color-blush-100); border-radius: var(--radius-sm); border: 1px dashed var(--color-border); transition: all 0.3s var(--ease-out); }
+  .booking-summary.has-selection { background: var(--color-blush-200); border: 1px solid var(--color-maroon-300); color: var(--color-ink); }
+  .booking-summary strong { color: var(--color-maroon-900); font-weight: 600; }
+  .btn-book { display: inline-flex; align-items: center; justify-content: center; padding: 1rem 1.75rem; font-family: var(--font-body); font-size: 1rem; font-weight: 500; border-radius: var(--radius-pill); background: var(--color-blush-200); color: var(--color-muted); border: none; cursor: not-allowed; transition: background 0.25s, color 0.25s, transform 0.2s, box-shadow 0.2s; min-height: 52px; }
+  .btn-book.ready { background: var(--color-maroon-700); color: var(--color-cream); cursor: pointer; box-shadow: var(--shadow-soft); animation: book-pulse 2.4s var(--ease-soft) infinite; }
+  .btn-book.ready:hover { background: var(--color-maroon-900); transform: translateY(-2px) scale(1.02); box-shadow: var(--shadow-lift); }
+  @keyframes book-pulse { 0%,100% { box-shadow: var(--shadow-soft); } 50% { box-shadow: 0 0 0 6px rgba(168,50,70,0.12), var(--shadow-lift); } }
+  .book-note { font-size: 0.75rem; color: var(--color-muted); margin: 0; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(42,20,24,0.58); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--color-cream); border-radius: var(--radius-lg); padding: 2rem 1.75rem; max-width: 440px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lift); animation: modal-in 0.3s var(--ease-out); }
+  @keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal h3 { margin: 0 0 0.3em; font-size: 1.35rem; }
+  .modal .vm-intro { color: var(--color-muted); font-size: 0.92rem; margin: 0 0 1.25rem; }
+  .vm-summary { background: var(--color-blush-100); border-radius: var(--radius-sm); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1.5rem; border-left: 3px solid var(--color-maroon-500); }
+  .vm-line { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; color: var(--color-ink); }
+  .vm-line-label { color: var(--color-muted); font-weight: 600; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .vm-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-maroon-900); margin-bottom: 0.35rem; margin-top: 0.9rem; }
+  .modal input[type='text'], .modal input[type='email'], .modal input[type='tel'],
+  .modal input[type='password'], .modal input[type='number'], .modal input[type='time'],
+  .modal textarea {
+    width: 100%; padding: 0.75rem 0.9rem; background: var(--color-blush-100); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.95rem; color: var(--color-ink); font-family: var(--font-body); transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
+  }
+  .modal input:focus, .modal textarea:focus { outline: none; border-color: var(--color-maroon-500); box-shadow: 0 0 0 3px rgba(168,50,70,0.12); }
+  .modal textarea { min-height: 80px; resize: vertical; }
+  .vm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .vm-error { color: #9b2a2a; font-size: 0.82rem; margin: 0.9rem 0 0; min-height: 1em; display: none; }
+  .vm-error.show { display: block; }
+  .vm-btns { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
+  .btn-vm-cancel, .btn-vm-send { padding: 0.7rem 1.2rem; border-radius: var(--radius-pill); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; min-height: 44px; }
+  .btn-vm-cancel { background: transparent; color: var(--color-muted); border: 1.5px solid var(--color-border); }
+  .btn-vm-cancel:hover { background: var(--color-blush-100); color: var(--color-ink); }
+  .btn-vm-send { background: var(--color-maroon-700); color: var(--color-cream); border: none; box-shadow: var(--shadow-soft); }
+  .btn-vm-send:hover { background: var(--color-maroon-900); transform: translateY(-1px); }
+  .btn-vm-send:disabled { opacity: 0.65; cursor: wait; transform: none; }
+  .vm-success-icon { color: var(--color-maroon-700); display: flex; justify-content: center; margin-bottom: 1rem; }
+  .vm-success-icon svg { width: 72px; height: 72px; }
+  #vm-success h4 { text-align: center; margin: 0 0 0.5em; font-size: 1.35rem; }
+  #vm-success > p { text-align: center; color: var(--color-muted); font-size: 0.92rem; max-width: 32ch; margin: 0 auto; }
+  #vm-success[hidden] { display: none; }
+  #vm-form[hidden] { display: none; }
+
+  /* Admin FAB */
+  .admin-fab { position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px; border-radius: 50%; background: var(--color-blush-200); color: var(--color-maroon-700); font-size: 22px; border: 1px solid var(--color-border); box-shadow: var(--shadow-soft); cursor: pointer; z-index: 50; transition: all 0.2s; display: grid; place-items: center; }
+  .admin-fab:hover { background: var(--color-maroon-700); color: var(--color-cream); transform: scale(1.08); }
+  .admin-fab.active { background: var(--color-maroon-700); color: var(--color-cream); }
+
+  /* Admin banner */
+  .admin-banner { background: var(--color-maroon-700); color: var(--color-cream); padding: 0.85rem 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .admin-banner[hidden] { display: none; }
+  .admin-exit-btn { padding: 0.4rem 0.9rem; border-radius: var(--radius-pill); font-size: 0.82rem; font-weight: 500; background: rgba(255,250,245,0.2); color: var(--color-cream); border: 1px solid rgba(255,250,245,0.3); cursor: pointer; }
+  .admin-exit-btn:hover { background: rgba(255,250,245,0.35); }
+
+  /* Admin panels */
+  .admin-panel { background: var(--color-cream); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--color-border); box-shadow: var(--shadow-soft); }
+  .admin-panel[hidden] { display: none; }
+  .admin-panel h3 { margin: 0 0 0.5em; font-size: 1.15rem; }
+  .admin-count { font-size: 0.88rem; color: var(--color-muted); margin: 0 0 1rem; }
+
+  /* Admin request cards */
+  .req-card, .pay-card { background: var(--color-blush-100); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+  .req-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .req-card-child { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; color: var(--color-maroon-900); margin: 0; }
+  .req-card-svc { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-muted); background: var(--color-cream); padding: 0.25rem 0.6rem; border-radius: var(--radius-pill); }
+  .req-card-line { font-size: 0.88rem; color: var(--color-ink); margin: 0.25rem 0; }
+  .req-card-line a { color: var(--color-maroon-700); }
+  .req-card-notes { font-size: 0.85rem; color: var(--color-muted); font-style: italic; margin: 0.5rem 0; }
+  .req-card-actions { display: flex; gap: 0.6rem; margin-top: 0.75rem; }
+  .btn-req-approve, .btn-req-decline, .btn-req-paid, .btn-req-cancel {
+    padding: 0.5rem 1rem; border-radius: var(--radius-pill); font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; min-height: 36px;
+  }
+  .btn-req-approve { background: var(--color-maroon-700); color: var(--color-cream); }
+  .btn-req-approve:hover { background: var(--color-maroon-900); }
+  .btn-req-decline { background: transparent; color: var(--color-muted); border: 1px solid var(--color-border); }
+  .btn-req-decline:hover { border-color: #9b2a2a; color: #9b2a2a; }
+  .btn-req-paid { background: var(--color-gold); color: var(--color-maroon-900); font-weight: 600; }
+  .btn-req-paid:hover { background: #b88a5a; }
+  .btn-req-cancel { background: transparent; color: var(--color-muted); border: 1px solid var(--color-border); }
+  .btn-req-cancel:hover { border-color: #9b2a2a; color: #9b2a2a; }
+
+  /* State picker buttons */
+  .state-picker-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
+  .state-btn { padding: 0.7rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: 1.5px solid var(--color-border); background: var(--color-blush-100); color: var(--color-ink); }
+  .state-btn:hover { border-color: var(--color-maroon-500); background: var(--color-blush-200); }
+  .state-btn.is-current { opacity: 0.45; cursor: default; }
+
+  /* Admin mode: all non-past cells are clickable */
+  body.admin-mode .cal-day.available,
+  body.admin-mode .cal-day.booked,
+  body.admin-mode .cal-day.unavailable { cursor: pointer; }
+  body.admin-mode .cal-day:not(.empty):not(.past):hover { transform: scale(1.14); box-shadow: 0 0 0 2px var(--color-gold); }
+
+  @media (max-width: 720px) { .calendar-months { grid-template-columns: 1fr; gap: 1rem; } }
+  @media (max-width: 480px) { .cal-day { font-size: 0.78rem; min-height: 30px; } .vm-row { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  import { getSupabase } from '../lib/supabase';
+
+  /* ════════════════════════════════════════════════════════
+     SLEEPY LLAMAS — AVAILABILITY CALENDAR
+     Full Supabase integration with admin mode.
+     ════════════════════════════════════════════════════════ */
+
+  type DayStatus = 'booked' | 'unavailable' | 'available';
+  type DayEntry = { status: DayStatus | 'past'; childName?: string | null; arrivalTime?: string | null; departureTime?: string | null; notes?: string | null };
+
+  const STORAGE_KEY = 'sl_schedule';
+  const MONTHS_AHEAD = 3;
+  let ADMIN_PIN: string | null = null;
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  const SERVICES: Record<string, { name: string; desc: string; price: number; unit: string; perNight: boolean }> = {
+    'sleep-training': { name: 'Overnight Sleep Training', desc: 'In-home overnight care tailored to your baby\u2019s temperament.', price: 150, unit: 'night', perNight: true },
+    'doula':          { name: 'Doula Support', desc: 'Birth and postpartum doula services grounded in warmth and deep experience.', price: 200, unit: 'visit', perNight: false },
+    'consultation':   { name: 'Consultation', desc: 'A calm, no-pressure conversation to explore your options.', price: 75, unit: 'session', perNight: false },
+  };
+
+  // ── Helpers ────────────────────────────────
+  function padZ(n: number) { return String(n).padStart(2, '0'); }
+  function toKey(y: number, m: number, d: number) { return `${y}-${padZ(m + 1)}-${padZ(d)}`; }
+  function todayKey() { const d = new Date(); return toKey(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function isPast(key: string) { return key < todayKey(); }
+  function isToday(key: string) { return key === todayKey(); }
+  function fmtPretty(key: string) {
+    const p = key.split('-').map(Number);
+    return new Date(p[0], p[1]-1, p[2]).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function nightsBetween(a: string, b: string) {
+    const p1 = a.split('-').map(Number), p2 = b.split('-').map(Number);
+    return Math.round((new Date(p2[0],p2[1]-1,p2[2]).getTime() - new Date(p1[0],p1[1]-1,p1[2]).getTime()) / 86400000);
+  }
+  function rangeEnd(ahead: number) {
+    const d = new Date();
+    const end = new Date(d.getFullYear(), d.getMonth() + ahead + 1, 0);
+    return toKey(end.getFullYear(), end.getMonth(), end.getDate());
+  }
+  function escHtml(s: string | null | undefined) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] || c)); }
+
+  // ── Local schedule cache ───────────────────
+  function getSchedule(): Record<string, DayEntry> {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  }
+  function saveSchedule(s: Record<string, DayEntry>) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+  function getEntry(key: string): DayEntry {
+    if (isPast(key)) return { status: 'past' };
+    const s = getSchedule()[key];
+    if (!s) return { status: 'available' };
+    return s;
+  }
+
+  // ── Supabase cloud sync ────────────────────
+  const supabase = getSupabase();
+
+  async function cloudFetch(): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      const { data, error } = await supabase.rpc('sl_get_availability', { p_from: todayKey(), p_to: rangeEnd(MONTHS_AHEAD) });
+      if (error || !data) return false;
+      const map = getSchedule();
+      (data as any[]).forEach((row: any) => {
+        map[row.day] = { status: row.status, childName: row.child_name, arrivalTime: row.arrival_time?.slice(0,5), departureTime: row.departure_time?.slice(0,5), notes: row.notes };
+      });
+      saveSchedule(map);
+      return true;
+    } catch { return false; }
+  }
+
+  // ── Calendar rendering ─────────────────────
+  const container = document.getElementById('calendar-months')!;
+  const visitorPick: { start: string | null; end: string | null } = { start: null, end: null };
+
+  function renderCalendars() {
+    container.innerHTML = '';
+    const now = new Date();
+    for (let m = 0; m < MONTHS_AHEAD; m++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + m, 1);
+      container.appendChild(buildMonth(d.getFullYear(), d.getMonth()));
+    }
+  }
+
+  function buildMonth(year: number, month: number): HTMLElement {
+    const wrap = document.createElement('div'); wrap.className = 'cal-month';
+    const hdr = document.createElement('div'); hdr.className = 'cal-month-header'; hdr.textContent = `${MONTHS[month]} ${year}`; wrap.appendChild(hdr);
+    const wdRow = document.createElement('div'); wdRow.className = 'cal-weekdays';
+    DAYS.forEach(d => { const wd = document.createElement('div'); wd.className = 'cal-weekday'; wd.textContent = d; wdRow.appendChild(wd); });
+    wrap.appendChild(wdRow);
+
+    const grid = document.createElement('div'); grid.className = 'cal-days';
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) { const b = document.createElement('div'); b.className = 'cal-day empty'; grid.appendChild(b); }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const key = toKey(year, month, day);
+      const cell = document.createElement('div');
+      cell.textContent = String(day);
+      cell.setAttribute('data-key', key);
+      applyCellState(cell, key);
+      cell.addEventListener('click', () => handleCellClick(key, cell));
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function applyCellState(cell: HTMLElement, key: string) {
+    const entry = getEntry(key);
+    cell.className = `cal-day ${entry.status}`;
+    if (isToday(key)) cell.classList.add('today-ring');
+    if (visitorPick.start && key >= visitorPick.start && key <= (visitorPick.end || visitorPick.start)) {
+      cell.classList.add(key === visitorPick.start || key === visitorPick.end ? 'range-end' : 'in-range');
+    }
+    cell.setAttribute('title', entry.status === 'booked' && entry.childName ? `Booked \u2014 ${entry.childName}` : entry.status);
+  }
+
+  function repaintAll() {
+    container.querySelectorAll<HTMLElement>('.cal-day[data-key]').forEach(c => applyCellState(c, c.getAttribute('data-key')!));
+  }
+
+  function handleCellClick(key: string, cell: HTMLElement) {
+    if (isPast(key)) return;
+    const entry = getEntry(key);
+    const isAdmin = document.body.classList.contains('admin-mode');
+
+    if (isAdmin) {
+      // Admin: open state picker for any non-past day
+      cell.classList.remove('bounce'); void cell.offsetWidth; cell.classList.add('bounce');
+      setTimeout(() => cell.classList.remove('bounce'), 520);
+      openStatePicker(key, cell, entry);
+      return;
+    }
+
+    // Visitor: only available days are clickable
+    if (entry.status === 'booked') { showToast('That night is already booked'); return; }
+    if (entry.status === 'unavailable') { showToast('That night isn\u2019t available'); return; }
+    cell.classList.remove('bounce'); void cell.offsetWidth; cell.classList.add('bounce');
+    setTimeout(() => cell.classList.remove('bounce'), 520);
+    handleVisitorPick(key);
+  }
+
+  // ── Visitor range pick ─────────────────────
+  function handleVisitorPick(key: string) {
+    if (!visitorPick.start) { visitorPick.start = key; visitorPick.end = key; }
+    else if (!visitorPick.end || visitorPick.start === visitorPick.end) {
+      if (key < visitorPick.start) visitorPick.start = key; else visitorPick.end = key;
+    } else { visitorPick.start = key; visitorPick.end = key; }
+    repaintAll(); updateBookingSummary();
+  }
+  function clearVisitorPick() { visitorPick.start = null; visitorPick.end = null; repaintAll(); updateBookingSummary(); }
+
+  // ── Service picker + booking summary ───────
+  const serviceSelect = document.getElementById('cal-service-select') as HTMLSelectElement;
+  const serviceDetail = document.getElementById('cal-service-detail')!;
+  const serviceName = document.getElementById('cal-service-name')!;
+  const servicePrice = document.getElementById('cal-service-price')!;
+  const serviceDesc = document.getElementById('cal-service-desc')!;
+  const bookingSummary = document.getElementById('cal-booking-summary')!;
+  const confirmBtn = document.getElementById('cal-confirm-btn') as HTMLButtonElement;
+
+  serviceSelect.addEventListener('change', () => {
+    const key = serviceSelect.value;
+    if (!key || !SERVICES[key]) { serviceDetail.classList.remove('show'); updateBookingSummary(); return; }
+    const s = SERVICES[key];
+    serviceName.textContent = s.name;
+    servicePrice.innerHTML = `$${s.price}<em>/${s.unit}</em>`;
+    serviceDesc.textContent = s.desc;
+    serviceDetail.classList.add('show');
+    updateBookingSummary();
+  });
+
+  function updateBookingSummary() {
+    const svc = serviceSelect.value;
+    const hasDates = !!visitorPick.start;
+    const parts: string[] = [];
+    if (hasDates) {
+      if (visitorPick.start === visitorPick.end) parts.push(`<strong>${fmtPretty(visitorPick.start!)}</strong>`);
+      else {
+        const n = nightsBetween(visitorPick.start!, visitorPick.end!);
+        parts.push(`<strong>${fmtPretty(visitorPick.start!)} \u2192 ${fmtPretty(visitorPick.end!)}</strong> (${n} night${n===1?'':'s'})`);
+      }
+    } else parts.push('No dates selected yet.');
+    if (svc && SERVICES[svc]) {
+      const s = SERVICES[svc];
+      let qty = 1;
+      if (hasDates) { qty = s.perNight ? Math.max(nightsBetween(visitorPick.start!, visitorPick.end!), 1) : nightsBetween(visitorPick.start!, visitorPick.end!) + 1; }
+      const total = s.price * qty;
+      parts.push(`Service: <strong>${s.name}</strong> &middot; Est. <strong>$${total}</strong>`);
+    } else if (hasDates) parts.push('Pick a service below to continue.');
+    bookingSummary.innerHTML = parts.join(' &middot; ');
+    bookingSummary.classList.toggle('has-selection', hasDates);
+    const ready = !!(hasDates && svc);
+    confirmBtn.disabled = !ready;
+    confirmBtn.classList.toggle('ready', ready);
+  }
+
+  // ── Visitor modal ──────────────────────────
+  const visitorModal = document.getElementById('visitor-modal')!;
+  const vmForm = document.getElementById('vm-form')!;
+  const vmSuccess = document.getElementById('vm-success')!;
+  const vmChildName = document.getElementById('vm-child-name') as HTMLInputElement;
+  const vmClientName = document.getElementById('vm-client-name') as HTMLInputElement;
+  const vmEmail = document.getElementById('vm-email') as HTMLInputElement;
+  const vmPhone = document.getElementById('vm-phone') as HTMLInputElement;
+  const vmWeeks = document.getElementById('vm-weeks') as HTMLInputElement;
+  const vmDays = document.getElementById('vm-days') as HTMLInputElement;
+  const vmArrival = document.getElementById('vm-arrival') as HTMLInputElement;
+  const vmDeparture = document.getElementById('vm-departure') as HTMLInputElement;
+  const vmNotes = document.getElementById('vm-notes') as HTMLTextAreaElement;
+  const vmError = document.getElementById('vm-error')!;
+  const vmSendBtn = document.getElementById('vm-send-btn') as HTMLButtonElement;
+
+  function vmShowError(msg: string) { vmError.textContent = msg; vmError.classList.add('show'); }
+  function vmClearError() { vmError.classList.remove('show'); }
+
+  function openVisitorModal() {
+    if (!visitorPick.start || !serviceSelect.value) return;
+    const svc = SERVICES[serviceSelect.value];
+    document.getElementById('vm-dateline')!.textContent = visitorPick.start === visitorPick.end
+      ? fmtPretty(visitorPick.start) : `${fmtPretty(visitorPick.start)} \u2192 ${fmtPretty(visitorPick.end!)}`;
+    document.getElementById('vm-serviceline')!.textContent = svc.name;
+    vmClearError();
+    vmForm.removeAttribute('hidden'); vmSuccess.setAttribute('hidden', '');
+    vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request';
+    visitorModal.classList.add('open');
+    setTimeout(() => vmChildName.focus(), 80);
+  }
+  function closeVisitorModal() { visitorModal.classList.remove('open'); }
+
+  async function submitVisitorRequest() {
+    vmClearError();
+    const childName = vmChildName.value.trim();
+    const clientName = vmClientName.value.trim();
+    const email = vmEmail.value.trim();
+    if (!childName) return vmShowError('Please enter your child\u2019s name.');
+    if (!clientName) return vmShowError('Please enter your name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return vmShowError('Please enter a valid email.');
+    if (!serviceSelect.value || !visitorPick.start) return vmShowError('Selection cleared \u2014 please pick dates and a service.');
+
+    vmSendBtn.disabled = true; vmSendBtn.textContent = 'Sending\u2026';
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.rpc('sl_create_booking_request', {
+          p_service: serviceSelect.value,
+          p_client_name: clientName,
+          p_client_email: email,
+          p_client_phone: vmPhone.value.trim() || null,
+          p_child_name: childName,
+          p_start_date: visitorPick.start,
+          p_end_date: visitorPick.end || visitorPick.start,
+          p_weeks_needed: vmWeeks.value ? parseInt(vmWeeks.value) : null,
+          p_days_per_week: vmDays.value ? parseInt(vmDays.value) : null,
+          p_arrival_time: vmArrival.value || null,
+          p_departure_time: vmDeparture.value || null,
+          p_notes: vmNotes.value.trim() || null,
+        });
+        if (error) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError(error.message || 'Something went wrong.'); }
+      } catch (e: any) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError('Network error. Please try again.'); }
+    } else {
+      // Offline stub
+      await new Promise(r => setTimeout(r, 900));
+    }
+
+    vmForm.setAttribute('hidden', ''); vmSuccess.removeAttribute('hidden');
+    clearVisitorPick();
+    vmChildName.value = ''; vmClientName.value = ''; vmEmail.value = ''; vmPhone.value = '';
+    vmWeeks.value = ''; vmDays.value = ''; vmNotes.value = '';
+  }
+
+  confirmBtn.addEventListener('click', () => { if (!confirmBtn.disabled) openVisitorModal(); });
+  document.getElementById('vm-cancel-btn')!.addEventListener('click', closeVisitorModal);
+  document.getElementById('vm-done-btn')!.addEventListener('click', closeVisitorModal);
+  vmSendBtn.addEventListener('click', submitVisitorRequest);
+  visitorModal.addEventListener('click', e => { if (e.target === visitorModal) closeVisitorModal(); });
+  [vmChildName, vmClientName, vmEmail, vmPhone].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitVisitorRequest(); } }));
+
+  // ── Admin mode ─────────────────────────────
+  const adminFab = document.getElementById('admin-fab')!;
+  const pinModal = document.getElementById('pin-modal')!;
+  const pinInput = document.getElementById('pin-input') as HTMLInputElement;
+  const pinError = document.getElementById('pin-error')!;
+  const adminBanner = document.getElementById('admin-banner')!;
+  const adminRequests = document.getElementById('admin-requests')!;
+  const adminPayments = document.getElementById('admin-payments')!;
+
+  adminFab.addEventListener('click', () => {
+    if (document.body.classList.contains('admin-mode')) return;
+    pinInput.value = ''; pinError.classList.remove('show');
+    pinModal.classList.add('open');
+    setTimeout(() => pinInput.focus(), 80);
+  });
+
+  async function tryPin() {
+    const pin = pinInput.value.trim();
+    if (!pin) { pinError.textContent = 'Enter a PIN.'; pinError.classList.add('show'); return; }
+    const okBtn = document.getElementById('pin-ok-btn') as HTMLButtonElement;
+    okBtn.disabled = true; pinError.textContent = 'Checking\u2026'; pinError.classList.add('show');
+
+    let ok = false;
+    if (supabase) {
+      try {
+        const { data } = await supabase.rpc('sl_verify_admin_pin', { p_pin: pin });
+        ok = data === true;
+      } catch { ok = false; }
+    } else {
+      ok = pin === '1234'; // offline fallback
+    }
+
+    okBtn.disabled = false;
+    if (ok) {
+      ADMIN_PIN = pin;
+      pinModal.classList.remove('open'); pinError.classList.remove('show');
+      document.body.classList.add('admin-mode');
+      adminFab.classList.add('active'); adminFab.textContent = '\u2713';
+      adminBanner.removeAttribute('hidden');
+      showToast('Admin mode active');
+      loadPendingRequests(); loadAwaitingPayment();
+    } else {
+      pinError.textContent = 'Incorrect PIN.'; pinError.classList.add('show');
+      pinInput.value = ''; pinInput.focus();
+    }
+  }
+
+  document.getElementById('pin-ok-btn')!.addEventListener('click', tryPin);
+  pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryPin(); });
+  document.getElementById('pin-cancel-btn')!.addEventListener('click', () => pinModal.classList.remove('open'));
+  pinModal.addEventListener('click', e => { if (e.target === pinModal) pinModal.classList.remove('open'); });
+
+  document.getElementById('exit-admin-btn')!.addEventListener('click', () => {
+    document.body.classList.remove('admin-mode');
+    ADMIN_PIN = null;
+    adminFab.classList.remove('active'); adminFab.textContent = '\u2699';
+    adminBanner.setAttribute('hidden', '');
+    adminRequests.setAttribute('hidden', '');
+    adminPayments.setAttribute('hidden', '');
+  });
+
+  // ── Admin state picker ─────────────────────
+  const stateModal = document.getElementById('state-modal')!;
+  const stateCurrent = document.getElementById('state-modal-current')!;
+  const stateBtnAvail = document.getElementById('state-btn-available')!;
+  const stateBtnUnavail = document.getElementById('state-btn-unavailable')!;
+
+  let stateCtx: { key: string; cell: HTMLElement } | null = null;
+
+  function openStatePicker(key: string, cell: HTMLElement, entry: DayEntry) {
+    stateCtx = { key, cell };
+    stateCurrent.textContent = entry.status === 'booked' ? `Booked${entry.childName ? ' \u2014 ' + entry.childName : ''}` : entry.status;
+    [stateBtnAvail, stateBtnUnavail].forEach(b => b.classList.remove('is-current'));
+    if (entry.status === 'available') stateBtnAvail.classList.add('is-current');
+    if (entry.status === 'unavailable') stateBtnUnavail.classList.add('is-current');
+    stateModal.classList.add('open');
+  }
+
+  async function adminSetDay(status: 'available' | 'unavailable') {
+    if (!stateCtx || !ADMIN_PIN) return;
+    stateModal.classList.remove('open');
+    if (supabase) {
+      await supabase.rpc('sl_set_availability', { p_pin: ADMIN_PIN, p_date: stateCtx.key, p_status: status });
+      await cloudFetch();
+    } else {
+      const map = getSchedule();
+      map[stateCtx.key] = { status };
+      saveSchedule(map);
+    }
+    renderCalendars();
+    showToast(`Saved: ${stateCtx.key} \u2192 ${status}`);
+  }
+
+  stateBtnAvail.addEventListener('click', () => adminSetDay('available'));
+  stateBtnUnavail.addEventListener('click', () => adminSetDay('unavailable'));
+  document.getElementById('state-cancel-btn')!.addEventListener('click', () => stateModal.classList.remove('open'));
+  stateModal.addEventListener('click', e => { if (e.target === stateModal) stateModal.classList.remove('open'); });
+
+  // ── Admin pending requests ─────────────────
+  async function loadPendingRequests() {
+    if (!supabase || !ADMIN_PIN) return;
+    adminRequests.removeAttribute('hidden');
+    const reqCount = document.getElementById('req-count')!;
+    const reqList = document.getElementById('req-list')!;
+    reqCount.textContent = 'Loading\u2026'; reqList.innerHTML = '';
+    try {
+      const { data, error } = await supabase.rpc('sl_list_booking_requests', { p_pin: ADMIN_PIN, p_status: 'pending' });
+      if (error || !data) { reqCount.textContent = 'Couldn\u2019t load.'; return; }
+      const rows = data as any[];
+      if (!rows.length) { reqCount.textContent = 'No pending requests.'; return; }
+      reqCount.textContent = `${rows.length} pending`;
+      rows.forEach(row => reqList.appendChild(buildRequestCard(row)));
+    } catch { reqCount.textContent = 'Error loading.'; }
+  }
+
+  function buildRequestCard(row: any): HTMLElement {
+    const card = document.createElement('div'); card.className = 'req-card';
+    const range = row.start_date === row.end_date ? row.start_date : `${row.start_date} \u2192 ${row.end_date}`;
+    card.innerHTML = `
+      <div class="req-card-head"><p class="req-card-child">${escHtml(row.child_name)}</p><span class="req-card-svc">${escHtml(row.service)}</span></div>
+      <p class="req-card-line"><strong>Dates:</strong> ${escHtml(range)}</p>
+      <p class="req-card-line"><strong>Client:</strong> ${escHtml(row.client_name)} &middot; <a href="mailto:${escHtml(row.client_email)}">${escHtml(row.client_email)}</a>${row.client_phone ? ' &middot; ' + escHtml(row.client_phone) : ''}</p>
+      ${row.notes ? `<p class="req-card-notes">\u201C${escHtml(row.notes)}\u201D</p>` : ''}
+      <div class="req-card-actions">
+        <button class="btn-req-approve" type="button">Approve</button>
+        <button class="btn-req-decline" type="button">Decline</button>
+      </div>`;
+    card.querySelector('.btn-req-approve')!.addEventListener('click', () => decideRequest(row.id, 'approve', card));
+    card.querySelector('.btn-req-decline')!.addEventListener('click', () => { if (confirm(`Decline request from ${row.client_name}?`)) decideRequest(row.id, 'decline', card); });
+    return card;
+  }
+
+  async function decideRequest(id: string, action: string, card: HTMLElement) {
+    if (!supabase || !ADMIN_PIN) return;
+    card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = true);
+    try {
+      const { error } = await supabase.rpc('sl_decide_booking_request', { p_pin: ADMIN_PIN, p_id: id, p_action: action });
+      if (error) { showToast(`\u26A0 Couldn\u2019t ${action}`); card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false); return; }
+      showToast(action === 'approve' ? 'Approved \u2014 calendar updated' : 'Request declined');
+      card.remove();
+      const remaining = document.getElementById('req-list')!.children.length;
+      document.getElementById('req-count')!.textContent = remaining ? `${remaining} pending` : 'No pending requests.';
+      if (action === 'approve') { await cloudFetch(); renderCalendars(); loadAwaitingPayment(); }
+    } catch { showToast('\u26A0 Network error'); card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false); }
+  }
+
+  // ── Admin awaiting payment ─────────────────
+  async function loadAwaitingPayment() {
+    if (!supabase || !ADMIN_PIN) return;
+    adminPayments.removeAttribute('hidden');
+    const payCount = document.getElementById('pay-count')!;
+    const payList = document.getElementById('pay-list')!;
+    payCount.textContent = 'Loading\u2026'; payList.innerHTML = '';
+    try {
+      const { data, error } = await supabase.rpc('sl_list_awaiting_payment', { p_pin: ADMIN_PIN });
+      if (error || !data) { payCount.textContent = 'Couldn\u2019t load.'; return; }
+      const rows = data as any[];
+      if (!rows.length) { payCount.textContent = 'No payments awaiting.'; return; }
+      payCount.textContent = `${rows.length} awaiting payment`;
+      rows.forEach(row => payList.appendChild(buildPayCard(row)));
+    } catch { payCount.textContent = 'Error loading.'; }
+  }
+
+  function buildPayCard(row: any): HTMLElement {
+    const card = document.createElement('div'); card.className = 'pay-card';
+    const range = row.start_date === row.end_date ? row.start_date : `${row.start_date} \u2192 ${row.end_date}`;
+    card.innerHTML = `
+      <div class="req-card-head"><p class="req-card-child">${escHtml(row.child_name)}</p><span class="req-card-svc">${escHtml(row.service)}</span></div>
+      <p class="req-card-line"><strong>Dates:</strong> ${escHtml(range)}</p>
+      <p class="req-card-line"><strong>Client:</strong> ${escHtml(row.client_name)} &middot; <a href="mailto:${escHtml(row.client_email)}">${escHtml(row.client_email)}</a></p>
+      <div class="req-card-actions">
+        <button class="btn-req-paid" type="button">Mark Paid &mdash; send confirmation</button>
+        <button class="btn-req-cancel" type="button">Cancel</button>
+      </div>`;
+    card.querySelector('.btn-req-paid')!.addEventListener('click', async () => {
+      card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = true);
+      try {
+        const { error } = await supabase!.rpc('sl_mark_booking_paid', { p_pin: ADMIN_PIN, p_id: row.id });
+        if (error) { showToast('\u26A0 Failed'); card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false); return; }
+        showToast('Marked paid \u2014 confirmation email sent'); card.remove();
+        const rem = document.getElementById('pay-list')!.children.length;
+        document.getElementById('pay-count')!.textContent = rem ? `${rem} awaiting payment` : 'No payments awaiting.';
+      } catch { showToast('\u26A0 Network error'); card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false); }
+    });
+    card.querySelector('.btn-req-cancel')!.addEventListener('click', async () => {
+      if (!confirm(`Cancel booking for ${row.child_name}?`)) return;
+      card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = true);
+      try {
+        const { error } = await supabase!.rpc('sl_cancel_booking_request', { p_pin: ADMIN_PIN, p_id: row.id });
+        if (error) { showToast('\u26A0 Failed'); card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false); return; }
+        showToast('Cancelled \u2014 dates freed'); card.remove();
+        const rem = document.getElementById('pay-list')!.children.length;
+        document.getElementById('pay-count')!.textContent = rem ? `${rem} awaiting payment` : 'No payments awaiting.';
+        await cloudFetch(); renderCalendars();
+      } catch { showToast('\u26A0 Network error'); card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false); }
+    });
+    return card;
+  }
+
+  // ── Toast ──────────────────────────────────
+  function showToast(msg: string) {
+    let toast = document.getElementById('sl-toast');
+    if (!toast) {
+      toast = document.createElement('div'); toast.id = 'sl-toast'; toast.setAttribute('role', 'status');
+      toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#2a1418;color:#fffaf5;padding:0.85rem 1.3rem;border-radius:999px;font-size:0.88rem;box-shadow:0 10px 30px -10px rgba(0,0,0,.3);z-index:200;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;max-width:90vw;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg; toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => { toast!.style.opacity = '0'; toast!.style.transform = 'translateX(-50%) translateY(20px)'; }, 3000);
+  }
+
+  // ── Init ───────────────────────────────────
+  renderCalendars();
+  cloudFetch().then(ok => { if (ok) renderCalendars(); });
+</script>

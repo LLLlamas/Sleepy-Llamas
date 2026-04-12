@@ -1,0 +1,179 @@
+---
+import { site } from '../config/site';
+---
+
+<section class="hero" id="top">
+  <div class="hero-bg" aria-hidden="true">
+    <div class="hero-glow-1"></div>
+    <div class="hero-glow-2"></div>
+  </div>
+
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow hero-anim hero-anim-1">Certified Doula &middot; Overnight Sleep Specialist</span>
+      <h1 class="hero-anim hero-anim-2">
+        Restful nights,<br />
+        gentle beginnings.
+      </h1>
+      <p class="lead hero-anim hero-anim-3">
+        Expert overnight sleep training and doula support, delivered with deep
+        warmth and care for every family we meet. Rest is not a luxury &mdash;
+        it&rsquo;s the foundation of bonding, healing, and joy.
+      </p>
+      <div class="hero-actions hero-anim hero-anim-3">
+        <a href="#contact" class="btn btn-primary">Reach out for a consultation</a>
+        <a href="#services" class="hero-link">Explore services &rarr;</a>
+      </div>
+      <p class="hero-meta hero-anim hero-anim-3">
+        Serving {site.serviceArea} &middot; Response {site.responseTime}
+      </p>
+    </div>
+
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 400 400" class="hero-illustration">
+        <defs>
+          <radialGradient id="moon-grad" cx="50%" cy="45%" r="55%">
+            <stop offset="0%" stop-color="#fffaf5" />
+            <stop offset="60%" stop-color="#f7e6e2" />
+            <stop offset="100%" stop-color="#f0d2cb" />
+          </radialGradient>
+          <linearGradient id="accent-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#a83246" />
+            <stop offset="100%" stop-color="#6b1a28" />
+          </linearGradient>
+        </defs>
+
+        <!-- Soft moon -->
+        <circle cx="200" cy="180" r="140" fill="url(#moon-grad)" />
+
+        <!-- Subtle stars -->
+        <circle cx="90" cy="80" r="2.5" fill="#c89b6a" opacity="0.7" />
+        <circle cx="320" cy="110" r="2" fill="#c89b6a" opacity="0.6" />
+        <circle cx="340" cy="260" r="2.5" fill="#c89b6a" opacity="0.7" />
+        <circle cx="70" cy="280" r="2" fill="#c89b6a" opacity="0.6" />
+
+        <!-- Crescent accent -->
+        <path
+          d="M230 110c-30 10-52 38-52 70 0 32 22 60 52 70-45 4-84-30-84-70s39-74 84-70Z"
+          fill="url(#accent-grad)"
+          opacity="0.92"
+        />
+
+        <!-- Cloud base -->
+        <path
+          d="M80 340c0-18 15-30 34-28 6-16 22-26 40-22 10-14 28-20 46-14 14-10 34-8 46 6 16-2 30 10 30 26 0 18-14 32-32 32H112c-18 0-32-12-32-0Z"
+          fill="#fffaf5"
+          opacity="0.85"
+        />
+      </svg>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(3.5rem, 8vw, 6rem) clamp(4rem, 10vw, 8rem);
+    background: linear-gradient(180deg, var(--color-blush-100) 0%, var(--color-blush-200) 100%);
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .hero-glow-1,
+  .hero-glow-2 {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.35;
+  }
+  .hero-glow-1 {
+    width: 520px;
+    height: 520px;
+    top: -180px;
+    right: -120px;
+    background: radial-gradient(circle, var(--color-maroon-300), transparent 70%);
+  }
+  .hero-glow-2 {
+    width: 400px;
+    height: 400px;
+    bottom: -140px;
+    left: -100px;
+    background: radial-gradient(circle, var(--color-gold), transparent 70%);
+    opacity: 0.22;
+  }
+
+  .hero-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
+
+  .hero-copy h1 {
+    margin-top: 0.35em;
+    margin-bottom: 0.5em;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    align-items: center;
+    margin-top: 1.75rem;
+  }
+
+  .hero-link {
+    font-weight: 500;
+    color: var(--color-maroon-700);
+    position: relative;
+  }
+  .hero-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
+    height: 1.5px;
+    background: var(--color-maroon-500);
+    transform: scaleX(0.6);
+    transform-origin: left;
+    transition: transform 0.3s var(--ease-out);
+  }
+  .hero-link:hover::after { transform: scaleX(1); }
+
+  .hero-meta {
+    margin-top: 2rem;
+    font-size: 0.875rem;
+    color: var(--color-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .hero-art {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .hero-illustration {
+    width: 100%;
+    max-width: 460px;
+    height: auto;
+    filter: drop-shadow(0 20px 40px rgba(61, 15, 23, 0.15));
+  }
+
+  @media (max-width: 880px) {
+    .hero-inner {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    .hero-art {
+      order: -1;
+      max-width: 320px;
+      margin: 0 auto 1rem;
+    }
+  }
+</style>

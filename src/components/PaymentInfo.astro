@@ -1,0 +1,142 @@
+---
+import { site } from '../config/site';
+---
+
+<section class="section payment">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">After your consultation</span>
+      <h2>Simple, flexible payment.</h2>
+      <p class="lead">
+        There&rsquo;s no upfront commitment to reach out. Once we&rsquo;ve
+        talked and agreed on a plan, I&rsquo;ll send you an invoice &mdash; pay
+        whichever way feels easiest.
+      </p>
+    </div>
+
+    <div class="payment-grid reveal reveal-delay-1">
+      <div class="pay-card">
+        <div class="pay-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M6 10h20v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10Zm2-4h16a2 2 0 0 1 2 2v2H6V8a2 2 0 0 1 2-2Z" fill="currentColor"/></svg>
+        </div>
+        <h3>Venmo</h3>
+        <p class="pay-handle">{site.venmoHandle}</p>
+        <p class="pay-note">Fast, no fees.</p>
+      </div>
+
+      <div class="pay-card">
+        <div class="pay-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M6 8h20l-4 8 4 8H6l4-8-4-8Z" fill="currentColor"/></svg>
+        </div>
+        <h3>Zelle</h3>
+        <p class="pay-handle">{site.zelleHandle}</p>
+        <p class="pay-note">Direct bank-to-bank.</p>
+      </div>
+
+      <div class="pay-card">
+        <div class="pay-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M4 12a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-8Zm6 3a1.5 1.5 0 1 0 0 3h12a1.5 1.5 0 1 0 0-3H10Z" fill="currentColor"/></svg>
+        </div>
+        <h3>Credit Card</h3>
+        {site.stripePaymentLink ? (
+          <a href={site.stripePaymentLink} class="pay-handle pay-link" target="_blank" rel="noopener">
+            Pay with card &rarr;
+          </a>
+        ) : (
+          <p class="pay-handle">Link sent with invoice</p>
+        )}
+        <p class="pay-note">Secure checkout via Stripe.</p>
+      </div>
+    </div>
+
+    <p class="payment-footnote reveal reveal-delay-2">
+      All payments are discussed after your consultation &mdash; never before.
+    </p>
+  </div>
+</section>
+
+<style>
+  .payment {
+    background: var(--color-blush-200);
+  }
+
+  .section-head {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto 3rem;
+  }
+  .section-head .lead { margin-inline: auto; }
+
+  .payment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(1.25rem, 3vw, 2rem);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .pay-card {
+    background: var(--color-cream);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  .pay-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
+  }
+
+  .pay-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    background: var(--color-blush-200);
+    color: var(--color-maroon-700);
+    display: grid;
+    place-items: center;
+    margin: 0 auto 1rem;
+  }
+  .pay-icon svg { width: 28px; height: 28px; }
+
+  .pay-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .pay-handle {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-maroon-700);
+    font-weight: 500;
+    margin: 0 0 0.4rem;
+    word-break: break-all;
+  }
+  .pay-link {
+    display: inline-block;
+    border-bottom: 1.5px solid var(--color-maroon-500);
+    padding-bottom: 2px;
+  }
+
+  .pay-note {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    margin: 0;
+  }
+
+  .payment-footnote {
+    margin-top: 2.5rem;
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.88rem;
+  }
+
+  @media (max-width: 760px) {
+    .payment-grid {
+      grid-template-columns: 1fr;
+      max-width: 420px;
+    }
+  }
+</style>

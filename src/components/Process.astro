@@ -1,0 +1,147 @@
+---
+const steps = [
+  {
+    n: '01',
+    title: 'Reach Out',
+    body: 'Send a short note with what you&rsquo;re looking for. I&rsquo;ll respond within a day.',
+  },
+  {
+    n: '02',
+    title: 'Free Consultation',
+    body: 'We talk &mdash; by phone, text, or video &mdash; about your baby, your family, and your goals.',
+  },
+  {
+    n: '03',
+    title: 'Custom Plan',
+    body: 'I build a plan shaped to your values, your schedule, and your home.',
+  },
+  {
+    n: '04',
+    title: 'Restful Nights',
+    body: 'Support begins. We adjust as we go &mdash; every family finds their rhythm.',
+  },
+];
+---
+
+<section class="section process" id="process">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">How it works</span>
+      <h2>A calm path to better sleep.</h2>
+      <p class="lead">Simple, unhurried, and centered on your family.</p>
+    </div>
+
+    <ol class="timeline" role="list">
+      {steps.map((step, i) => (
+        <li class:list={["timeline-step", "reveal", `reveal-delay-${i + 1}`]}>
+          <div class="step-number">{step.n}</div>
+          <div class="step-body">
+            <h3>{step.title}</h3>
+            <p set:html={step.body}></p>
+          </div>
+          {i < steps.length - 1 && <div class="step-connector" aria-hidden="true"></div>}
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .process {
+    background: var(--color-blush-100);
+  }
+
+  .section-head {
+    max-width: 680px;
+    margin: 0 auto 3.5rem;
+    text-align: center;
+  }
+  .section-head .lead { margin-inline: auto; }
+
+  .timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(1rem, 3vw, 2rem);
+    counter-reset: step;
+  }
+
+  .timeline-step {
+    position: relative;
+    padding-top: 0.5rem;
+  }
+
+  .step-number {
+    display: inline-grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--color-cream);
+    border: 2px solid var(--color-maroon-700);
+    color: var(--color-maroon-700);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    z-index: 2;
+  }
+
+  .step-body h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.4em;
+  }
+  .step-body p {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .step-connector {
+    position: absolute;
+    top: 28px;
+    left: 56px;
+    right: -1rem;
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-maroon-300) 0 6px,
+      transparent 6px 12px
+    );
+    z-index: 1;
+  }
+
+  @media (max-width: 900px) {
+    .timeline {
+      grid-template-columns: 1fr;
+      max-width: 480px;
+      margin-inline: auto;
+      gap: 2rem;
+    }
+    .timeline-step {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+    .step-number {
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+    .step-connector {
+      left: 27px;
+      top: 56px;
+      right: auto;
+      bottom: -2rem;
+      width: 2px;
+      height: auto;
+      background: repeating-linear-gradient(
+        180deg,
+        var(--color-maroon-300) 0 6px,
+        transparent 6px 12px
+      );
+    }
+  }
+</style>

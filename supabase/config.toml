@@ -1,0 +1,6 @@
+project_id = "kozbrcqehylhzoocvfby"
+
+[functions.send-email]
+# JWT verification disabled because pg_net calls this function without a JWT.
+# Auth is handled via the x-edge-secret header instead.
+verify_jwt = false

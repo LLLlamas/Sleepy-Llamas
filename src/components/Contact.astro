@@ -1,0 +1,308 @@
+---
+import { site } from '../config/site';
+---
+
+<section class="section contact" id="contact">
+  <div class="container contact-inner">
+    <aside class="contact-info reveal">
+      <span class="eyebrow">Let&rsquo;s talk</span>
+      <h2>I&rsquo;d love to hear from you.</h2>
+      <p class="lead">
+        Short and sweet &mdash; just the basics so I know how to reach you. I
+        read every message personally and respond {site.responseTime}.
+      </p>
+
+      <ul class="contact-methods" role="list">
+        <li>
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 7l9 6 9-6M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <span class="method-label">Email</span>
+            <a href={`mailto:${site.email}`}>{site.email}</a>
+          </div>
+        </li>
+        <li>
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <span class="method-label">Phone &amp; Text</span>
+            <a href={`tel:${site.phoneHref}`}>{site.phone}</a>
+          </div>
+        </li>
+        <li>
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <span class="method-label">Response Time</span>
+            <span>{site.responseTime}</span>
+          </div>
+        </li>
+      </ul>
+    </aside>
+
+    <div class="form-card reveal reveal-delay-1">
+      <form class="contact-form" id="contact-form" novalidate>
+        <div class="field">
+          <label for="client-name">Your name</label>
+          <input type="text" id="client-name" name="clientName" required autocomplete="name" />
+          <div class="field-error" data-for="client-name"></div>
+        </div>
+
+        <div class="field">
+          <label for="child-name">Child&rsquo;s name</label>
+          <input type="text" id="child-name" name="childName" required autocomplete="off" placeholder="e.g. Noah" />
+          <div class="field-error" data-for="child-name"></div>
+        </div>
+
+        <div class="field">
+          <label for="service">Which service are you looking for?</label>
+          <select id="service" name="service" required>
+            <option value="">&mdash; Select a service &mdash;</option>
+            <option value="sleep-training">Overnight Sleep Training</option>
+            <option value="doula">Doula Support</option>
+            <option value="consultation">Consultation</option>
+            <option value="not-sure">Not sure yet</option>
+          </select>
+          <div class="field-error" data-for="service"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required autocomplete="email" />
+            <div class="field-error" data-for="email"></div>
+          </div>
+          <div class="field">
+            <label for="phone">Phone <span class="optional">(optional)</span></label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="notes">Anything else we should know? <span class="optional">(optional)</span></label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Sleep challenges, questions, preferred schedule&hellip;"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary submit-btn" id="submit-btn">
+          <span class="btn-label">Send message</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+
+        <p class="form-note">Your message goes straight to me. I&rsquo;ll never share your information.</p>
+      </form>
+
+      <div class="form-success" id="form-success" hidden>
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <path d="M20 33l9 9 16-18" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Thank you!</h3>
+        <p>Your message is on its way. I&rsquo;ll reply {site.responseTime}.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .contact {
+    background: var(--color-blush-100);
+  }
+
+  .contact-inner {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+
+  .contact-info h2 { margin-bottom: 0.6em; }
+
+  .contact-methods {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .contact-methods li {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .contact-methods .icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--color-blush-200);
+    color: var(--color-maroon-700);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .contact-methods .icon svg { width: 22px; height: 22px; }
+  .method-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-muted);
+    margin-bottom: 0.15rem;
+  }
+  .contact-methods a {
+    font-weight: 500;
+  }
+
+  /* Card wrapper — form and success overlay swap inside it */
+  .form-card {
+    position: relative;
+    background: var(--color-cream);
+    border-radius: var(--radius-lg);
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    box-shadow: var(--shadow-medium);
+    border: 1px solid var(--color-border);
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .optional {
+    color: var(--color-muted);
+    font-weight: 400;
+    font-size: 0.78rem;
+  }
+  .contact-form[hidden] { display: none; }
+
+  @media (max-width: 560px) {
+    .field-row { grid-template-columns: 1fr; }
+  }
+
+  .submit-btn {
+    position: relative;
+    width: 100%;
+    margin-top: 0.75rem;
+    overflow: hidden;
+  }
+  .submit-btn .btn-spinner {
+    display: none;
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(255, 250, 245, 0.35);
+    border-top-color: var(--color-cream);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .submit-btn[data-loading='true'] .btn-spinner { display: block; }
+  .submit-btn[data-loading='true'] .btn-label { opacity: 0.6; }
+  .submit-btn:disabled { cursor: wait; opacity: 0.85; }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .form-note {
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    text-align: center;
+  }
+
+  /* Success overlay — hidden by default, shown after successful submit.
+     IMPORTANT: [hidden] must force display:none even though our visible
+     state sets display:flex. */
+  .form-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    min-height: 320px;
+    animation: successIn 0.5s var(--ease-out);
+  }
+  .form-success[hidden] { display: none; }
+
+  .form-success svg {
+    width: 80px;
+    height: 80px;
+    color: var(--color-maroon-700);
+    margin-bottom: 1rem;
+  }
+  .form-success h3 { margin-bottom: 0.4em; }
+  .form-success p { color: var(--color-muted); max-width: 30ch; }
+
+  @keyframes successIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @media (max-width: 900px) {
+    .contact-inner { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  const form = document.getElementById('contact-form') as HTMLFormElement | null;
+  const successBox = document.getElementById('form-success');
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+
+  function setError(id: string, msg: string) {
+    const el = form?.querySelector(`.field-error[data-for="${id}"]`);
+    if (el) el.textContent = msg;
+  }
+  function clearErrors() {
+    form?.querySelectorAll('.field-error').forEach((el) => { el.textContent = ''; });
+  }
+  function validate(): boolean {
+    clearErrors();
+    let ok = true;
+    const data = new FormData(form!);
+    const clientName = String(data.get('clientName') || '').trim();
+    const childName = String(data.get('childName') || '').trim();
+    const service = String(data.get('service') || '');
+    const email = String(data.get('email') || '').trim();
+
+    if (!clientName) { setError('client-name', 'Please enter your name.'); ok = false; }
+    if (!childName) { setError('child-name', 'Please enter your child\u2019s name.'); ok = false; }
+    if (!service) { setError('service', 'Please choose a service.'); ok = false; }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setError('email', 'Please enter a valid email.'); ok = false;
+    }
+
+    return ok;
+  }
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    submitBtn?.setAttribute('data-loading', 'true');
+    submitBtn?.setAttribute('disabled', '');
+
+    // ------------------------------------------------------------------
+    // TODO: wire up to real form backend (Formspree, Netlify Forms, EmailJS).
+    // For now we simulate a successful submit so the UX is fully testable.
+    // Example with Formspree:
+    //   const res = await fetch('https://formspree.io/f/YOUR_ID', {
+    //     method: 'POST',
+    //     body: new FormData(form!),
+    //     headers: { Accept: 'application/json' }
+    //   });
+    //   if (!res.ok) throw new Error('submit failed');
+    // ------------------------------------------------------------------
+    await new Promise((r) => setTimeout(r, 900));
+
+    submitBtn?.removeAttribute('data-loading');
+    submitBtn?.removeAttribute('disabled');
+
+    // Swap the form for the success panel
+    form?.setAttribute('hidden', '');
+    successBox?.removeAttribute('hidden');
+  });
+</script>
