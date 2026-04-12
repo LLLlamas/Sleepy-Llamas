@@ -139,32 +139,36 @@
         <span class="vm-line" id="vm-pkgline-wrap" hidden><span class="vm-line-label">Package</span><span id="vm-pkgline"></span></span>
       </div>
 
-      <label class="vm-label" for="vm-child-name">Child&rsquo;s name</label>
-      <input type="text" id="vm-child-name" placeholder="e.g. Noah" maxlength="60" autocomplete="off" />
+      <div class="vm-field">
+        <label class="vm-label" for="vm-child-name">Child&rsquo;s name</label>
+        <input type="text" id="vm-child-name" placeholder="e.g. Noah" maxlength="60" autocomplete="off" />
+      </div>
 
-      <label class="vm-label" for="vm-client-name">Your name</label>
-      <input type="text" id="vm-client-name" placeholder="Jane Doe" maxlength="80" autocomplete="name" />
+      <div class="vm-field">
+        <label class="vm-label" for="vm-client-name">Your name</label>
+        <input type="text" id="vm-client-name" placeholder="Jane Doe" maxlength="80" autocomplete="name" />
+      </div>
 
       <div class="vm-row">
-        <div>
+        <div class="vm-field">
           <label class="vm-label" for="vm-email">Email</label>
           <input type="email" id="vm-email" placeholder="you@example.com" maxlength="120" autocomplete="email" />
         </div>
-        <div>
+        <div class="vm-field">
           <label class="vm-label" for="vm-phone">Phone <span class="vm-opt">(optional)</span></label>
           <input type="tel" id="vm-phone" placeholder="555-555-1234" maxlength="32" autocomplete="tel" />
         </div>
       </div>
 
       <div class="vm-row">
-        <div>
-          <label class="vm-label" for="vm-weeks">How many weeks?</label>
+        <div class="vm-field">
+          <label class="vm-label" for="vm-weeks">How many weeks of service?</label>
           <div class="vm-optional-field">
             <input type="number" id="vm-weeks" min="1" max="52" placeholder="e.g. 4" />
             <label class="vm-notsure"><input type="checkbox" id="vm-weeks-unsure" /> Not sure yet</label>
           </div>
         </div>
-        <div>
+        <div class="vm-field">
           <label class="vm-label" for="vm-nights-pw">Nights per week?</label>
           <div class="vm-optional-field">
             <input type="number" id="vm-nights-pw" min="1" max="7" placeholder="e.g. 2" />
@@ -185,18 +189,20 @@
       </div>
 
       <div class="vm-row">
-        <div>
+        <div class="vm-field">
           <label class="vm-label" for="vm-arrival">Preferred arrival</label>
           <input type="time" id="vm-arrival" value="20:00" />
         </div>
-        <div>
+        <div class="vm-field">
           <label class="vm-label" for="vm-departure">Preferred departure</label>
           <input type="time" id="vm-departure" value="07:00" />
         </div>
       </div>
 
-      <label class="vm-label" for="vm-notes">Notes <span class="vm-opt">(optional)</span></label>
-      <textarea id="vm-notes" placeholder="Sleep challenges, routines, questions, anything that would help us prepare&hellip;" maxlength="2000"></textarea>
+      <div class="vm-field">
+        <label class="vm-label" for="vm-notes">Notes <span class="vm-opt">(optional)</span></label>
+        <textarea id="vm-notes" placeholder="Sleep challenges, routines, questions, anything that would help us prepare&hellip;" maxlength="2000"></textarea>
+      </div>
 
       <p class="vm-error" id="vm-error"></p>
 
@@ -298,16 +304,19 @@
   .modal-overlay.open { display: flex; }
   .modal { background: var(--color-cream); border-radius: var(--radius-lg); padding: 2rem 1.75rem; max-width: 440px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lift); animation: modal-in 0.3s var(--ease-out); }
   @keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  .modal h3 { margin: 0 0 0.3em; font-size: 1.35rem; }
+  .modal h3 { margin: 0 0 0.3em; font-size: 1.35rem; color: var(--color-maroon-700); }
   .modal .vm-intro { color: var(--color-muted); font-size: 0.92rem; margin: 0 0 1.25rem; }
   .vm-summary { background: var(--color-blush-100); border-radius: var(--radius-sm); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1.5rem; border-left: 3px solid var(--color-maroon-500); }
   .vm-line { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; color: var(--color-ink); }
   .vm-line-label { color: var(--color-muted); font-weight: 600; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
-  .vm-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-maroon-900); margin-bottom: 0.35rem; margin-top: 0.9rem; }
+  .vm-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-muted); margin-bottom: 0.35rem; margin-top: 0.9rem; transition: color 0.2s var(--ease-out); }
+  .vm-field:has(input:not(:placeholder-shown)) .vm-label,
+  .vm-field:has(textarea:not(:placeholder-shown)) .vm-label,
+  .vm-field:has(select) .vm-label { color: var(--color-maroon-700); }
   .modal input[type='text'], .modal input[type='email'], .modal input[type='tel'],
   .modal input[type='password'], .modal input[type='number'], .modal input[type='time'],
   .modal textarea {
-    width: 100%; padding: 0.75rem 0.9rem; background: var(--color-blush-100); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.95rem; color: var(--color-ink); font-family: var(--font-body); transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
+    width: 100%; padding: 0.65rem 0.85rem; background: #fdf6f4; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.95rem; color: var(--color-ink); font-family: var(--font-body); box-shadow: inset 0 1px 3px rgba(61, 15, 23, 0.06); transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
   }
   .modal input:focus, .modal textarea:focus { outline: none; border-color: var(--color-maroon-500); box-shadow: 0 0 0 3px rgba(168,50,70,0.12); }
   .modal textarea { min-height: 80px; resize: vertical; }

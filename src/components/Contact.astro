@@ -47,7 +47,7 @@ import { site } from '../config/site';
       <form class="contact-form" id="contact-form" novalidate>
         <div class="field">
           <label for="client-name">Your name</label>
-          <input type="text" id="client-name" name="clientName" required autocomplete="name" />
+          <input type="text" id="client-name" name="clientName" required autocomplete="name" placeholder="Jane Doe" />
           <div class="field-error" data-for="client-name"></div>
         </div>
 
@@ -72,12 +72,12 @@ import { site } from '../config/site';
         <div class="field-row">
           <div class="field">
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" required autocomplete="email" />
+            <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" />
             <div class="field-error" data-for="email"></div>
           </div>
           <div class="field">
             <label for="phone">Phone <span class="optional">(optional)</span></label>
-            <input type="tel" id="phone" name="phone" autocomplete="tel" />
+            <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="555-555-1234" />
           </div>
         </div>
 
@@ -333,6 +333,13 @@ import { site } from '../config/site';
   ctSpecialCare?.addEventListener('change', () => {
     if (ctSpecialCare.checked) ctSpecialDetail.removeAttribute('hidden');
     else { ctSpecialDetail.setAttribute('hidden', ''); (document.getElementById('ct-special-notes') as HTMLInputElement).value = ''; }
+  });
+
+  // Label color change for select (CSS :placeholder-shown doesn't work on selects)
+  const serviceSelect = document.getElementById('service') as HTMLSelectElement | null;
+  serviceSelect?.addEventListener('change', () => {
+    const label = serviceSelect.closest('.field')?.querySelector('label');
+    if (label) label.style.color = serviceSelect.value ? 'var(--color-maroon-700)' : '';
   });
 
   function setError(id: string, msg: string) {

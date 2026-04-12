@@ -272,8 +272,19 @@ input, textarea, select {
 .field .label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-maroon-900);
+  color: var(--color-muted);
   letter-spacing: 0.01em;
+  transition: color 0.2s var(--ease-out);
+}
+
+/* Label turns maroon when its sibling input has content */
+.field:has(input:not(:placeholder-shown)) > label,
+.field:has(textarea:not(:placeholder-shown)) > label,
+.field:has(select:not([value=""])) > label,
+.field:has(input:focus) > label,
+.field:has(textarea:focus) > label,
+.field:has(select:focus) > label {
+  color: var(--color-maroon-700);
 }
 
 .field input[type='text'],
@@ -285,7 +296,7 @@ input, textarea, select {
 .field textarea {
   width: 100%;
   padding: 0.65rem 0.85rem;
-  background: #fff;
+  background: #fdf6f4;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
@@ -301,7 +312,7 @@ input, textarea, select {
 .field textarea:focus {
   outline: none;
   border-color: var(--color-maroon-500);
-  box-shadow: 0 0 0 4px rgba(168, 50, 70, 0.12);
+  box-shadow: 0 0 0 3px rgba(168, 50, 70, 0.12);
 }
 
 .field textarea {
