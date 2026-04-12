@@ -81,6 +81,33 @@ import { site } from '../config/site';
           </div>
         </div>
 
+        <div class="field-row">
+          <div class="field">
+            <label for="ct-weeks">How many weeks? <span class="optional">(optional)</span></label>
+            <div class="optional-field">
+              <input type="number" id="ct-weeks" name="weeks" min="1" max="52" placeholder="e.g. 4" />
+              <label class="notsure-label"><input type="checkbox" id="ct-weeks-unsure" /> Not sure yet</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="ct-nights">Nights per week? <span class="optional">(optional)</span></label>
+            <div class="optional-field">
+              <input type="number" id="ct-nights" name="nightsPerWeek" min="1" max="7" placeholder="e.g. 2" />
+              <label class="notsure-label"><input type="checkbox" id="ct-nights-unsure" /> Not sure yet</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="special-care-check">
+            <input type="checkbox" id="ct-special-care" />
+            <span>My child has special care needs</span>
+          </label>
+          <div class="special-care-detail" id="ct-special-detail" hidden>
+            <input type="text" id="ct-special-notes" name="specialCareNotes" placeholder="e.g. twins, cleft palate, G-Tube&hellip;" maxlength="200" />
+          </div>
+        </div>
+
         <div class="field">
           <label for="notes">Anything else we should know? <span class="optional">(optional)</span></label>
           <textarea id="notes" name="notes" rows="3" placeholder="Sleep challenges, questions, preferred schedule&hellip;"></textarea>
@@ -178,6 +205,41 @@ import { site } from '../config/site';
   }
   .contact-form[hidden] { display: none; }
 
+  .optional-field { position: relative; }
+  .optional-field input[type="number"] { width: 100%; }
+  .optional-field input[type="number"].greyed { opacity: 0.4; pointer-events: none; }
+  .notsure-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    margin-top: 0.35rem;
+    cursor: pointer;
+  }
+  .notsure-label input { accent-color: var(--color-maroon-700); }
+
+  .special-care-check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.92rem;
+    color: var(--color-ink);
+    cursor: pointer;
+    padding: 0.7rem 1rem;
+    background: var(--color-blush-100);
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--color-border);
+    transition: border-color 0.2s;
+  }
+  .special-care-check:has(input:checked) {
+    border-color: var(--color-maroon-500);
+    background: var(--color-blush-200);
+  }
+  .special-care-check input { accent-color: var(--color-maroon-700); width: 18px; height: 18px; }
+  .special-care-detail { margin-top: 0.6rem; }
+  .special-care-detail[hidden] { display: none; }
+
   @media (max-width: 560px) {
     .field-row { grid-template-columns: 1fr; }
   }
@@ -251,6 +313,27 @@ import { site } from '../config/site';
   const form = document.getElementById('contact-form') as HTMLFormElement | null;
   const successBox = document.getElementById('form-success');
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+
+  // "Not sure yet" toggles
+  const ctWeeks = document.getElementById('ct-weeks') as HTMLInputElement;
+  const ctWeeksUnsure = document.getElementById('ct-weeks-unsure') as HTMLInputElement;
+  const ctNights = document.getElementById('ct-nights') as HTMLInputElement;
+  const ctNightsUnsure = document.getElementById('ct-nights-unsure') as HTMLInputElement;
+  const ctSpecialCare = document.getElementById('ct-special-care') as HTMLInputElement;
+  const ctSpecialDetail = document.getElementById('ct-special-detail')!;
+
+  ctWeeksUnsure?.addEventListener('change', () => {
+    ctWeeks.classList.toggle('greyed', ctWeeksUnsure.checked);
+    if (ctWeeksUnsure.checked) ctWeeks.value = '';
+  });
+  ctNightsUnsure?.addEventListener('change', () => {
+    ctNights.classList.toggle('greyed', ctNightsUnsure.checked);
+    if (ctNightsUnsure.checked) ctNights.value = '';
+  });
+  ctSpecialCare?.addEventListener('change', () => {
+    if (ctSpecialCare.checked) ctSpecialDetail.removeAttribute('hidden');
+    else { ctSpecialDetail.setAttribute('hidden', ''); (document.getElementById('ct-special-notes') as HTMLInputElement).value = ''; }
+  });
 
   function setError(id: string, msg: string) {
     const el = form?.querySelector(`.field-error[data-for="${id}"]`);
