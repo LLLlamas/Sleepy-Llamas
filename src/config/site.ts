@@ -9,7 +9,7 @@ export const site = {
   brandName: 'Sleepy Llamas',
   tagline: 'Restful nights for your whole family.',
   shortDescription:
-    'Certified doula support and overnight sleep training, delivered with warmth, expertise, and deep care for every family we meet.',
+    'Certified overnight doula support and gentle baby sleep training for families in NYC and the greater New York area. Personalized postpartum overnight care delivered with warmth and expertise.',
 
   // --- Contact (TODO: replace with real values) ---
   email: 'sleepyllamasdoula@gmail.com',

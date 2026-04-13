@@ -47,6 +47,17 @@ const testimonials = [
         </figure>
       ))}
     </div>
+
+    <!-- Referral CTA -->
+    <div class="referral reveal reveal-delay-4">
+      <p class="referral-text">Know a family that could use a good night&rsquo;s sleep?</p>
+      <a
+        class="btn btn-secondary referral-btn"
+        href={`mailto:?subject=Check out Sleepy Llamas — overnight doula %26 sleep training&body=I wanted to share this with you — Sleepy Llamas offers certified overnight doula care and gentle sleep training in the New York area. They were amazing for us! %0A%0Ahttps://sleepyllamasdoula.com`}
+      >
+        Share with a friend &hearts;
+      </a>
+    </div>
   </div>
 </section>
 
@@ -113,6 +124,22 @@ const testimonials = [
   .role {
     font-size: 0.85rem;
     color: var(--color-muted);
+  }
+
+  .referral {
+    text-align: center;
+    margin-top: clamp(2rem, 4vw, 3rem);
+    padding-top: clamp(1.5rem, 3vw, 2rem);
+    border-top: 1px solid var(--color-border);
+  }
+  .referral-text {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--color-maroon-900);
+    margin-bottom: 1rem;
+  }
+  .referral-btn {
+    font-size: 0.95rem;
   }
 
   @media (max-width: 900px) {
