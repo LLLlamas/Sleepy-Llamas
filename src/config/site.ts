@@ -12,7 +12,7 @@ export const site = {
     'Certified doula support and overnight sleep training, delivered with warmth, expertise, and deep care for every family we meet.',
 
   // --- Contact (TODO: replace with real values) ---
-  email: 'sleepyllamas@gmail.com',
+  email: 'sleepyllamasdoula@gmail.com',
   phone: '(555) 123-4567',              // TODO
   phoneHref: '+15551234567',            // TODO — digits only for tel: links
   serviceArea: 'the New York Area',
@@ -20,7 +20,7 @@ export const site = {
 
   // --- Payment handles (shown AFTER consultation — informational only) ---
   venmoHandle: '@sleepy-llamas',        // TODO
-  zelleHandle: 'hello@sleepyllamas.example', // TODO
+  zelleHandle: 'sleepyllamasdoula@gmail.com', // TODO — update if using a different Zelle email
   stripePaymentLink: '',                // TODO — paste a Stripe Payment Link URL when ready
 
   // --- Social (optional, leave empty strings to hide) ---

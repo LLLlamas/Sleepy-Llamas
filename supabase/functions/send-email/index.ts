@@ -11,7 +11,7 @@
 // cannot attach JWTs.
 //
 // Required Supabase secrets (set via `supabase secrets set ...`):
-//   GMAIL_USER           — e.g. sleepyllamas@gmail.com
+//   GMAIL_USER           — e.g. sleepyllamasdoula@gmail.com
 //   GMAIL_APP_PASSWORD   — 16-char Google App Password (NOT the login pw)
 //   EDGE_SHARED_SECRET   — high-entropy random string, same value in
 //                          app_config.email_fn_secret in Postgres

@@ -86,15 +86,15 @@ REVOKE ALL ON public.app_config FROM anon, authenticated;
 --   WHERE key = 'admin_pin_hash';
 
 INSERT INTO public.app_config (key, value) VALUES
-  ('owner_email',       'sleepyllamas@gmail.com'),
+  ('owner_email',       'sleepyllamasdoula@gmail.com'),
   ('owner_name',        'Owner Name'),                    -- TODO: your real name
-  ('sender_email',      'sleepyllamas@gmail.com'),
+  ('sender_email',      'sleepyllamasdoula@gmail.com'),
   ('sender_name',       'Sleepy Llamas'),
   ('email_fn_url',      'https://kozbrcqehylhzoocvfby.supabase.co/functions/v1/send-email'),
   ('email_fn_secret',   'CHANGE_ME_TO_A_32_CHAR_SECRET'), -- TODO: run openssl rand -base64 32
   ('admin_pin_hash',    crypt('1234', gen_salt('bf'))),   -- TODO: change PIN!
   ('venmo_handle',      'sleepy-llamas'),                 -- TODO
-  ('zelle_display',     'sleepyllamas@gmail.com'),
+  ('zelle_display',     'sleepyllamasdoula@gmail.com'),
   ('zelle_display_type','email')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
