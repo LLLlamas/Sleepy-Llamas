@@ -17,6 +17,8 @@ export const site = {
   phoneHref: '+15551234567',            // TODO — digits only for tel: links
   serviceArea: 'the New York Area',
   responseTime: 'within 24 hours',
+  whatsapp: '+15551234567',             // TODO — digits with country code for wa.me link
+  whatsappDisplay: '(555) 123-4567',    // TODO — formatted for display
 
   // --- Payment handles (shown AFTER consultation — informational only) ---
   venmoHandle: '@sleepy-llamas',        // TODO
