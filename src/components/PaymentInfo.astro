@@ -52,6 +52,47 @@ import { site } from '../config/site';
     <p class="payment-footnote reveal reveal-delay-2">
       All payments are discussed after your consultation &mdash; never before.
     </p>
+
+    <!-- Insurance & Benefits -->
+    <div class="benefits reveal reveal-delay-3">
+      <div class="benefits-inner">
+        <div class="benefits-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M16 3l12 5v8c0 7.5-5.4 12.5-12 15-6.6-2.5-12-7.5-12-15V8l12-5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 16l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="benefits-copy">
+          <h3>Insurance &amp; Benefits Reimbursement</h3>
+          <p>
+            Many families use <strong>HSA</strong>, <strong>FSA</strong>, or
+            <strong>Carrot Fertility</strong> benefits to cover doula and sleep
+            training services. I provide a detailed superbill after each billing
+            cycle that you can submit to your plan administrator for reimbursement.
+          </p>
+          <ul class="benefits-list" role="list">
+            <li>
+              <strong>HSA / FSA</strong> &mdash; Doula care often qualifies as an
+              eligible medical expense. Pay with your HSA/FSA debit card or submit
+              your superbill for reimbursement. A Letter of Medical Necessity from
+              your OB or midwife can help.
+            </li>
+            <li>
+              <strong>Carrot Fertility</strong> &mdash; If your employer offers
+              Carrot benefits, submit my info through your Carrot portal and I&rsquo;ll
+              complete the credentialing process. You pay me directly; Carrot
+              reimburses you.
+            </li>
+            <li>
+              <strong>Other benefits</strong> &mdash; Some employers offer doula
+              stipends or wellness reimbursements. Ask your HR team &mdash; you might
+              be surprised!
+            </li>
+          </ul>
+          <p class="benefits-note">
+            Not sure if you&rsquo;re covered? Reach out and I&rsquo;ll help you
+            figure it out &mdash; no charge, no pressure.
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -133,10 +174,82 @@ import { site } from '../config/site';
     font-size: 0.88rem;
   }
 
+  /* Insurance & Benefits */
+  .benefits {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+    padding-top: clamp(2rem, 4vw, 3rem);
+    border-top: 1px solid var(--color-border);
+  }
+  .benefits-inner {
+    display: flex;
+    gap: 1.5rem;
+    max-width: 780px;
+    margin: 0 auto;
+    background: var(--color-cream);
+    border-radius: var(--radius-lg);
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--color-border);
+  }
+  .benefits-icon {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--color-blush-200);
+    color: var(--color-maroon-700);
+    display: grid;
+    place-items: center;
+  }
+  .benefits-icon svg { width: 28px; height: 28px; }
+  .benefits-copy h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+  .benefits-copy p {
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    line-height: 1.6;
+  }
+  .benefits-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .benefits-list li {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    line-height: 1.55;
+    padding-left: 1.25rem;
+    position: relative;
+  }
+  .benefits-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--color-maroon-500);
+    font-weight: 700;
+  }
+  .benefits-list li strong {
+    color: var(--color-maroon-900);
+  }
+  .benefits-note {
+    font-size: 0.88rem;
+    font-style: italic;
+    margin-bottom: 0;
+  }
+
   @media (max-width: 760px) {
     .payment-grid {
       grid-template-columns: 1fr;
       max-width: 420px;
+    }
+    .benefits-inner {
+      flex-direction: column;
+      align-items: flex-start;
     }
   }
 </style>

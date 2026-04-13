@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superbill — Sleepy Llamas</title>
+  <style>
+    /* ── Print-friendly superbill ── */
+    @page { size: letter; margin: 0.65in 0.75in; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Inter, -apple-system, sans-serif;
+      font-size: 11pt;
+      color: #2a1418;
+      line-height: 1.45;
+      max-width: 8.5in;
+      margin: 0 auto;
+      padding: 0.5in 0.6in;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 3px solid #6b1a28;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .brand h1 {
+      font-size: 22pt;
+      color: #6b1a28;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand p {
+      font-size: 9pt;
+      color: #7a5a5f;
+      margin-top: 2px;
+    }
+    .doc-title {
+      text-align: right;
+    }
+    .doc-title h2 {
+      font-size: 14pt;
+      color: #6b1a28;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .doc-title p {
+      font-size: 9pt;
+      color: #7a5a5f;
+      margin-top: 4px;
+    }
+
+    /* ── Info grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .info-box {
+      background: #fdf6f4;
+      border: 1px solid rgba(61, 15, 23, 0.1);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .info-box h3 {
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #a83246;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 10pt;
+      padding: 3px 0;
+    }
+    .info-row .label {
+      color: #7a5a5f;
+      font-weight: 500;
+    }
+    .info-row .value {
+      color: #2a1418;
+      font-weight: 500;
+      text-align: right;
+    }
+
+    /* ── Services table ── */
+    .services-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .services-table thead th {
+      background: #6b1a28;
+      color: #fffaf5;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    .services-table thead th:last-child,
+    .services-table thead th:nth-child(4) {
+      text-align: right;
+    }
+    .services-table tbody td {
+      padding: 10px 12px;
+      font-size: 10pt;
+      border-bottom: 1px solid rgba(61, 15, 23, 0.08);
+    }
+    .services-table tbody td:last-child,
+    .services-table tbody td:nth-child(4) {
+      text-align: right;
+    }
+    .services-table tbody tr:nth-child(even) {
+      background: #fdf6f4;
+    }
+
+    /* ── Totals ── */
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 28px;
+    }
+    .totals-box {
+      width: 280px;
+      border: 1px solid rgba(61, 15, 23, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 16px;
+      font-size: 10pt;
+    }
+    .totals-row.total {
+      background: #6b1a28;
+      color: #fffaf5;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    .totals-row .label {
+      color: #7a5a5f;
+    }
+    .totals-row.total .label {
+      color: #fffaf5;
+    }
+
+    /* ── Notes ── */
+    .notes {
+      background: #fdf6f4;
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(61, 15, 23, 0.1);
+    }
+    .notes h3 {
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #a83246;
+      margin-bottom: 8px;
+    }
+    .notes p, .notes li {
+      font-size: 9.5pt;
+      color: #7a5a5f;
+      line-height: 1.5;
+    }
+    .notes ul {
+      padding-left: 16px;
+      margin-top: 6px;
+    }
+    .notes li { margin-bottom: 3px; }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid rgba(61, 15, 23, 0.1);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5pt;
+      color: #7a5a5f;
+    }
+    .footer a { color: #6b1a28; text-decoration: none; }
+
+    /* ── Stamp/badge ── */
+    .paid-stamp {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1.5px solid #2e7d32;
+    }
+
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PRINT BUTTON (hidden on print) -->
+  <div class="no-print" style="text-align:center; margin-bottom: 24px; padding: 12px; background: #fdf6f4; border-radius: 8px; border: 1px solid rgba(61,15,23,0.1);">
+    <p style="font-size: 10pt; color: #7a5a5f; margin-bottom: 8px;">This is a mock superbill template. Print or save as PDF with Ctrl+P / Cmd+P.</p>
+    <button onclick="window.print()" style="background: #6b1a28; color: #fffaf5; border: none; padding: 8px 24px; border-radius: 999px; cursor: pointer; font-size: 10pt; font-weight: 600;">Print / Save as PDF</button>
+  </div>
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header">
+    <div class="brand">
+      <h1>Sleepy Llamas</h1>
+      <p>Certified Overnight Doula &amp; Sleep Specialist</p>
+      <p>sleepyllamasdoula@gmail.com &middot; (555) 123-4567</p>
+      <p>New York, NY</p>
+    </div>
+    <div class="doc-title">
+      <h2>Superbill</h2>
+      <p>Invoice #SL-2026-0042</p>
+      <p>Date issued: April 12, 2026</p>
+      <p style="margin-top:6px"><span class="paid-stamp">Paid</span></p>
+    </div>
+  </div>
+
+  <!-- ═══ PROVIDER + CLIENT INFO ═══ -->
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>Provider Information</h3>
+      <div class="info-row"><span class="label">Provider</span><span class="value">Catalina [Last Name]</span></div>
+      <div class="info-row"><span class="label">Business</span><span class="value">Sleepy Llamas LLC</span></div>
+      <div class="info-row"><span class="label">EIN</span><span class="value">XX-XXXXXXX</span></div>
+      <div class="info-row"><span class="label">NPI (if applicable)</span><span class="value">XXXXXXXXXX</span></div>
+      <div class="info-row"><span class="label">Credential</span><span class="value">Certified Postpartum Doula</span></div>
+      <div class="info-row"><span class="label">Taxonomy Code</span><span class="value">174H00000X</span></div>
+    </div>
+    <div class="info-box">
+      <h3>Client Information</h3>
+      <div class="info-row"><span class="label">Client</span><span class="value">Sarah &amp; Marcus Johnson</span></div>
+      <div class="info-row"><span class="label">Child</span><span class="value">Emma Johnson (5 months)</span></div>
+      <div class="info-row"><span class="label">Address</span><span class="value">123 Park Ave, Apt 4B</span></div>
+      <div class="info-row"><span class="label">&nbsp;</span><span class="value">New York, NY 10001</span></div>
+      <div class="info-row"><span class="label">Email</span><span class="value">sarah.j@email.com</span></div>
+      <div class="info-row"><span class="label">Phone</span><span class="value">(212) 555-0199</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ DIAGNOSIS / REASON ═══ -->
+  <div class="info-box" style="margin-bottom: 20px;">
+    <h3>Diagnosis / Reason for Service</h3>
+    <div class="info-row"><span class="label">ICD-10 Code</span><span class="value">Z76.2 &mdash; Health supervision of other healthy infant and child</span></div>
+    <div class="info-row"><span class="label">Clinical summary</span><span class="value">Overnight postpartum doula support &amp; gentle infant sleep training</span></div>
+  </div>
+
+  <!-- ═══ SERVICES TABLE ═══ -->
+  <table class="services-table">
+    <thead>
+      <tr>
+        <th>Date of Service</th>
+        <th>CPT Code</th>
+        <th>Description</th>
+        <th>Hours</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>03/15/2026</td>
+        <td>99499</td>
+        <td>Overnight doula support &amp; sleep training (8 PM &ndash; 7 AM)</td>
+        <td>11</td>
+        <td>$620.00</td>
+      </tr>
+      <tr>
+        <td>03/17/2026</td>
+        <td>99499</td>
+        <td>Overnight doula support &amp; sleep training (8 PM &ndash; 7 AM)</td>
+        <td>11</td>
+        <td>$620.00</td>
+      </tr>
+      <tr>
+        <td>03/19/2026</td>
+        <td>99499</td>
+        <td>Overnight doula support &amp; sleep training (8 PM &ndash; 7 AM)</td>
+        <td>11</td>
+        <td>$620.00</td>
+      </tr>
+      <tr>
+        <td>03/22/2026</td>
+        <td>99499</td>
+        <td>Overnight doula support &amp; sleep training (8 PM &ndash; 7 AM)</td>
+        <td>11</td>
+        <td>$620.00</td>
+      </tr>
+      <tr>
+        <td>03/15/2026</td>
+        <td>S9442</td>
+        <td>Initial sleep consultation &amp; custom plan development</td>
+        <td>1</td>
+        <td>$0.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══ TOTALS ═══ -->
+  <div class="totals">
+    <div class="totals-box">
+      <div class="totals-row"><span class="label">Subtotal</span><span>$2,480.00</span></div>
+      <div class="totals-row"><span class="label">Package discount</span><span>$0.00</span></div>
+      <div class="totals-row"><span class="label">Amount paid</span><span>$2,480.00</span></div>
+      <div class="totals-row"><span class="label">Payment method</span><span>Venmo</span></div>
+      <div class="totals-row"><span class="label">Payment date</span><span>03/14/2026</span></div>
+      <div class="totals-row total"><span class="label">Balance due</span><span>$0.00</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ NOTES ═══ -->
+  <div class="notes">
+    <h3>Notes for Reimbursement</h3>
+    <p>This superbill is provided for insurance reimbursement purposes. Please submit to your HSA/FSA administrator or benefits provider.</p>
+    <ul>
+      <li><strong>CPT 99499</strong> &mdash; Unlisted evaluation and management service (commonly used for doula/postpartum support)</li>
+      <li><strong>CPT S9442</strong> &mdash; Birthing classes, per session (used for sleep consultation)</li>
+      <li><strong>Taxonomy 174H00000X</strong> &mdash; Health Service Providers, Doula</li>
+      <li>A Letter of Medical Necessity from your OB, midwife, or pediatrician may be required by your plan</li>
+    </ul>
+  </div>
+
+  <!-- ═══ PROVIDER SIGNATURE ═══ -->
+  <div class="info-box" style="margin-bottom: 24px;">
+    <h3>Provider Attestation</h3>
+    <p style="font-size: 9.5pt; color: #7a5a5f; margin-bottom: 12px;">
+      I certify that the services listed above were personally provided by me on the dates indicated.
+    </p>
+    <div class="info-grid" style="margin-bottom: 0;">
+      <div>
+        <div class="info-row"><span class="label">Signature</span><span class="value" style="border-bottom: 1px solid #ccc; min-width: 180px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      </div>
+      <div>
+        <div class="info-row"><span class="label">Date</span><span class="value" style="border-bottom: 1px solid #ccc; min-width: 120px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <div class="footer">
+    <span>Sleepy Llamas &middot; Certified Doula &amp; Sleep Specialist &middot; New York, NY</span>
+    <span><a href="mailto:sleepyllamasdoula@gmail.com">sleepyllamasdoula@gmail.com</a></span>
+  </div>
+
+</body>
+</html>

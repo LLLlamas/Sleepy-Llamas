@@ -312,7 +312,9 @@
   .vm-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-muted); margin-bottom: 0.35rem; margin-top: 0.9rem; transition: color 0.2s var(--ease-out); }
   .vm-field:has(input:not(:placeholder-shown)) .vm-label,
   .vm-field:has(textarea:not(:placeholder-shown)) .vm-label,
-  .vm-field:has(select) .vm-label { color: var(--color-maroon-700); }
+  .vm-field:has(input:focus) .vm-label,
+  .vm-field:has(textarea:focus) .vm-label,
+  .vm-label.filled { color: var(--color-maroon-700); }
   .modal input[type='text'], .modal input[type='email'], .modal input[type='tel'],
   .modal input[type='password'], .modal input[type='number'], .modal input[type='time'],
   .modal textarea {
@@ -706,9 +708,25 @@
     vmForm.removeAttribute('hidden'); vmSuccess.setAttribute('hidden', '');
     vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request';
     visitorModal.classList.add('open');
+    syncModalLabels();
     setTimeout(() => vmChildName.focus(), 80);
   }
   function closeVisitorModal() { visitorModal.classList.remove('open'); }
+
+  // Sync label colors for inputs that CSS :placeholder-shown can't handle (time, pre-filled)
+  function syncModalLabels() {
+    visitorModal.querySelectorAll('.vm-field').forEach(field => {
+      const input = field.querySelector('input, textarea') as HTMLInputElement | null;
+      const label = field.querySelector('.vm-label');
+      if (!input || !label) return;
+      const hasFill = input.value.trim().length > 0;
+      label.classList.toggle('filled', hasFill);
+    });
+  }
+  visitorModal.querySelectorAll('.vm-field input, .vm-field textarea').forEach(el => {
+    el.addEventListener('input', syncModalLabels);
+    el.addEventListener('change', syncModalLabels);
+  });
 
   async function submitVisitorRequest() {
     vmClearError();

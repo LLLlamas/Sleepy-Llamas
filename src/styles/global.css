@@ -277,10 +277,9 @@ input, textarea, select {
   transition: color 0.2s var(--ease-out);
 }
 
-/* Label turns maroon when its sibling input has content */
+/* Label turns maroon when its sibling input has content or is focused */
 .field:has(input:not(:placeholder-shown)) > label,
 .field:has(textarea:not(:placeholder-shown)) > label,
-.field:has(select:not([value=""])) > label,
 .field:has(input:focus) > label,
 .field:has(textarea:focus) > label,
 .field:has(select:focus) > label {
