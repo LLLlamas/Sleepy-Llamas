@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Baby, LogEvent, Shift, SleepSession } from '../db/types';
 import type { Unit } from '../lib/units';
 import { computeTotals, buildSummaryText } from '../lib/summary';
 import { useRecentShifts } from '../db/hooks';
 import { useToast } from '../state/ToastContext';
-import { DeleteRow } from '../components/sheets/DeleteRow';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import {
   dayNumber,
   fmtClockLong,
@@ -51,8 +51,48 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
   const { showToast } = useToast();
   const recent = useRecentShifts(baby.id);
   const totals = computeTotals(events, sleepSessions, now);
-  const text = buildSummaryText(baby, shift, events, sleepSessions, unit, now);
+  const generated = buildSummaryText(baby, shift, events, sleepSessions, unit, now);
   const [shareSupported] = useState(() => typeof navigator !== 'undefined' && 'share' in navigator);
+
+  // Editable handoff: `draft` holds the user's edits (persisted per shift so a
+  // tab switch / reload doesn't lose them). null = use the live auto-generated text.
+  const draftKey = `moonlog.handoff.${shift.id}`;
+  const [draft, setDraft] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(draftKey);
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    try {
+      setDraft(localStorage.getItem(draftKey));
+    } catch {
+      setDraft(null);
+    }
+  }, [draftKey]);
+
+  const text = draft ?? generated;
+  const edited = draft !== null;
+  const editDraft = (v: string) => {
+    setDraft(v);
+    try {
+      localStorage.setItem(draftKey, v);
+    } catch {
+      /* ignore */
+    }
+  };
+  const resetDraft = () => {
+    setDraft(null);
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+    showToast('Reset to the auto-generated summary');
+  };
+
+  const [confirmEnd, setConfirmEnd] = useState(false);
 
   const onCopy = async () => {
     const ok = await copyText(text);
@@ -136,30 +176,52 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
         </button>
       </div>
 
-      <div className="section-label">Handoff text</div>
-      <pre
-        style={{
-          whiteSpace: 'pre-wrap',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.78rem',
-          lineHeight: 1.5,
-          color: 'var(--soft)',
-          background: 'var(--raised)',
-          border: '1px solid var(--line)',
-          borderRadius: 'var(--r-md)',
-          padding: '14px',
-          margin: '0 0 18px',
-          overflowX: 'auto',
-        }}
-      >
-        {text}
-      </pre>
+      <div className="section-head">
+        <span className="section-label">Handoff — edit before sending</span>
+        {edited && (
+          <button type="button" className="section-action" onClick={resetDraft}>
+            Reset
+          </button>
+        )}
+      </div>
+      <textarea
+        className="handoff-edit"
+        value={text}
+        onChange={(e) => editDraft(e.target.value)}
+        aria-label="Handoff summary (editable)"
+        spellCheck={false}
+      />
 
       <div className="section-label">End of shift</div>
       <p className="screen-sub" style={{ marginBottom: 10 }}>
         Archives this shift and starts a fresh one.
       </p>
-      <DeleteRow label="End shift & start fresh" onDelete={onEndShift} />
+      <button
+        type="button"
+        className="btn btn--danger btn--block"
+        onClick={() => setConfirmEnd(true)}
+      >
+        End shift &amp; start fresh
+      </button>
+
+      {confirmEnd && (
+        <ConfirmDialog
+          title="End shift & start fresh?"
+          message={`This archives ${baby.name}'s current shift and starts a new, empty one. Copy or share the handoff first — it won't be shown here again.`}
+          confirmLabel="End shift"
+          danger
+          onCancel={() => setConfirmEnd(false)}
+          onConfirm={() => {
+            setConfirmEnd(false);
+            try {
+              localStorage.removeItem(draftKey);
+            } catch {
+              /* ignore */
+            }
+            onEndShift();
+          }}
+        />
+      )}
 
       {archived.length > 0 && (
         <>

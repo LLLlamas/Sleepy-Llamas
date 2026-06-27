@@ -897,6 +897,42 @@ select {
   font-weight: 600;
 }
 
+/* editable handoff text */
+.handoff-edit {
+  width: 100%;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px;
+  min-height: 256px;
+  resize: vertical;
+  margin-bottom: 18px;
+}
+.handoff-edit:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* confirmation dialog */
+.confirm-msg {
+  color: var(--soft);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0 0 18px;
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+.confirm-actions .btn {
+  flex: 1 1 0;
+}
+
 .note-banner {
   background: var(--raised);
   border: 1px solid var(--line);
