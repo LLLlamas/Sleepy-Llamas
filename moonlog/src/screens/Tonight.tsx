@@ -43,6 +43,9 @@ export function Tonight({
           + past sleep
         </button>
       </div>
+      {(events.length > 0 || sleepSessions.length > 0) && (
+        <p className="timeline-hint">Tap any entry to edit or delete it.</p>
+      )}
       <Timeline
         events={events}
         sleepSessions={sleepSessions}

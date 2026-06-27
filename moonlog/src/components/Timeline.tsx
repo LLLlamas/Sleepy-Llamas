@@ -53,6 +53,7 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
                   {fmtClockShort(item.ev.at)} · {ago(item.ev.at)}
                 </span>
               </span>
+              <span className="row__chev" aria-hidden="true">›</span>
             </button>
           </li>
         ) : (
@@ -71,6 +72,7 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
                   {item.s.endAt ? '' : ' · running'}
                 </span>
               </span>
+              <span className="row__chev" aria-hidden="true">›</span>
             </button>
           </li>
         ),

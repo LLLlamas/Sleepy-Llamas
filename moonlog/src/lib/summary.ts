@@ -1,7 +1,17 @@
-import type { Baby, LogEvent, Shift, SleepSession, StoolColor } from '../db/types';
-import { dayNumber, fmtClockLong, fmtShortMin } from './time';
-import { displayAmount, type Unit } from './units';
-import { METHOD_LABEL_SHORT, STOOL_LABEL, isBottle, tagLabel } from './labels';
+import { format } from 'date-fns';
+import type {
+  Baby,
+  FeedEvent,
+  FeedMethod,
+  LogEvent,
+  NoteEvent,
+  Shift,
+  SleepSession,
+  StoolColor,
+} from '../db/types';
+import { dayNumber, fmtClockLong, fmtClockShort, fmtShortMin } from './time';
+import { formatAmount, type Unit } from './units';
+import { STOOL_LABEL, isBottle, tagLabel } from './labels';
 
 export interface Totals {
   feeds: number;
@@ -64,23 +74,24 @@ export function computeTotals(
   };
 }
 
-function amountText(ml: number, unit: Unit): string {
-  const v = displayAmount(ml, unit);
-  const num = v % 1 === 0 ? String(v) : v.toFixed(1);
-  return unit === 'oz' ? `${num}oz` : `${num}ml`;
+const WARM_METHOD: Record<FeedMethod, string> = {
+  'breast-left': 'left breast',
+  'breast-right': 'right breast',
+  'bottle-breastmilk': 'bottle, breastmilk',
+  'bottle-formula': 'bottle, formula',
+};
+
+function warmFeedLine(ev: FeedEvent, unit: Unit): string {
+  const bits: string[] = [];
+  if (isBottle(ev.method) && ev.amountMl != null) bits.push(formatAmount(ev.amountMl, unit));
+  if (ev.durationMin) bits.push(`${ev.durationMin} min`);
+  return bits.length ? `${WARM_METHOD[ev.method]} — ${bits.join(', ')}` : WARM_METHOD[ev.method];
 }
 
-function feedSummaryLine(ev: Extract<LogEvent, { type: 'feed' }>, unit: Unit): string {
-  let s = METHOD_LABEL_SHORT[ev.method];
-  if (isBottle(ev.method) && ev.amountMl != null) s += ` ${amountText(ev.amountMl, unit)}`;
-  if (ev.durationMin) s += ` (${ev.durationMin}m)`;
-  return s;
-}
-
-function noteSummaryLine(ev: Extract<LogEvent, { type: 'note' }>): string {
+function noteSummaryLine(ev: NoteEvent): string {
   const parts: string[] = [];
   if (ev.text) parts.push(ev.text);
-  if (ev.tempF != null) parts.push(`Temp ${ev.tempF}°F`);
+  if (ev.tempF != null) parts.push(`temp ${ev.tempF}°F`);
   if (ev.tags?.length) {
     const extra = ev.tags.filter((t) => t !== 'temp').map(tagLabel);
     if (extra.length) parts.push(extra.join(', '));
@@ -88,7 +99,10 @@ function noteSummaryLine(ev: Extract<LogEvent, { type: 'note' }>): string {
   return parts.join(' · ') || 'Note';
 }
 
-/** Plain-text night summary matching spec §7, for clipboard / Web Share. */
+/**
+ * Warm, human-readable night summary for the morning handoff. Stays plain text
+ * (emoji included) so it pastes cleanly into Messages / email / Notes.
+ */
 export function buildSummaryText(
   baby: Baby,
   shift: Shift,
@@ -102,48 +116,54 @@ export function buildSummaryText(
     (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
   );
   const day = dayNumber(baby.birthAt, now);
+  const dateLabel = format(new Date(shift.startedAt), 'EEE, MMM d');
   const start = fmtClockLong(shift.startedAt);
   const end = fmtClockLong(shift.endedAt ?? now);
 
-  const lines: string[] = [];
-  lines.push(`🌙 Night summary — ${baby.name}, Day ${day}`);
-  const cg = shift.caregiver ? ` (caregiver: ${shift.caregiver})` : '';
-  lines.push(`Shift: ${start} – ${end}${cg}`);
-  lines.push('');
+  const L: string[] = [];
+  L.push(`🌙 ${baby.name}'s night · Day ${day}`);
+  L.push(`${dateLabel} · ${start} – ${end}`);
+  if (shift.caregiver) L.push(`Cared for by ${shift.caregiver}`);
+  L.push('');
 
-  const ozTotal = displayAmount(totals.feedMl, unit);
-  const totalAmt = totals.feedMl
-    ? unit === 'oz'
-      ? ` (~${ozTotal % 1 === 0 ? ozTotal : ozTotal.toFixed(1)} oz)`
-      : ` (~${ozTotal} ml)`
-    : '';
-  lines.push(`FEEDS — ${totals.feeds}${totalAmt}`);
+  // Feeds
+  const ozLabel = totals.feedMl ? ` (about ${formatAmount(totals.feedMl, unit)})` : '';
+  L.push(`🍼  Feeds · ${totals.feeds}${ozLabel}`);
   for (const ev of sorted) {
-    if (ev.type === 'feed') {
-      lines.push(`  ${fmtClockLong(ev.at)}  ${feedSummaryLine(ev, unit)}`);
-    }
+    if (ev.type === 'feed') L.push(`     ${fmtClockShort(ev.at)}  ${warmFeedLine(ev, unit)}`);
   }
+  L.push('');
 
-  const progression = totals.stoolProgression.map((s) => STOOL_LABEL[s].toLowerCase()).join(' → ');
-  const stoolPart = progression ? ` · stool ${progression}` : '';
-  lines.push(`DIAPERS — ${totals.diapers} (${totals.wet} wet, ${totals.dirty} dirty)${stoolPart}`);
+  // Diapers
+  L.push(`🧷  Diapers · ${totals.diapers}  (${totals.wet} wet, ${totals.dirty} dirty)`);
+  const prog = totals.stoolProgression.map((s) => STOOL_LABEL[s].toLowerCase()).join(' → ');
+  if (prog) L.push(`     stool: ${prog}`);
+  L.push('');
 
-  lines.push(
-    `SLEEP — ${fmtShortMin(totals.sleepMin)} across ${totals.stretches} stretch${
+  // Sleep
+  L.push(
+    `😴  Sleep · ${fmtShortMin(totals.sleepMin)} over ${totals.stretches} stretch${
       totals.stretches === 1 ? '' : 'es'
-    }${totals.longestMin ? ` (longest ${fmtShortMin(totals.longestMin)})` : ''}`,
+    }`,
   );
+  if (totals.longestMin) L.push(`     longest was ${fmtShortMin(totals.longestMin)}`);
+  L.push('');
 
+  // Notes
   if (totals.notes) {
-    lines.push('NOTES');
+    L.push('📝  Notes');
     for (const ev of sorted) {
-      if (ev.type === 'note') {
-        lines.push(`  ${fmtClockLong(ev.at)}  ${noteSummaryLine(ev)}`);
-      }
+      if (ev.type === 'note') L.push(`     ${fmtClockShort(ev.at)}  ${noteSummaryLine(ev)}`);
     }
+    L.push('');
   }
 
-  lines.push('');
-  lines.push('— logged with Moonlog');
-  return lines.join('\n');
+  // Warm sign-off
+  if (shift.caregiver) {
+    L.push('With care,');
+    L.push(`${shift.caregiver} 🌙`);
+  } else {
+    L.push('🌙 logged with Moonlog');
+  }
+  return L.join('\n');
 }
