@@ -17,6 +17,11 @@ const METHODS: FeedMethod[] = ['breast-left', 'breast-right', 'bottle-breastmilk
 
 const defaultAmount = (unit: Unit) => (unit === 'oz' ? 2 : 60);
 
+const AMOUNT_PRESETS: Record<Unit, number[]> = {
+  oz: [1, 1.5, 2, 2.5, 3],
+  ml: [30, 45, 60, 75, 90],
+};
+
 function amountText(value: number, unit: Unit): string {
   const n = value % 1 === 0 ? String(value) : value.toFixed(1);
   return `${n} ${unit}`;
@@ -95,6 +100,18 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
           >
             {amount > 0 ? amountText(amount, unit) : '—'}
           </Stepper>
+          <div className="preset-row">
+            {AMOUNT_PRESETS[unit].map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={`preset${amount === p ? ' is-on' : ''}`}
+                onClick={() => setAmount(p)}
+              >
+                {p % 1 === 0 ? p : p.toFixed(1)}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

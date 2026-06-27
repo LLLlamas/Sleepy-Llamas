@@ -33,6 +33,11 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
     );
   }
 
+  const ago = (iso: string) => {
+    const s = sinceISO(iso, now);
+    return s === 'just now' ? s : `${s} ago`;
+  };
+
   return (
     <ul className="timeline">
       {items.map((item) =>
@@ -44,9 +49,10 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
               </span>
               <span className="row__main">
                 <span className="row__title">{eventSummary(item.ev, unit)}</span>
-                <span className="row__time tabular">{fmtClockShort(item.ev.at)}</span>
+                <span className="row__meta tabular">
+                  {fmtClockShort(item.ev.at)} · {ago(item.ev.at)}
+                </span>
               </span>
-              <span className="row__age tabular">{sinceISO(item.ev.at, now)}</span>
             </button>
           </li>
         ) : (
@@ -60,7 +66,7 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
                   Sleep · {fmtClockShort(item.s.startAt)} →{' '}
                   {item.s.endAt ? fmtClockShort(item.s.endAt) : 'now'}
                 </span>
-                <span className="row__time tabular">
+                <span className="row__meta tabular">
                   {fmtShortMin(spanMinutes(item.s.startAt, item.s.endAt ?? now))}
                   {item.s.endAt ? '' : ' · running'}
                 </span>

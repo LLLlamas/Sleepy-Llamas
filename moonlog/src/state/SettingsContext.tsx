@@ -19,6 +19,7 @@ export interface Settings {
   dueSoonHours: number;
   tempUnit: 'F' | 'C';
   caregiver: string;
+  keepAwake: boolean;
   iosHintDismissed: boolean;
 }
 
@@ -29,6 +30,7 @@ const DEFAULTS: Settings = {
   dueSoonHours: 3,
   tempUnit: 'F',
   caregiver: '',
+  keepAwake: false,
   iosHintDismissed: false,
 };
 

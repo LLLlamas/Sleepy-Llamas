@@ -86,6 +86,7 @@ export function Settings({ baby, shift, now }: Props) {
   const [birth, setBirth] = useState(format(new Date(baby.birthAt), "yyyy-MM-dd'T'HH:mm"));
   const [caregiver, setCaregiver] = useState(shift.caregiver ?? settings.caregiver);
   const [persisted, setPersisted] = useState<boolean | null>(null);
+  const wakeSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null));
@@ -213,6 +214,22 @@ export function Settings({ baby, shift, now }: Props) {
         >
           {settings.dueSoonHours}h
         </Stepper>
+      </div>
+      <div className="setting">
+        <div className="setting__label">Keep screen awake</div>
+        <div className="setting__hint">
+          Stops the screen dimming while you log through a feed.
+          {!wakeSupported && ' (Not supported on this device.)'}
+        </div>
+        <Segmented
+          ariaLabel="Keep screen awake"
+          value={settings.keepAwake ? 'on' : 'off'}
+          options={[
+            { value: 'on', label: 'On' },
+            { value: 'off', label: 'Off' },
+          ]}
+          onChange={(v) => update({ keepAwake: v === 'on' })}
+        />
       </div>
 
       {/* Data */}

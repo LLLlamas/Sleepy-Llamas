@@ -11,6 +11,7 @@ interface Props {
   unit: Unit;
   dueSoonHours: number;
   onToggleSleep: () => void;
+  onAddSleep: () => void;
   onEditEvent: (ev: LogEvent) => void;
   onEditSleep: (s: SleepSession) => void;
 }
@@ -23,6 +24,7 @@ export function Tonight({
   unit,
   dueSoonHours,
   onToggleSleep,
+  onAddSleep,
   onEditEvent,
   onEditSleep,
 }: Props) {
@@ -35,7 +37,12 @@ export function Tonight({
         dueSoonHours={dueSoonHours}
         onToggleSleep={onToggleSleep}
       />
-      <div className="section-label">Timeline</div>
+      <div className="section-head">
+        <span className="section-label">Timeline</span>
+        <button type="button" className="section-action" onClick={onAddSleep}>
+          + past sleep
+        </button>
+      </div>
       <Timeline
         events={events}
         sleepSessions={sleepSessions}

@@ -25,6 +25,7 @@ import {
 import { useNow } from './state/NowContext';
 import { useSettings } from './state/SettingsContext';
 import { useToast } from './state/ToastContext';
+import { useWakeLock } from './lib/useWakeLock';
 import { buzz } from './lib/haptics';
 import type {
   DiaperEvent,
@@ -62,6 +63,9 @@ export default function App() {
 
   const [tab, setTab] = useState<TabId>('tonight');
   const [sheet, setSheet] = useState<SheetState>(null);
+
+  // optionally keep the screen on through the night (Settings toggle)
+  useWakeLock(settings.keepAwake);
 
   // ask for persistent storage once (spec §8: iOS may evict IndexedDB)
   useEffect(() => {
@@ -143,6 +147,7 @@ export default function App() {
             unit={settings.unit}
             dueSoonHours={settings.dueSoonHours}
             onToggleSleep={onToggleSleep}
+            onAddSleep={() => setSheet({ k: 'sleep' })}
             onEditEvent={editEvent}
             onEditSleep={editSleep}
           />
