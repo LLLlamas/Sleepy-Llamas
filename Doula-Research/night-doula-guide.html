@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Night Doula Guide — The 3-Day-Old Newborn</title>
+<style>
+  :root{
+    --bg:#f6f4fb; --card:#ffffff; --ink:#2c2a3a; --muted:#6b6880;
+    --lav:#7c6bb0; --lav-soft:#ece7f7; --line:#e4e0ef;
+    --good:#3f8f6e; --good-soft:#e7f4ee;
+    --warn:#b87b1e; --warn-soft:#fbf1de;
+    --alert:#b8324a; --alert-soft:#fbe6ea;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:24px 18px 80px}
+  header.top{text-align:center; padding:18px 0 6px}
+  header.top .moon{font-size:34px}
+  h1{font-size:1.55rem; margin:6px 0 2px; letter-spacing:-.01em}
+  .sub{color:var(--muted); font-size:.95rem; margin:0}
+  .stamp{color:var(--muted); font-size:.8rem; margin-top:6px}
+
+  /* Quick reference card */
+  .quick{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:16px 18px; margin:18px 0 8px; box-shadow:0 1px 3px rgba(50,40,90,.05);
+  }
+  .quick h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--lav); margin:0 0 10px}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  .qitem{background:var(--lav-soft); border-radius:10px; padding:10px 12px}
+  .qitem b{display:block; font-size:.78rem; color:var(--lav); text-transform:uppercase; letter-spacing:.04em}
+  .qitem span{font-size:.95rem}
+
+  /* Emergency banner */
+  .er{
+    background:var(--alert-soft); border:1px solid #f0c2cc; border-left:5px solid var(--alert);
+    border-radius:12px; padding:12px 16px; margin:14px 0;
+  }
+  .er b{color:var(--alert)}
+  .er .big{font-size:1.05rem; font-weight:700; color:var(--alert)}
+
+  /* Collapsible sections */
+  details{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    margin:12px 0; overflow:hidden; box-shadow:0 1px 2px rgba(50,40,90,.04);
+  }
+  summary{
+    cursor:pointer; padding:15px 18px; font-weight:600; font-size:1.04rem;
+    list-style:none; display:flex; align-items:center; gap:10px; user-select:none;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary .ico{font-size:1.15rem}
+  summary::after{content:"+"; margin-left:auto; color:var(--lav); font-size:1.3rem; font-weight:400; transition:transform .2s}
+  details[open] summary::after{content:"–"}
+  details[open] summary{border-bottom:1px solid var(--line)}
+  .body{padding:4px 18px 18px}
+  .body p{margin:.6em 0}
+  .body ul{margin:.5em 0; padding-left:1.25em}
+  .body li{margin:.32em 0}
+  .body h4{margin:1.1em 0 .3em; font-size:.97rem; color:var(--lav)}
+  .tag{display:inline-block; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:20px; vertical-align:middle}
+  .tag.do{background:var(--good-soft); color:var(--good)}
+  .tag.dont{background:var(--alert-soft); color:var(--alert)}
+  .note{background:var(--lav-soft); border-radius:10px; padding:10px 12px; font-size:.9rem; color:var(--ink); margin:.7em 0}
+  .callout-warn{background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 12px; margin:.7em 0; font-size:.92rem}
+  table{width:100%; border-collapse:collapse; font-size:.9rem; margin:.6em 0}
+  th,td{text-align:left; padding:7px 8px; border-bottom:1px solid var(--line)}
+  th{color:var(--lav); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em}
+  .timeline li{margin:.5em 0}
+  .timeline b{color:var(--lav)}
+  .src a{color:var(--lav); text-decoration:none}
+  .src a:hover{text-decoration:underline}
+  .src li{font-size:.85rem; color:var(--muted); margin:.3em 0}
+  .disclaim{font-size:.82rem; color:var(--muted); text-align:center; margin-top:26px; line-height:1.5}
+  .controls{text-align:center; margin:6px 0 2px}
+  .controls button{
+    background:var(--lav-soft); color:var(--lav); border:none; border-radius:20px;
+    padding:7px 16px; font-size:.85rem; font-weight:600; cursor:pointer; margin:0 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="moon">🌙</div>
+    <h1>Night Doula Field Guide</h1>
+    <p class="sub">Your first overnight shift · a 3-day-old newborn</p>
+    <p class="stamp">Sleepy Llamas · prepared June 2026 · tap any section to expand</p>
+  </header>
+
+  <!-- ALWAYS-VISIBLE QUICK REFERENCE -->
+  <div class="quick">
+    <h2>At a glance</h2>
+    <div class="grid">
+      <div class="qitem"><b>Feed every</b><span>2–3 hrs · 8–12 feeds / 24 hrs</span></div>
+      <div class="qitem"><b>Bottle amount</b><span>~1–2 oz per feed (this age)</span></div>
+      <div class="qitem"><b>Wet diapers (day 3)</b><span>~3–4 in 24 hrs</span></div>
+      <div class="qitem"><b>Dirty diapers (day 3)</b><span>~3, turning green→yellow</span></div>
+      <div class="qitem"><b>Sleep</b><span>14–17 hrs/day, 30 min–2 hr stretches</span></div>
+      <div class="qitem"><b>Safe sleep</b><span>Alone · on Back · in Crib, flat & bare</span></div>
+    </div>
+  </div>
+
+  <div class="er">
+    <span class="big">🚨 Call 911 / go to ER immediately</span>
+    <p style="margin:.4em 0 0">Rectal temperature <b>100.4°F (38°C) or higher</b> in a baby under 3 months · blue lips or face · struggling to breathe or chest pulling in · limp, won't wake, or unresponsive · seizure. Any fever this age is a medical emergency. <b>Wake the parents and call right away.</b></p>
+  </div>
+
+  <div class="controls">
+    <button onclick="document.querySelectorAll('details').forEach(d=>d.open=true)">Expand all</button>
+    <button onclick="document.querySelectorAll('details').forEach(d=>d.open=false)">Collapse all</button>
+  </div>
+
+  <!-- 1. BEFORE THE SHIFT -->
+  <details open>
+    <summary><span class="ico">📋</span> Before the shift — questions for the parents</summary>
+    <div class="body">
+      <p>Run through this at arrival so the night runs to <em>their</em> plan, not your guesses. Write the answers in your log.</p>
+      <h4>Feeding</h4>
+      <ul>
+        <li>Breast, bottle, or both? If pumping/formula, where are supplies and how is a bottle prepared?</li>
+        <li>How much per feed, and how often — feed on a schedule or on demand / on cue?</li>
+        <li>If breastfeeding: bring baby to mom to nurse, or give a bottle of expressed milk? Should I wake her for feeds?</li>
+        <li>Any latch or feeding issues so far? Any pediatrician instructions (e.g., "feed at least every 3 hrs")?</li>
+      </ul>
+      <h4>Sleep & soothing</h4>
+      <ul>
+        <li>Where does baby sleep? (bassinet/crib in which room)</li>
+        <li>Swaddled or not? Pacifier — yes or no?</li>
+        <li>What soothes this baby so far?</li>
+      </ul>
+      <h4>Health & safety</h4>
+      <ul>
+        <li>Birth weight and any feeding/weight or jaundice follow-up the pediatrician asked for?</li>
+        <li>Any allergies, medications, or special instructions?</li>
+        <li>How is the cord stump being cared for?</li>
+        <li>Pediatrician name & after-hours number; nearest ER; who to wake and how (text/knock)?</li>
+      </ul>
+      <h4>House & logistics</h4>
+      <ul>
+        <li>Where are diapers, wipes, spare clothes, burp cloths, thermometer?</li>
+        <li>Lights/sound preferences; do they want a written log each morning?</li>
+        <li>What counts as "wake me" vs. "handle it yourself"?</li>
+      </ul>
+      <div class="note">Confirm the one non-negotiable up front: <b>the maximum stretch the baby may go between feeds tonight.</b> At 3 days old, babies usually should not go longer than ~3 hours without feeding unless the pediatrician says otherwise.</div>
+    </div>
+  </details>
+
+  <!-- 2. ROLE & SCOPE -->
+  <details>
+    <summary><span class="ico">🎓</span> Your role & scope — and what training covers</summary>
+    <div class="body">
+      <p>A night doula / newborn care specialist gives overnight care so parents can sleep: <b>feeding, diapering, swaddling, soothing, settling baby back to sleep, and keeping a written log.</b> If mom is breastfeeding you may bring the baby to her, then burp, change, and resettle. Light baby-related tidying (washing bottles, sterilizing pump parts, restocking the changing station) is typical.</p>
+      <h4>Outside a doula's scope <span class="tag dont">do not</span></h4>
+      <p>A postpartum doula provides <b>emotional, physical, and educational support only</b>. Per DONA International's standards, doulas do <b>not</b> perform clinical or medical tasks — no diagnosing, no clinical exams, no taking blood pressure, no prescribing or giving medication, and they do not replace the doctor, midwife, or pediatrician. You observe and report; the parents and their providers make medical calls.</p>
+      <div class="callout-warn">Taking a baby's temperature sits on the line between roles. Clarify with the parents whether they want you to measure temperature, and always escalate concerns to <em>them</em> rather than acting medically.</div>
+      <h4>What doula / newborn-care training typically teaches</h4>
+      <ul>
+        <li>Newborn basics: safe handling, diapering, swaddling, bathing (sponge baths until the cord falls off), and soothing.</li>
+        <li>Feeding support: breastfeeding anatomy & latch help, paced bottle-feeding, safe formula prep and milk storage.</li>
+        <li>Newborn behavior, states of alertness, sleep patterns, and safe sleep.</li>
+        <li>The postpartum period: physical recovery, emotional well-being, and spotting signs of postpartum depression/anxiety.</li>
+        <li>Recognizing warning signs in baby and parent, and emergency response — including <b>infant CPR and choking first aid</b> (get/keep this certification current).</li>
+        <li>Professional standards: scope of practice, confidentiality, and code of ethics.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- 3. THE 3-DAY-OLD -->
+  <details>
+    <summary><span class="ico">👶</span> What's normal for a 3-day-old</summary>
+    <div class="body">
+      <p>Day 3 is a real transition point. Expect these — they're usually normal, not problems:</p>
+      <h4>Jaundice often peaks now</h4>
+      <p>Physiologic (normal) jaundice appears after the first 24 hours and typically <b>peaks around 48–96 hours</b> — i.e., right about day 3 — then fades over 1–2 weeks. It affects up to ~60% of full-term babies. Frequent feeding helps clear it. Watch for yellowing that spreads to the belly, arms, or legs, or a very sleepy baby who won't feed — report that to the parents/pediatrician.</p>
+      <h4>Weight is at its lowest</h4>
+      <p>It's normal for newborns to lose about <b>7–10% of birth weight</b> in the first days, with the low point usually on day 2, 3, or 4. Most babies are back to birth weight by about 2 weeks. This is why feeding on time tonight matters.</p>
+      <h4>Stools are changing color</h4>
+      <p>The black, sticky meconium of days 1–2 shifts to <b>greenish-brown "transitional" stool</b> around days 3–5, heading toward seedy yellow by day 5+. Greenish poop today is expected, not alarming.</p>
+      <h4>Day/night confusion & cluster feeding</h4>
+      <p>The circadian clock is immature, so sleep is spread evenly across day and night — newborns truly don't know night from day yet. Frequent "cluster" feeds, especially in the evening, are normal. Keep nights calm, dim, and boring (low light, quiet voice, minimal play) to gently nudge day/night sorting.</p>
+    </div>
+  </details>
+
+  <!-- 4. BEHAVIOR STATES -->
+  <details>
+    <summary><span class="ico">🌀</span> Reading the baby — 6 behavior states</summary>
+    <div class="body">
+      <p>Babies cycle through six states. Matching your response to the state is the whole game at night.</p>
+      <table>
+        <tr><th>State</th><th>Looks like</th><th>What to do</th></tr>
+        <tr><td>Deep / quiet sleep</td><td>Still, slow regular breathing, hard to rouse</td><td>Don't disturb — restorative sleep</td></tr>
+        <tr><td>Light / active sleep</td><td>Twitches, flutters, may stir or squeak</td><td>Wait — may resettle on their own</td></tr>
+        <tr><td>Drowsy</td><td>Heavy-lidded, slow, irregular breathing</td><td>Help toward sleep, or feed if due</td></tr>
+        <tr><td>Quiet alert</td><td>Calm, eyes open, focused</td><td>Best time to feed or bond</td></tr>
+        <tr><td>Active alert</td><td>Jerky movements, fussy, fidgety</td><td>Check needs early before crying</td></tr>
+        <tr><td>Crying</td><td>Full cry, hard to redirect</td><td>Soothe first, then feed</td></tr>
+      </table>
+      <div class="note"><b>Catch hunger early.</b> Crying is a <em>late</em> hunger sign. Earlier cues: stirring, hands to mouth, sucking motions, turning head and "rooting." A crying baby often must be calmed before it can latch or take a bottle.</div>
+    </div>
+  </details>
+
+  <!-- 5. FEEDING -->
+  <details>
+    <summary><span class="ico">🍼</span> Feeding — amounts, cues & burping</summary>
+    <div class="body">
+      <p>At this age, feed <b>every 2–3 hours, ~8–12 times in 24 hours</b>. Bottle-fed babies usually take about <b>1–2 oz per feed</b> in these early days. Always follow the parents' specific plan first.</p>
+      <h4>Paced bottle-feeding</h4>
+      <p>Hold baby semi-upright, keep the bottle close to horizontal, and let the baby draw milk rather than letting it pour. Pause often; let the baby take breaks. If baby pushes the bottle away but still seems hungry, try a brief pause, a burp, or repositioning before offering more.</p>
+      <h4>Burping</h4>
+      <p>Burp midway and after each feed. Three positions: <b>over the shoulder</b>, <b>sitting upright</b> supporting the chin/chest, or <b>face-down across your lap</b> — gently pat or rub the back. Some spit-up/dribbling with burps is common and normal.</p>
+      <h4>If breastfeeding</h4>
+      <p>Per the parents' wishes, bring baby to mom to nurse, then take over burping, changing, and resettling so she gets back to sleep faster. For a pumping parent, wash and sterilize pump parts and store milk safely.</p>
+      <div class="callout-warn">Never prop a bottle and walk away — choking and ear-infection risk. Stay with the baby for the whole feed.</div>
+    </div>
+  </details>
+
+  <!-- 6. SAFE SLEEP -->
+  <details>
+    <summary><span class="ico">🛏️</span> Safe sleep — the AAP rules</summary>
+    <div class="body">
+      <p>Every sleep, every time, including quick naps — remember <b>A, B, C: Alone, on Back, in a Crib.</b></p>
+      <ul>
+        <li><b>Back to sleep</b> for every sleep, by every caregiver — never side or tummy.</li>
+        <li><b>Firm, flat surface</b> (crib, bassinet, or play yard) with a tight-fitting mattress and fitted sheet only. Inclined surfaces (more than ~10°) are unsafe.</li>
+        <li><b>Bare crib:</b> no pillows, blankets, bumpers, quilts, or soft toys.</li>
+        <li><b>Room-share, don't bed-share.</b> Baby sleeps on their own surface near the parents — bed-sharing is not recommended.</li>
+        <li>Put baby down <b>drowsy but awake</b> when possible.</li>
+      </ul>
+      <div class="callout-warn">If a baby falls asleep on you or in a swing/seat, move them to the firm flat sleep surface. If you might doze off, put the baby down first.</div>
+    </div>
+  </details>
+
+  <!-- 7. SOOTHING -->
+  <details>
+    <summary><span class="ico">🤱</span> Soothing — the 5 S's & safe swaddling</summary>
+    <div class="body">
+      <p>Dr. Harvey Karp's <b>5 S's</b> recreate womb-like calm:</p>
+      <ul>
+        <li><b>Swaddle</b> — snug wrap reduces the startle reflex.</li>
+        <li><b>Side/Stomach position</b> — hold (never <em>sleep</em>) baby on side or tummy to calm.</li>
+        <li><b>Shush</b> — steady "shhh" or white noise.</li>
+        <li><b>Swing</b> — tiny, gentle, supported jiggle.</li>
+        <li><b>Suck</b> — pacifier or clean finger (with parents' okay).</li>
+      </ul>
+      <h4>Swaddle safely</h4>
+      <ul>
+        <li>Snug around the arms, <b>loose around the hips</b> — legs should bend up and out ("froggy"). Baby can take deep breaths.</li>
+        <li>A swaddled baby goes <b>on the back only</b>, and never with loose blanket edges near the face.</li>
+        <li><b>Stop swaddling at the first sign of rolling</b> (often 3–5 months) — but tonight, at 3 days, swaddling is appropriate if the parents use it.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- 8. DIAPERING & CORD -->
+  <details>
+    <summary><span class="ico">🧷</span> Diapering & umbilical cord care</summary>
+    <div class="body">
+      <h4>Diapers</h4>
+      <p>Change at each feed and whenever soiled. Wipe front to back. Track every wet and dirty diaper in the log — output is the main signal the baby is feeding enough. Expect roughly <b>3–4 wet and ~3 dirty</b> today, with counts rising over the next days.</p>
+      <h4>Cord stump — keep it clean & dry</h4>
+      <ul>
+        <li><b>No alcohol or scrubbing</b> — dry cord care is the standard; just keep it clean and dry.</li>
+        <li><b>Fold the diaper down</b> below the stump so urine doesn't soak it.</li>
+        <li><b>Sponge baths only</b> until the stump falls off (usually by ~3 weeks).</li>
+        <li>Report to parents: redness spreading on the belly, pus/foul smell, or active bleeding.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- 9. OVERNIGHT PLAN -->
+  <details>
+    <summary><span class="ico">🕙</span> The overnight plan — a sample rhythm</summary>
+    <div class="body">
+      <p>A common shift runs roughly <b>10 pm–6 am</b>. There's no rigid schedule with a newborn — you flow with the 2–3 hour feed cycle. A typical loop:</p>
+      <ul class="timeline">
+        <li><b>Arrival</b> — get the parent handoff, review the intake questions, locate supplies, confirm the max feed interval and "when to wake me" rule.</li>
+        <li><b>Settle the house</b> — dim lights, set white noise low, prep the changing station and a bottle if applicable.</li>
+        <li><b>The feed loop (repeat ~every 2–3 hrs):</b> watch for early hunger cues → change diaper → feed (paced bottle or bring to mom) → burp → change again if needed → swaddle → back down drowsy-but-awake on the firm flat surface → log it.</li>
+        <li><b>Between feeds</b> — keep baby safely asleep, do quiet baby-related tidying (wash bottles, restock diapers), rest your eyes but stay attentive.</li>
+        <li><b>Toward morning</b> — final feed/change, tidy the nursery, write the morning summary.</li>
+        <li><b>Handoff</b> — brief the parents: feeds, diaper counts, sleep stretches, anything you noticed.</li>
+      </ul>
+      <div class="note">Keep nights low-stimulation: minimal light, quiet voice, no play. Save interaction and bright light for daytime caregivers — it helps the baby learn night from day.</div>
+    </div>
+  </details>
+
+  <!-- 10. LOG -->
+  <details>
+    <summary><span class="ico">📝</span> What to log</summary>
+    <div class="body">
+      <p>A clear log is one of your most valued deliverables — it gives parents and the pediatrician an accurate picture. Track:</p>
+      <ul>
+        <li><b>Feeds</b> — time, breast or bottle, amount/duration, which side.</li>
+        <li><b>Diapers</b> — time, wet / dirty, stool color.</li>
+        <li><b>Sleep</b> — down and up times, stretch length, where.</li>
+        <li><b>Notes</b> — fussiness, spit-up, soothing that worked, anything you flagged to parents.</li>
+      </ul>
+      <table>
+        <tr><th>Time</th><th>Feed</th><th>Diaper</th><th>Sleep</th><th>Notes</th></tr>
+        <tr><td>10:30</td><td>1.5 oz EBM</td><td>wet</td><td>down 10:50</td><td>burped well</td></tr>
+        <tr><td>1:00</td><td>brought to mom</td><td>wet + dirty (green)</td><td>down 1:40</td><td>resettled easily</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <!-- 11. WARNING SIGNS -->
+  <details>
+    <summary><span class="ico">⚠️</span> Warning signs — wake the parents</summary>
+    <div class="body">
+      <p class="big" style="color:var(--alert);font-weight:700">Emergency — call 911 / ER and wake parents now:</p>
+      <ul>
+        <li>Rectal temp <b>100.4°F (38°C) or higher</b> (any fever under 3 months is an emergency).</li>
+        <li>Blue/grey lips or face; trouble breathing, fast/labored breaths, or chest pulling in.</li>
+        <li>Limp, floppy, won't wake, or not responding to voice or touch.</li>
+        <li>Seizure; or a rash of purple spots that doesn't fade when pressed.</li>
+        <li>Bulging or sunken soft spot on the head.</li>
+        <li>Choking that doesn't clear — begin infant choking first aid and call 911.</li>
+      </ul>
+      <p style="color:var(--warn);font-weight:700;margin-top:1em">Wake the parents to discuss (not 911, but don't wait):</p>
+      <ul>
+        <li>Won't feed, or far fewer wet/dirty diapers than expected (possible dehydration).</li>
+        <li>Inconsolable crying that nothing soothes, or a weak/high-pitched unusual cry.</li>
+        <li>Jaundice clearly worsening or spreading down the body; very sleepy and hard to wake for feeds.</li>
+        <li>Cord stump: spreading redness, pus, foul smell, or bleeding.</li>
+        <li>Repeated forceful vomiting (not normal spit-up).</li>
+      </ul>
+      <div class="note">When in doubt, tell the parents. You observe and escalate — they and the pediatrician make the medical decisions.</div>
+    </div>
+  </details>
+
+  <!-- SOURCES -->
+  <details>
+    <summary><span class="ico">📚</span> Sources</summary>
+    <div class="body src">
+      <p>All guidance drawn from pediatric and professional-association sources:</p>
+      <ul>
+        <li><a href="https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/how-often-and-how-much-should-your-baby-eat.aspx">AAP HealthyChildren — How Often & How Much Should Your Baby Eat</a></li>
+        <li><a href="https://www.healthychildren.org/English/ages-stages/baby/sleep/Pages/a-parents-guide-to-safe-sleep.aspx">AAP HealthyChildren — Safe Sleep (2022 policy explained)</a> · <a href="https://cribsforkids.org/aap-recommendations-2022/">AAP 2022 Recommendations summary</a></li>
+        <li><a href="https://www.healthychildren.org/English/ages-stages/baby/bathing-skin-care/Pages/Umbilical-Cord-Care.aspx">AAP HealthyChildren — Umbilical Cord Care</a> · <a href="https://www.mayoclinic.org/healthy-lifestyle/infant-and-toddler-health/in-depth/umbilical-cord/art-20048250">Mayo Clinic — Cord Care Do's & Don'ts</a></li>
+        <li><a href="https://www.healthychildren.org/English/health-issues/conditions/fever/Pages/Fever-and-Your-Baby.aspx">AAP HealthyChildren — Fever and Your Baby</a> · <a href="https://www.chop.edu/conditions-diseases/fever-newborn">CHOP — Fever in a Newborn</a></li>
+        <li><a href="https://www.healthychildren.org/English/ages-stages/baby/diapers-clothing/Pages/Swaddling-Is-it-Safe.aspx">AAP HealthyChildren — Swaddling: Is It Safe?</a> · <a href="https://www.happiestbaby.com/blogs/baby/the-5-s-s-for-soothing-babies">Dr. Harvey Karp — The 5 S's</a></li>
+        <li><a href="https://my.clevelandclinic.org/health/diseases/22263-jaundice-in-newborns">Cleveland Clinic — Newborn Jaundice</a> · <a href="https://www.ncbi.nlm.nih.gov/books/NBK532930/">StatPearls (NIH) — Neonatal Jaundice</a></li>
+        <li><a href="https://publications.aap.org/pediatrics/article/138/6/e20162625/52570/Weight-Change-Nomograms-for-the-First-Month-After">AAP Pediatrics — Newborn Weight-Change Nomograms</a> · <a href="https://kidshealth.org/en/parents/grownewborn.html">Nemours KidsHealth — Newborn Growth</a></li>
+        <li><a href="https://www.nationwidechildrens.org/family-resources-education/700childrens/2021/07/newborn-poop-meconium">Nationwide Children's — Newborn Poop & Meconium</a> · <a href="https://www.lllc.ca/poops-and-pees">La Leche League — Poops & Pees (diaper counts)</a></li>
+        <li><a href="https://birthwaysinc.com/a-newborns-6-states-of-consciousness-and-why-theyre-important/">Newborn's 6 States of Consciousness</a> · <a href="https://www.pampers.com/en-us/baby/newborn/article/paced-bottle-feeding">Pampers — Paced Bottle-Feeding</a></li>
+        <li><a href="https://www.dona.org/wp-content/uploads/2016/09/COE-SOP-Postpartum.pdf">DONA International — Postpartum Doula Scope of Practice & Code of Ethics</a> · <a href="https://dona.org/what-is-a-postpartum-doula/">DONA — What Is a Postpartum Doula</a></li>
+        <li><a href="https://newborncarespecialist.org/ncs-industry-standards/">NCSA — Newborn Care Specialist Industry Standards</a> · <a href="https://letmommysleep.com/blog/2022/04/28/whats-a-night-nanny/">Let Mommy Sleep — What's a Night Nanny</a></li>
+        <li><a href="https://motherbabysupport.net/professional-education/postpartum-doula-training/">Postpartum Doula Training Curriculum (Happy Mama Healthy Baby Alliance)</a> · <a href="https://lifespandoulas.com/postpartum-doula-training/">Lifespan Doulas — Training & Certification</a></li>
+      </ul>
+    </div>
+  </details>
+
+  <p class="disclaim">This guide is educational and reflects general pediatric and doula-profession guidance — it is not medical advice and does not replace the family's pediatrician, the parents' instructions, or your own certified training (including current infant CPR). When anything seems off, tell the parents and let them and their provider decide. You've got this. 🦙</p>
+
+</div>
+</body>
+</html>

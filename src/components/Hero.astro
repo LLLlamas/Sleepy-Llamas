@@ -1,13 +1,12 @@
 ---
 import { site } from '../config/site';
+const base = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const resumeHref = `${base}resume/`;
 ---
 
 <section class="hero" id="top">
-  <div class="hero-bg" aria-hidden="true">
-    <div class="hero-glow-1"></div>
-    <div class="hero-glow-2"></div>
-  </div>
-
   <div class="container hero-inner">
     <div class="hero-copy">
       <span class="eyebrow hero-anim hero-anim-1">Certified Doula &middot; Overnight Sleep Specialist</span>
@@ -16,13 +15,18 @@ import { site } from '../config/site';
         gentle beginnings.
       </h1>
       <p class="lead hero-anim hero-anim-3">
-        Certified overnight doula care and gentle sleep training for New York
-        families. Rest is not a luxury &mdash; it&rsquo;s the foundation of
-        bonding, healing, and joy.
+        I offer certified overnight doula care and gentle sleep support for New
+        York families. Rest is not a luxury &mdash; it&rsquo;s the foundation of
+        bonding, healing, and feeling like yourself again.
       </p>
       <div class="hero-actions hero-anim hero-anim-3">
         <a href="#contact" class="btn btn-primary">Reach out for a consultation</a>
         <a href="#services" class="hero-link">Explore services &rarr;</a>
+      </div>
+      <div class="hero-trust hero-anim hero-anim-3" aria-label="Catalina's experience highlights">
+        <span>8 years caring for infants and twins</span>
+        <span>Certified lactation support</span>
+        <a href={resumeHref}>View my resume</a>
       </div>
       <p class="hero-meta hero-anim hero-anim-3">
         Serving {site.serviceArea} &middot; Response {site.responseTime}
@@ -75,35 +79,9 @@ import { site } from '../config/site';
     position: relative;
     overflow: hidden;
     padding-block: clamp(3.5rem, 8vw, 6rem) clamp(4rem, 10vw, 8rem);
-    background: linear-gradient(180deg, var(--color-blush-100) 0%, var(--color-blush-200) 100%);
-  }
-
-  .hero-bg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-  .hero-glow-1,
-  .hero-glow-2 {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(90px);
-    opacity: 0.35;
-  }
-  .hero-glow-1 {
-    width: 520px;
-    height: 520px;
-    top: -180px;
-    right: -120px;
-    background: radial-gradient(circle, var(--color-maroon-300), transparent 70%);
-  }
-  .hero-glow-2 {
-    width: 400px;
-    height: 400px;
-    bottom: -140px;
-    left: -100px;
-    background: radial-gradient(circle, var(--color-gold), transparent 70%);
-    opacity: 0.22;
+    background:
+      linear-gradient(180deg, var(--color-blush-100) 0%, var(--color-blush-200) 100%),
+      repeating-linear-gradient(90deg, rgba(107, 26, 40, 0.04) 0 1px, transparent 1px 96px);
   }
 
   .hero-inner {
@@ -145,6 +123,32 @@ import { site } from '../config/site';
     transition: transform 0.3s var(--ease-out);
   }
   .hero-link:hover::after { transform: scaleX(1); }
+
+  .hero-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+  }
+  .hero-trust span,
+  .hero-trust a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 250, 245, 0.75);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .hero-trust a {
+    color: var(--color-maroon-700);
+  }
+  .hero-trust a:hover {
+    border-color: var(--color-maroon-300);
+  }
 
   .hero-meta {
     margin-top: 2rem;

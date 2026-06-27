@@ -53,6 +53,23 @@ jobs:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
 
+      # ----------------------------------------------------------------------
+      # Moonlog PWA — built separately and placed at /Sleepy-Llamas/Moonlog/
+      # so it installs as its own offline app while sharing this Pages site.
+      # ----------------------------------------------------------------------
+      - name: Install Moonlog deps
+        working-directory: moonlog
+        run: npm ci
+
+      - name: Build Moonlog PWA
+        working-directory: moonlog
+        run: npm run build
+
+      - name: Place Moonlog at /Moonlog
+        run: |
+          mkdir -p dist/Moonlog
+          cp -r moonlog/dist/. dist/Moonlog/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

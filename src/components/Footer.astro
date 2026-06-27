@@ -1,6 +1,11 @@
 ---
 import { site } from '../config/site';
 const year = new Date().getFullYear();
+const base = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const sectionHref = (id: string) => `${base}#${id}`;
+const resumeHref = `${base}resume/`;
 ---
 
 <footer class="footer">
@@ -23,11 +28,13 @@ const year = new Date().getFullYear();
       <div>
         <h4>Explore</h4>
         <ul role="list">
-          <li><a href="#about">About</a></li>
-          <li><a href="#services">Services</a></li>
-          <li><a href="#process">How It Works</a></li>
-          <li><a href="#availability">Availability</a></li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href={sectionHref('about')}>About</a></li>
+          <li><a href={sectionHref('services')}>Services</a></li>
+          <li><a href={sectionHref('process')}>How It Works</a></li>
+          <li><a href={sectionHref('availability')}>Availability</a></li>
+          <li><a href={resumeHref}>Resume</a></li>
+          <li><a href={`${base}Moonlog/`}>Moonlog · night log</a></li>
+          <li><a href={sectionHref('contact')}>Contact</a></li>
         </ul>
       </div>
       <div>

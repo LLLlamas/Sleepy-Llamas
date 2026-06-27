@@ -1,0 +1,783 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { resume } from '../config/resume';
+import { site } from '../config/site';
+
+const base = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const homeHref = `${base}#top`;
+const contactHref = `${base}#contact`;
+const resumeDescription =
+  'Explore my interactive resume, including postpartum doula training, newborn and twin care, lactation support, specialized developmental care, and bilingual family support.';
+---
+
+<BaseLayout
+  title={`Resume | ${resume.name} for ${site.brandName}`}
+  description={resumeDescription}
+  canonicalPath="/resume"
+  includeFaqSchema={false}
+>
+  <Nav />
+  <main class="resume-page">
+    <div class="resume-progress" aria-hidden="true">
+      <span class="resume-progress-bar"></span>
+    </div>
+
+    <section class="resume-hero" id="resume-top">
+      <div class="container resume-hero-inner">
+        <div class="resume-hero-copy hero-anim hero-anim-1">
+          <a href={homeHref} class="back-link">&larr; Back to Sleepy Llamas</a>
+          <span class="eyebrow">Interactive Resume</span>
+          <h1>My care history, made easy to explore.</h1>
+          <p class="lead">
+            A warm guided view of my hands-on experience with newborns, twins,
+            overnight care, lactation support, and specialized developmental
+            routines.
+          </p>
+          <div class="resume-actions">
+            <a href="#experience" class="btn btn-primary">Walk through experience</a>
+            <a href={contactHref} class="resume-text-link">Ask about fit &rarr;</a>
+          </div>
+        </div>
+
+        <aside class="resume-hero-card hero-anim hero-anim-2" aria-label="Resume summary">
+          <span class="card-kicker">{resume.location}</span>
+          <h2>{resume.name}</h2>
+          <p>{resume.title}</p>
+          <div class="hero-stat-grid">
+            {resume.highlights.map((item) => (
+              <div>
+                <strong>{item.value}</strong>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <div class="resume-cursor-note" aria-hidden="true">care + context + calm</div>
+      </div>
+    </section>
+
+    <nav class="resume-tabs" aria-label="Resume sections">
+      <div class="container resume-tabs-inner">
+        <a href="#snapshot" data-resume-tab="snapshot">Snapshot</a>
+        <a href="#care-map" data-resume-tab="care-map">Care Map</a>
+        <a href="#experience" data-resume-tab="experience">Experience</a>
+        <a href="#footnotes" data-resume-tab="footnotes">Care Notes</a>
+      </div>
+    </nav>
+
+    <section class="section resume-snapshot" id="snapshot">
+      <div class="container snapshot-grid">
+        <div class="snapshot-copy reveal">
+          <span class="eyebrow">At a glance</span>
+          <h2>Trained care with real newborn miles behind it.</h2>
+          <p class="lead">{resume.summary}</p>
+        </div>
+
+        <div class="training-panel reveal reveal-delay-1">
+          <h3>Training and credentials</h3>
+          <ul role="list">
+            {resume.training.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section care-map" id="care-map">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Care Map</span>
+          <h2>Where I&rsquo;m especially useful.</h2>
+          <p class="lead">
+            These notes connect resume line items to the kind of steady,
+            practical care families feel in the home.
+          </p>
+        </div>
+
+        <div class="care-map-grid">
+          {resume.careAreas.map((area, i) => (
+            <article class:list={['care-card', 'reveal', `reveal-delay-${Math.min(i + 1, 4)}`]} style={`--i:${i};`}>
+              <span class="care-number">0{i + 1}</span>
+              <h3>{area.title}</h3>
+              <p>{area.body}</p>
+              <details>
+                <summary>Why this matters</summary>
+                <p>{area.footnote}</p>
+              </details>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="section resume-experience" id="experience">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Experience</span>
+          <h2>A timeline of families, routines, and trust.</h2>
+          <p class="lead">
+            Family names are kept private here. The goal is to show the shape of
+            the work: the ages, transitions, care needs, and steady presence
+            I bring.
+          </p>
+        </div>
+
+        <ol class="experience-list" role="list">
+          {resume.experience.map((job, i) => (
+            <li class:list={['experience-item', 'reveal', `reveal-delay-${Math.min((i % 4) + 1, 4)}`]} style={`--i:${i};`}>
+              <div class="experience-dot" aria-hidden="true"></div>
+              <article class="experience-card">
+                <div class="experience-top">
+                  <div>
+                    <span class="experience-date">{job.dates}</span>
+                    <h3>{job.role}</h3>
+                    <p class="experience-place">{job.family} &middot; {job.location}</p>
+                  </div>
+                  <span class="experience-index">{String(i + 1).padStart(2, '0')}</span>
+                </div>
+
+                <div class="tag-row" aria-label="Care focus areas">
+                  {job.tags.map((tag) => (
+                    <span>{tag}</span>
+                  ))}
+                </div>
+
+                <ul class="experience-notes" role="list">
+                  {job.notes.map((note) => (
+                    <li>{note}</li>
+                  ))}
+                </ul>
+
+                <details class="experience-footnote">
+                  <summary>Care note</summary>
+                  <p>{job.footnote}</p>
+                </details>
+              </article>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="section resume-footnotes" id="footnotes">
+      <div class="container footnotes-inner reveal">
+        <div>
+          <span class="eyebrow">Private Family Footnotes</span>
+          <h2>What these roles looked like inside real homes.</h2>
+          <p>
+            These notes keep names private, but they show the particular kind of
+            help I gave each family.
+          </p>
+        </div>
+        <div class="footnote-stack">
+          {resume.experience.map((job, i) => (
+            <details open={i === 0}>
+              <summary>{job.location} &middot; {job.role}</summary>
+              <p>{job.footnote}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="resume-cta">
+      <div class="container resume-cta-inner reveal">
+        <h2>Want to talk through what your family needs?</h2>
+        <p>
+          Share where you are right now: newborn nights, a sleep transition,
+          special care routines, or just needing a little more rest.
+        </p>
+        <a href={contactHref} class="btn btn-primary">Reach out to me</a>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .resume-page {
+    background: var(--color-blush-100);
+  }
+
+  .resume-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 80;
+    background: transparent;
+  }
+  .resume-progress-bar {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--color-maroon-700);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .resume-hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: 4.5rem 3rem;
+    background:
+      linear-gradient(135deg, rgba(255, 250, 245, 0.92) 0%, rgba(247, 230, 226, 0.94) 58%, rgba(240, 210, 203, 0.8) 100%),
+      repeating-linear-gradient(90deg, rgba(107, 26, 40, 0.05) 0 1px, transparent 1px 88px);
+  }
+  .resume-hero::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 7px;
+    background: linear-gradient(90deg, var(--color-maroon-700), var(--color-gold), var(--color-maroon-300));
+    opacity: 0.8;
+  }
+
+  .resume-hero-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 2.75rem;
+    align-items: center;
+  }
+
+  .back-link {
+    display: inline-flex;
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-maroon-700);
+  }
+
+  .resume-hero h1 {
+    max-width: 11ch;
+    font-size: 3.7rem;
+  }
+
+  .resume-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    margin-top: 1.75rem;
+  }
+
+  .resume-text-link {
+    font-weight: 600;
+    color: var(--color-maroon-700);
+  }
+
+  .resume-cursor-note {
+    position: absolute;
+    right: 18%;
+    top: 8%;
+    z-index: 1;
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 250, 245, 0.82);
+    border: 1px solid var(--color-border);
+    color: var(--color-maroon-700);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-soft);
+    transform: translate3d(var(--cursor-x, 0), var(--cursor-y, 0), 0) rotate(-2deg);
+    transition: transform 0.22s var(--ease-out), color 0.2s var(--ease-out);
+    pointer-events: none;
+  }
+
+  .resume-hero-card {
+    background: rgba(255, 250, 245, 0.9);
+    border: 1px solid rgba(61, 15, 23, 0.12);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-medium);
+    padding: 1.5rem;
+  }
+  .card-kicker {
+    display: inline-block;
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.55rem;
+  }
+  .resume-hero-card h2 {
+    font-size: 2rem;
+    margin-bottom: 0.2rem;
+  }
+  .resume-hero-card p {
+    color: var(--color-muted);
+  }
+
+  .hero-stat-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.35rem;
+  }
+  .hero-stat-grid div {
+    padding: 0.85rem 1rem;
+    background: var(--color-blush-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: transform 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+  }
+  .hero-stat-grid div:hover {
+    transform: translateX(6px);
+    border-color: var(--color-maroon-300);
+  }
+  .hero-stat-grid strong,
+  .hero-stat-grid span {
+    display: block;
+  }
+  .hero-stat-grid strong {
+    color: var(--color-maroon-900);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+  }
+  .hero-stat-grid span {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+
+  .resume-tabs {
+    position: sticky;
+    top: 68px;
+    z-index: 40;
+    background: rgba(253, 246, 244, 0.9);
+    border-bottom: 1px solid var(--color-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .resume-tabs-inner {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding-block: 0.75rem;
+    scrollbar-width: none;
+  }
+  .resume-tabs-inner::-webkit-scrollbar {
+    display: none;
+  }
+  .resume-tabs a {
+    flex: 0 0 auto;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .resume-tabs a.active,
+  .resume-tabs a:hover {
+    background: var(--color-maroon-700);
+    border-color: var(--color-maroon-700);
+    color: var(--color-cream);
+  }
+
+  .snapshot-grid {
+    display: grid;
+    grid-template-columns: 1fr 0.9fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .training-panel,
+  .care-card,
+  .experience-card,
+  .footnotes-inner,
+  .resume-cta-inner {
+    background: var(--color-cream);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .training-panel {
+    padding: 1.5rem;
+  }
+  .training-panel h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .training-panel ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .training-panel li {
+    position: relative;
+    padding-left: 1.6rem;
+    color: var(--color-muted);
+    transition: color 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  }
+  .training-panel li:hover {
+    color: var(--color-maroon-900);
+    transform: translateX(4px);
+  }
+  .training-panel li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-maroon-500);
+    box-shadow: 0 0 0 4px var(--color-blush-200);
+  }
+
+  .care-map {
+    background: var(--color-blush-200);
+  }
+  .section-head {
+    max-width: 680px;
+    margin: 0 auto 2.5rem;
+    text-align: center;
+  }
+  .section-head .lead {
+    margin-inline: auto;
+  }
+  .care-map-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  .care-card {
+    padding: 1.25rem;
+    min-height: 100%;
+    transition:
+      transform 0.28s var(--ease-out),
+      border-color 0.28s var(--ease-out),
+      box-shadow 0.28s var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 40ms);
+  }
+  .care-card:hover {
+    transform: translateY(-6px) rotate(-0.4deg);
+    border-color: var(--color-maroon-300);
+    box-shadow: var(--shadow-medium);
+  }
+  .care-card:hover h3 {
+    color: var(--color-maroon-700);
+  }
+  .care-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-blush-200);
+    color: var(--color-maroon-700);
+    font-family: var(--font-display);
+    margin-bottom: 1rem;
+  }
+  .care-card h3 {
+    font-size: 1.2rem;
+  }
+  .care-card p {
+    color: var(--color-muted);
+    font-size: 0.94rem;
+  }
+
+  details {
+    margin-top: 1rem;
+  }
+  summary {
+    cursor: pointer;
+    color: var(--color-maroon-700);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  details p {
+    margin-top: 0.65rem;
+  }
+
+  .experience-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    max-width: 900px;
+    display: grid;
+    gap: 1.25rem;
+    position: relative;
+  }
+  .experience-list::before {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: linear-gradient(var(--color-maroon-300), var(--color-gold));
+  }
+  .experience-item {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 1rem;
+    position: relative;
+    transition-delay: calc(var(--i, 0) * 55ms);
+  }
+  .experience-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-maroon-700);
+    border: 8px solid var(--color-blush-100);
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    z-index: 2;
+  }
+  .experience-card {
+    padding: 1.35rem;
+    transition:
+      transform 0.28s var(--ease-out),
+      border-color 0.28s var(--ease-out),
+      box-shadow 0.28s var(--ease-out);
+  }
+  .experience-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-maroon-300);
+    box-shadow: var(--shadow-medium);
+  }
+  .experience-card:hover h3 {
+    color: var(--color-maroon-700);
+  }
+  .experience-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .experience-date {
+    display: block;
+    color: var(--color-maroon-500);
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .experience-card h3 {
+    font-size: 1.35rem;
+  }
+  .experience-place {
+    color: var(--color-muted);
+    margin-bottom: 0;
+  }
+  .experience-index {
+    color: var(--color-blush-300);
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 1rem 0;
+  }
+  .tag-row span {
+    background: var(--color-blush-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    color: var(--color-maroon-700);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.35rem 0.65rem;
+  }
+  .experience-notes {
+    margin: 0;
+    padding-left: 1.15rem;
+    color: var(--color-muted);
+  }
+  .experience-notes li + li {
+    margin-top: 0.45rem;
+  }
+
+  .resume-footnotes {
+    background: var(--color-blush-200);
+  }
+  .footnotes-inner {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 2rem;
+    padding: 1.5rem;
+  }
+  .footnotes-inner > div > p {
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .footnote-stack {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .footnote-stack details {
+    margin: 0;
+    background: var(--color-blush-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    transition: transform 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+  }
+  .footnote-stack details:hover {
+    transform: translateX(4px);
+    border-color: var(--color-maroon-300);
+  }
+
+  .resume-cta {
+    padding-block: 3rem;
+    background: var(--color-blush-100);
+  }
+  .resume-cta-inner {
+    text-align: center;
+    padding: 2rem;
+  }
+  .resume-cta-inner h2 {
+    font-size: 2rem;
+  }
+  .resume-cta-inner p {
+    max-width: 58ch;
+    margin-inline: auto;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 980px) {
+    .resume-hero-inner,
+    .snapshot-grid,
+    .footnotes-inner {
+      grid-template-columns: 1fr;
+    }
+    .resume-hero h1 {
+      max-width: 13ch;
+    }
+    .care-map-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .resume-cursor-note {
+      display: none;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .resume-hero {
+      padding-block: 3rem 2rem;
+    }
+    .resume-hero h1 {
+      font-size: 2.45rem;
+    }
+    .resume-tabs {
+      top: 64px;
+    }
+    .resume-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .resume-actions .btn,
+    .resume-text-link {
+      width: 100%;
+      text-align: center;
+    }
+    .care-map-grid {
+      grid-template-columns: 1fr;
+    }
+    .experience-list::before {
+      left: 14px;
+    }
+    .experience-item {
+      grid-template-columns: 30px 1fr;
+      gap: 0.75rem;
+    }
+    .experience-dot {
+      width: 30px;
+      height: 30px;
+      border-width: 6px;
+    }
+    .experience-card {
+      padding: 1rem;
+    }
+    .experience-top {
+      flex-direction: column;
+    }
+    .experience-index {
+      display: none;
+    }
+    .resume-cta-inner {
+      padding: 1.35rem;
+      text-align: left;
+    }
+    .resume-cta-inner h2 {
+      font-size: 1.7rem;
+    }
+    .resume-cta-inner .btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  const progressBar = document.querySelector('.resume-progress-bar') as HTMLElement | null;
+  const tabs = Array.from(document.querySelectorAll('[data-resume-tab]')) as HTMLAnchorElement[];
+  const tabSections = ['snapshot', 'care-map', 'experience', 'footnotes']
+    .map((id) => document.getElementById(id))
+    .filter(Boolean) as HTMLElement[];
+
+  let ticking = false;
+  const updateProgress = () => {
+    if (!progressBar) return;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const amount = max > 0 ? Math.min(window.scrollY / max, 1) : 0;
+    progressBar.style.transform = `scaleX(${amount})`;
+  };
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(() => {
+      updateProgress();
+      ticking = false;
+    });
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  updateProgress();
+
+  if ('IntersectionObserver' in window && tabs.length && tabSections.length) {
+    const tabObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.find((entry) => entry.isIntersecting);
+        if (!visible) return;
+        tabs.forEach((tab) => {
+          tab.classList.toggle('active', tab.dataset.resumeTab === visible.target.id);
+        });
+      },
+      { rootMargin: '-35% 0px -55% 0px', threshold: 0 }
+    );
+    tabSections.forEach((section) => tabObserver.observe(section));
+  }
+
+  const resumeHero = document.querySelector('.resume-hero') as HTMLElement | null;
+  const cursorNote = document.querySelector('.resume-cursor-note') as HTMLElement | null;
+  const allowPointerPlay = window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (resumeHero && cursorNote && allowPointerPlay) {
+    resumeHero.addEventListener('pointermove', (event) => {
+      const rect = resumeHero.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * 28;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * 20;
+      cursorNote.style.setProperty('--cursor-x', `${x}px`);
+      cursorNote.style.setProperty('--cursor-y', `${y}px`);
+    });
+    resumeHero.addEventListener('pointerleave', () => {
+      cursorNote.style.setProperty('--cursor-x', '0px');
+      cursorNote.style.setProperty('--cursor-y', '0px');
+    });
+  }
+</script>

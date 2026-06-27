@@ -1,10 +1,17 @@
 ---
 import { site } from '../config/site';
+
+const base = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const sectionHref = (id: string) => `${base}#${id}`;
+const resumeHref = `${base}resume/`;
+const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathname.endsWith('/resume/');
 ---
 
 <header class="nav" id="site-nav">
   <div class="container nav-inner">
-    <a href="#top" class="brand" aria-label={`${site.brandName} — home`}>
+    <a href={sectionHref('top')} class="brand" aria-label={`${site.brandName} home`}>
       <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
         <!-- Simple crescent + soft curve: llama silhouette-ish moon mark -->
         <circle cx="16" cy="16" r="14" fill="currentColor" opacity="0.08" />
@@ -17,11 +24,12 @@ import { site } from '../config/site';
     </a>
 
     <nav class="nav-links" aria-label="Primary">
-      <a href="#about">About</a>
-      <a href="#services">Services</a>
-      <a href="#process">How It Works</a>
-      <a href="#availability">Availability</a>
-      <a href="#contact" class="nav-cta">Contact</a>
+      <a href={sectionHref('about')} data-section="about">About</a>
+      <a href={sectionHref('services')} data-section="services">Services</a>
+      <a href={sectionHref('process')} data-section="process">How It Works</a>
+      <a href={sectionHref('availability')} data-section="availability">Availability</a>
+      <a href={resumeHref} class:list={[isResumePage && 'active']}>Resume</a>
+      <a href={sectionHref('contact')} data-section="contact" class="nav-cta">Contact</a>
     </nav>
 
     <button class="nav-toggle" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">
@@ -30,11 +38,12 @@ import { site } from '../config/site';
   </div>
 
   <div class="mobile-menu" id="mobile-menu" hidden>
-    <a href="#about">About</a>
-    <a href="#services">Services</a>
-    <a href="#process">How It Works</a>
-    <a href="#availability">Availability</a>
-    <a href="#contact">Contact</a>
+    <a href={sectionHref('about')} data-section="about">About</a>
+    <a href={sectionHref('services')} data-section="services">Services</a>
+    <a href={sectionHref('process')} data-section="process">How It Works</a>
+    <a href={sectionHref('availability')} data-section="availability">Availability</a>
+    <a href={resumeHref} class:list={[isResumePage && 'active']}>Resume</a>
+    <a href={sectionHref('contact')} data-section="contact">Contact</a>
   </div>
 </header>
 
@@ -171,23 +180,18 @@ import { site } from '../config/site';
     handleScroll();
   }
 
-  // Update URL hash based on which section is currently in view
+  // Highlight the matching home-page section without rewriting the URL.
   const sections = document.querySelectorAll('section[id]');
   if (sections.length) {
+    const sectionLinks = document.querySelectorAll('[data-section]');
     const sectionObserver = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             const id = entry.target.id;
-            const hash = id === 'top' ? '' : `#${id}`;
-            if (window.location.hash !== hash) {
-              history.replaceState(null, '', hash || window.location.pathname);
-            }
-            // Highlight active nav link
-            document.querySelectorAll('.nav-links a, .mobile-menu a').forEach((a) => {
+            sectionLinks.forEach((a) => {
               const anchor = a as HTMLAnchorElement;
-              const linkHash = anchor.getAttribute('href') || '';
-              anchor.classList.toggle('active', linkHash === (hash || '#top'));
+              anchor.classList.toggle('active', anchor.dataset.section === id);
             });
             break;
           }

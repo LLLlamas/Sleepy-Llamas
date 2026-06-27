@@ -1,23 +1,22 @@
 ---
-// TODO: replace with real testimonials once collected.
-const testimonials = [
+const careNotes = [
   {
-    quote:
-      'After three nights of working with her, our daughter slept through for the first time in four months. I actually cried. She is magic and gentle and exactly who we needed.',
-    author: 'Sarah &amp; Marcus',
-    role: 'Parents of a 5-month-old',
+    title: 'Care that notices the details',
+    body:
+      'Overnight support is more than staying awake. I track feeding rhythms, soothing patterns, sleep windows, and the small changes parents are too tired to hold alone.',
+    meta: 'Best for newborn nights and sleep transitions',
   },
   {
-    quote:
-      'The care and knowledge she brought to our postpartum days was unmatched. I felt seen, rested, and supported in ways I didn&rsquo;t know I needed.',
-    author: 'Priya',
-    role: 'First-time mom',
+    title: 'A steady hand with specialized routines',
+    body:
+      'My resume includes G-tube support, hearing-aid assistance, cleft palate care plans, autism support, and therapy routines followed under specialist guidance.',
+    meta: 'Best for families with extra care instructions',
   },
   {
-    quote:
-      'She built a sleep plan around our twins that actually worked for our family. No guilt, no one-size-fits-all. Just real help, every night.',
-    author: 'Jenna &amp; Dave',
-    role: 'Parents of twins',
+    title: 'Practical help that protects recovery',
+    body:
+      'I have supported postpartum recovery after C-section delivery, newborn twins, feeding transitions, and the household tasks that make rest easier to access.',
+    meta: 'Best for postpartum recovery and twin care',
   },
 ];
 ---
@@ -25,24 +24,23 @@ const testimonials = [
 <section class="section testimonials">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">Families we&rsquo;ve helped</span>
-      <h2>Real stories from real nights.</h2>
+      <span class="eyebrow">Care style</span>
+      <h2>The kind of support families feel right away.</h2>
     </div>
 
     <div class="testimonials-grid">
-      {testimonials.map((t, i) => (
+      {careNotes.map((t, i) => (
         <figure class:list={["testimonial", "reveal", `reveal-delay-${i + 1}`]}>
           <svg class="quote-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <path d="M10 22V14H4v8h6Zm18 0V14h-6v8h6Z" fill="currentColor" opacity="0.15" />
-            <path
-              d="M6 20c0-6 3-10 7-11v3c-2 1-4 3-4 6h3v4H6v-2Zm16 0c0-6 3-10 7-11v3c-2 1-4 3-4 6h3v4h-6v-2Z"
-              fill="currentColor"
-            />
+            <path d="M16 3l10 5v7c0 6.8-4.4 11.5-10 14-5.6-2.5-10-7.2-10-14V8l10-5Z" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M11 16l3 3 7-8" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <blockquote set:html={t.quote}></blockquote>
+          <blockquote>
+            <strong>{t.title}</strong>
+            <span>{t.body}</span>
+          </blockquote>
           <figcaption>
-            <span class="author" set:html={t.author}></span>
-            <span class="role">{t.role}</span>
+            <span class="role">{t.meta}</span>
           </figcaption>
         </figure>
       ))}
@@ -53,7 +51,7 @@ const testimonials = [
       <p class="referral-text">Know a family that could use a good night&rsquo;s sleep?</p>
       <a
         class="btn btn-secondary referral-btn"
-        href={`mailto:?subject=Check out Sleepy Llamas — overnight doula %26 sleep training&body=I wanted to share this with you — Sleepy Llamas offers certified overnight doula care and gentle sleep training in the New York area. They were amazing for us! %0A%0Ahttps://sleepyllamasdoula.com`}
+        href={`mailto:?subject=Check out Sleepy Llamas overnight doula %26 sleep training&body=I wanted to share Sleepy Llamas with you. Catalina offers certified overnight doula care and gentle sleep support in the New York area.%0A%0Ahttps://sleepyllamasdoula.com`}
       >
         Share with a friend &hearts;
       </a>
@@ -101,13 +99,20 @@ const testimonials = [
   }
 
   blockquote {
-    font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: 0.98rem;
     line-height: 1.55;
-    color: var(--color-maroon-900);
     margin: 0 0 1.5rem;
-    font-style: italic;
-    font-weight: 400;
+  }
+  blockquote strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.18rem;
+    font-weight: 500;
+    color: var(--color-maroon-900);
+    margin-bottom: 0.55rem;
+  }
+  blockquote span {
+    color: var(--color-muted);
   }
 
   figcaption {
@@ -117,13 +122,10 @@ const testimonials = [
     padding-top: 1rem;
     border-top: 1px solid var(--color-border);
   }
-  .author {
-    font-weight: 600;
-    color: var(--color-maroon-900);
-  }
   .role {
     font-size: 0.85rem;
-    color: var(--color-muted);
+    color: var(--color-maroon-700);
+    font-weight: 600;
   }
 
   .referral {

@@ -66,14 +66,14 @@ h1, h2, h3, h4 {
   font-family: var(--font-display);
   font-weight: 500;
   color: var(--color-maroon-900);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   line-height: 1.15;
   margin: 0 0 0.5em;
 }
 
-h1 { font-size: clamp(2.25rem, 6vw, 4rem); font-weight: 400; }
-h2 { font-size: clamp(1.75rem, 4vw, 2.75rem); }
-h3 { font-size: clamp(1.25rem, 2.5vw, 1.6rem); }
+h1 { font-size: 3.8rem; font-weight: 400; }
+h2 { font-size: 2.55rem; }
+h3 { font-size: 1.5rem; }
 h4 { font-size: 1.125rem; }
 
 p { margin: 0 0 1em; }
@@ -209,7 +209,6 @@ input, textarea, select {
   transition:
     opacity 0.7s var(--ease-out),
     transform 0.7s var(--ease-out);
-  will-change: opacity, transform;
 }
 .reveal.in-view {
   opacity: 1;
@@ -232,7 +231,7 @@ input, textarea, select {
   to {
     opacity: 1;
     transform: translateY(0);
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 }
 .hero-anim {
@@ -361,4 +360,10 @@ input, textarea, select {
 }
 .radio-option:hover {
   border-color: var(--color-maroon-500);
+}
+
+@media (max-width: 700px) {
+  h1 { font-size: 2.45rem; }
+  h2 { font-size: 2rem; }
+  h3 { font-size: 1.32rem; }
 }

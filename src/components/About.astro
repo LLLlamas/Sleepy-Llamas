@@ -1,16 +1,60 @@
 ---
 import { site } from '../config/site';
+import { resume } from '../config/resume';
+
+const base = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const resumeHref = `${base}resume/`;
+const credentials = [
+  'Certified Postpartum Doula',
+  'Certified Lactation Support Specialist',
+  'CPR & First Aid Certified',
+  'Early Childhood Education student',
+  'Newborn, twin, and overnight care',
+  'Fluent in Spanish and English',
+];
+
+const careSpecialties = [
+  {
+    title: 'Newborns, infants, and twins',
+    body:
+      'From full-time newborn twin care to overnight doula support, I bring calm routines to the moments when families most need rest.',
+  },
+  {
+    title: 'Specialized care support',
+    body:
+      'Experience with cleft palate care plans, G-tube routines, hearing-aid support, autism support, and therapy exercises under specialist guidance.',
+  },
+  {
+    title: 'Transitions that feel possible',
+    body:
+      'Sleep routines, feeding transitions, daycare transitions, potty training, and crib-to-bed changes handled with patience and consistency.',
+  },
+];
 ---
 
 <section class="section about" id="about">
   <div class="container about-inner">
     <div class="about-portrait reveal">
-      <div class="portrait-frame" aria-hidden="true">
-        <svg viewBox="0 0 200 240" class="portrait-placeholder">
-          <rect width="200" height="240" fill="#f7e6e2" />
-          <circle cx="100" cy="90" r="38" fill="#d98295" opacity="0.6" />
-          <path d="M40 200c0-35 27-60 60-60s60 25 60 60v40H40Z" fill="#d98295" opacity="0.6" />
-        </svg>
+      <div class="portrait-frame">
+        <span class="profile-kicker">Resume Snapshot</span>
+        <strong>8 years</strong>
+        <p>of hands-on newborn, infant, twin, toddler, postpartum, and household care.</p>
+        <dl class="profile-stats">
+          <div>
+            <dt>Training</dt>
+            <dd>Postpartum doula + lactation support</dd>
+          </div>
+          <div>
+            <dt>Special care</dt>
+            <dd>G-tube, hearing aid, cleft palate, autism, therapy routines</dd>
+          </div>
+          <div>
+            <dt>Language</dt>
+            <dd>Spanish + English</dd>
+          </div>
+        </dl>
       </div>
       <div class="portrait-tag">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -25,63 +69,42 @@ import { site } from '../config/site';
 
     <div class="about-copy reveal reveal-delay-1">
       <span class="eyebrow">About {site.brandName}</span>
-      <h2>Warm, expert support through the seasons that matter most.</h2>
+      <h2>Warm support, trained judgment, and real newborn experience.</h2>
       <p class="lead">
-        Hi, I&rsquo;m Catalina! I&rsquo;ve spent years nurturing little ones
-        through every stage &mdash; the midnight wake-ups, the breakthroughs,
-        and everything in between. My goal is simple: make life easier for
-        parents so you can be present for the moments that matter. Every
-        family is different, and every plan I build is catered and dedicated
-        to you and your child.
+        Hi, I&rsquo;m Catalina. I&rsquo;ve spent {resume.highlights[0].value}
+        caring for newborns, infants, toddlers, twins, and children with
+        specialized developmental or medical needs. My work is practical and
+        tender at the same time: safe routines, thoughtful feeding support,
+        steady overnight care, and enough calm for parents to breathe again.
       </p>
 
       <ul class="credentials" role="list">
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="check">
-            <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>Certified Postpartum Doula</span>
-        </li>
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="check">
-            <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>Infant Sleep Consultant</span>
-        </li>
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="check">
-            <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>CPR &amp; Safe Sleep Trained</span>
-        </li>
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="check">
-            <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>Background Checked &amp; Insured</span>
-        </li>
+        {credentials.map((item) => (
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="check">
+              <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>{item}</span>
+          </li>
+        ))}
       </ul>
 
-      <a href="#contact" class="btn btn-secondary">Let&rsquo;s talk</a>
+      <div class="about-actions">
+        <a href="#contact" class="btn btn-secondary">Let&rsquo;s talk</a>
+        <a href={resumeHref} class="about-resume-link">View my interactive resume &rarr;</a>
+      </div>
     </div>
   </div>
 
-  <!-- Families we've helped — inline testimonials -->
   <div class="container about-testimonials reveal">
-    <span class="eyebrow">Families we&rsquo;ve helped</span>
+    <span class="eyebrow">Care strengths</span>
     <div class="about-quotes">
-      <figure class="about-quote reveal reveal-delay-1">
-        <blockquote>After three nights of working with her, our daughter slept through for the first time in four months. I actually cried.</blockquote>
-        <figcaption>&mdash; Sarah &amp; Marcus, <span>parents of a 5-month-old</span></figcaption>
-      </figure>
-      <figure class="about-quote reveal reveal-delay-2">
-        <blockquote>The care and knowledge she brought to our postpartum days was unmatched. I felt seen, rested, and supported in ways I didn&rsquo;t know I needed.</blockquote>
-        <figcaption>&mdash; Priya, <span>first-time mom</span></figcaption>
-      </figure>
-      <figure class="about-quote reveal reveal-delay-3">
-        <blockquote>She built a sleep plan around our twins that actually worked for our family. No guilt, no one-size-fits-all. Just real help, every night.</blockquote>
-        <figcaption>&mdash; Jenna &amp; Dave, <span>parents of twins</span></figcaption>
-      </figure>
+      {careSpecialties.map((item, i) => (
+        <article class:list={['about-quote', 'reveal', `reveal-delay-${i + 1}`]}>
+          <h3>{item.title}</h3>
+          <p>{item.body}</p>
+        </article>
+      ))}
     </div>
   </div>
 </section>
@@ -109,17 +132,59 @@ import { site } from '../config/site';
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-medium);
-    background: var(--color-blush-200);
+    background:
+      linear-gradient(160deg, var(--color-cream), var(--color-blush-200));
     transform: rotate(-1.5deg);
     transition: transform 0.4s var(--ease-out);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
   }
   .about-portrait:hover .portrait-frame {
     transform: rotate(0deg);
   }
-  .portrait-placeholder {
-    width: 100%;
-    height: 100%;
-    display: block;
+  .profile-kicker {
+    color: var(--color-maroon-500);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: auto;
+  }
+  .portrait-frame strong {
+    color: var(--color-maroon-900);
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 500;
+    line-height: 1;
+    margin-bottom: 0.6rem;
+  }
+  .portrait-frame p {
+    color: var(--color-muted);
+    font-size: 0.96rem;
+  }
+  .profile-stats {
+    display: grid;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+  }
+  .profile-stats div {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .profile-stats dt {
+    color: var(--color-maroon-700);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .profile-stats dd {
+    margin: 0.15rem 0 0;
+    color: var(--color-ink);
+    font-size: 0.86rem;
+    line-height: 1.45;
   }
   .portrait-tag {
     position: absolute;
@@ -174,6 +239,17 @@ import { site } from '../config/site';
     margin-top: 1px;
   }
 
+  .about-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.4rem;
+    align-items: center;
+  }
+  .about-resume-link {
+    font-weight: 600;
+    color: var(--color-maroon-700);
+  }
+
   /* Inline testimonials in About */
   .about-testimonials {
     margin-top: clamp(2rem, 4vw, 3.5rem);
@@ -204,28 +280,16 @@ import { site } from '../config/site';
     box-shadow: var(--shadow-medium);
   }
 
-  .about-quote blockquote {
-    font-family: var(--font-display);
-    font-size: 0.98rem;
-    line-height: 1.55;
+  .about-quote h3 {
+    font-size: 1.08rem;
     color: var(--color-maroon-900);
-    margin: 0 0 1rem;
-    font-style: italic;
-    font-weight: 400;
+    margin-bottom: 0.45rem;
   }
-
-  .about-quote figcaption {
-    font-size: 0.82rem;
+  .about-quote p {
+    font-size: 0.9rem;
+    line-height: 1.6;
     color: var(--color-muted);
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--color-border);
-  }
-  .about-quote figcaption span {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--color-muted);
-    opacity: 0.8;
-    margin-top: 0.15rem;
+    margin: 0;
   }
 
   @media (max-width: 860px) {

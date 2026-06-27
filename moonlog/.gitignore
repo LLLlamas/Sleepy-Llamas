@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+
+# generated PWA icons (produced by scripts/gen-icons.mjs on dev/build)
+public/icons/
+public/apple-touch-icon.png
+
+# vite-plugin-pwa dev artifacts
+dev-dist/

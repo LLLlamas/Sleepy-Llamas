@@ -1,0 +1,42 @@
+{
+  "name": "moonlog",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Offline-first night-logging PWA for newborn care — companion to the Sleepy Llamas Night Shift Field Guide.",
+  "scripts": {
+    "icons": "node scripts/gen-icons.mjs",
+    "predev": "node scripts/gen-icons.mjs",
+    "prebuild": "node scripts/gen-icons.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.2.9",
+    "@fontsource-variable/inter": "^5.2.8",
+    "date-fns": "^3.6.0",
+    "dexie": "^4.0.8",
+    "dexie-react-hooks": "^1.1.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "^0.20.5",
+    "workbox-build": "7.1.0",
+    "workbox-window": "7.1.0"
+  },
+  "comments": {
+    "overrides": "Workbox 7.3+ requires Node >=20 (uses diagnostics_channel.tracingChannel). Pinned to 7.1.0 for Node 18 compatibility."
+  },
+  "overrides": {
+    "workbox-build": "7.1.0",
+    "workbox-window": "7.1.0"
+  }
+}

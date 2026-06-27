@@ -9,8 +9,9 @@
       <span class="eyebrow">See when I&rsquo;m open</span>
       <h2>Pick your nights.</h2>
       <p class="lead">
-        Tap an open day to start. Tap a second day to select a range. Then
-        choose a service and send your request &mdash; I&rsquo;ll reply within 24 hours.
+        Tap an open day to start, or tap a second day to select a range. The
+        nights you choose become the first draft of your custom plan, and
+        I&rsquo;ll help match them to the right overnight package.
       </p>
     </div>
 
@@ -41,15 +42,32 @@
       <div class="legend-item"><span class="legend-dot legend-unavailable"></span> Unavailable</div>
     </div>
 
-    <div class="calendar-months reveal" id="calendar-months">
-      <noscript><p class="calendar-fallback">Please enable JavaScript to view the calendar.</p></noscript>
+    <div class="calendar-shell reveal">
+      <div class="calendar-nav" aria-label="Calendar month navigation">
+        <button class="month-btn" id="cal-prev-month" type="button" aria-label="Previous month">&larr;</button>
+        <p class="month-nav-label" id="cal-month-label">Loading availability...</p>
+        <button class="month-btn" id="cal-next-month" type="button" aria-label="Next month">&rarr;</button>
+      </div>
+
+      <div class="calendar-months" id="calendar-months">
+        <noscript><p class="calendar-fallback">Please enable JavaScript to view the calendar.</p></noscript>
+      </div>
     </div>
 
     <div class="service-picker reveal reveal-delay-1">
       <h3>Select your service &amp; package</h3>
       <p class="service-picker-sub">
-        Pick a service, then we&rsquo;ll suggest a package based on the nights you selected.
+        Pick a service and a package. I&rsquo;ll use your selected nights as the
+        draft plan, then confirm what truly fits after I learn more.
       </p>
+
+      <div class="custom-plan-note" id="custom-plan-note">
+        <strong>How the custom plan works:</strong>
+        packages set the total number of overnight shifts; your calendar
+        selection shows the exact nights you prefer. If your family needs
+        special care or a different rhythm, I&rsquo;ll adjust the plan during the
+        consultation.
+      </div>
 
       <div class="service-select-wrap">
         <select class="service-select" id="cal-service-select" aria-label="Select a service">
@@ -67,7 +85,7 @@
 
       <!-- Package suggestion (populated by JS when dates + service are selected) -->
       <div class="pkg-suggestion" id="cal-pkg-suggestion" hidden>
-        <p class="pkg-suggestion-label">Suggested package based on your selection:</p>
+        <p class="pkg-suggestion-label" id="cal-pkg-label">Suggested package based on your selection:</p>
         <div class="pkg-suggestion-card" id="cal-pkg-card"></div>
         <div class="pkg-override">
           <label class="vm-label" for="cal-pkg-override">Or choose a different package:</label>
@@ -77,6 +95,7 @@
             <option value="8-nights">Standard &mdash; 8 nights ($4,800)</option>
             <option value="12-nights">Extended &mdash; 12 nights ($6,900)</option>
             <option value="16-nights">Comprehensive &mdash; 16 nights ($9,000)</option>
+            <option value="custom">Build a custom plan with me</option>
             <option value="not-sure">Not sure yet</option>
           </select>
         </div>
@@ -87,7 +106,7 @@
         <button class="btn-book" id="cal-confirm-btn" type="button" disabled>
           Send booking request &rarr;
         </button>
-        <p class="book-note">No account needed &middot; we&rsquo;ll discuss details &middot; reply within 24 hours</p>
+        <p class="book-note">No account needed &middot; I&rsquo;ll confirm the custom plan with you &middot; reply within 24 hours</p>
         <p class="book-note" style="font-style:italic;opacity:0.7;margin-top:0.35rem;">All prices are subject to change. Final pricing confirmed during consultation.</p>
       </div>
     </div>
@@ -251,7 +270,43 @@
   .legend-today       { background: var(--color-gold); box-shadow: 0 0 0 2px var(--color-cream) inset; }
   .legend-unavailable { background: var(--color-cream); border: 2px solid var(--color-border); }
 
-  .calendar-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; max-width: 960px; margin: 0 auto 2.5rem; }
+  .calendar-shell { max-width: 520px; margin: 0 auto 2.5rem; }
+  .calendar-nav {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.85rem;
+  }
+  .month-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--color-cream);
+    color: var(--color-maroon-700);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-soft);
+    font-weight: 700;
+    transition: transform 0.2s var(--ease-out), background 0.2s var(--ease-out), color 0.2s var(--ease-out);
+  }
+  .month-btn:hover:not(:disabled) {
+    background: var(--color-maroon-700);
+    color: var(--color-cream);
+    transform: translateY(-2px);
+  }
+  .month-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .month-nav-label {
+    margin: 0;
+    color: var(--color-maroon-900);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    text-align: center;
+  }
+  .calendar-months { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin: 0 auto; }
 
   .cal-month { background: var(--color-cream); border-radius: var(--radius-md); border: 1px solid var(--color-border); box-shadow: var(--shadow-soft); overflow: hidden; }
   .cal-month-header { background: var(--color-maroon-700); padding: 0.9rem 1.1rem; font-family: var(--font-display); font-weight: 500; font-size: 1.05rem; color: var(--color-cream); text-align: center; }
@@ -276,6 +331,19 @@
   .service-picker { background: var(--color-cream); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-medium); padding: clamp(1.75rem,4vw,2.5rem); max-width: 720px; margin: 0 auto; position: relative; }
   .service-picker h3 { margin: 0 0 0.4em; font-size: 1.35rem; }
   .service-picker-sub { font-size: 0.92rem; color: var(--color-muted); margin: 0 0 1.5rem; }
+  .custom-plan-note {
+    margin-bottom: 1.25rem;
+    padding: 0.9rem 1rem;
+    background: var(--color-blush-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  .custom-plan-note strong {
+    color: var(--color-maroon-900);
+  }
   .service-select-wrap { position: relative; margin-bottom: 1rem; }
   .service-select { width: 100%; padding: 0.95rem 2.5rem 0.95rem 1.1rem; font-size: 1rem; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-blush-100); color: var(--color-ink); appearance: none; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
   .service-select:hover { background: var(--color-blush-200); transform: translateY(-1px); }
@@ -435,14 +503,15 @@
   const STORAGE_KEY = 'sl_schedule';
   const MONTHS_AHEAD = 3;
   let ADMIN_PIN: string | null = null;
+  let currentMonthOffset = 0;
 
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
   const SERVICES: Record<string, { name: string; desc: string }> = {
-    'overnight-doula':           { name: 'Overnight Doula Support', desc: 'In-home overnight doula care focused on your postpartum recovery. Nighttime feeds, soothing, and newborn care while you rest.' },
-    'overnight-sleep-training':  { name: 'Overnight Sleep Training', desc: 'Gentle, evidence-based overnight sleep training tailored to your baby\u2019s temperament. Full overnight shifts.' },
-    'consultation':              { name: 'Consultation(s)', desc: 'A calm, no-pressure conversation to explore your options and build a plan that fits your life.' },
+    'overnight-doula':           { name: 'Overnight Doula Support', desc: 'In-home overnight doula care focused on recovery, feeding rhythm, and newborn routines while you rest.' },
+    'overnight-sleep-training':  { name: 'Overnight Sleep Training', desc: 'Gentle overnight sleep support tailored to your baby\u2019s temperament, feeding needs, and home rhythm.' },
+    'consultation':              { name: 'Consultation(s)', desc: 'A calm, no-pressure conversation where I help you understand what kind of support would actually help.' },
   };
 
   const PACKAGES: { key: string; name: string; nights: number; timeframe: string; price: number; specialPrice: number }[] = [
@@ -510,16 +579,31 @@
 
   // ── Calendar rendering ─────────────────────
   const container = document.getElementById('calendar-months')!;
+  const monthLabel = document.getElementById('cal-month-label')!;
+  const prevMonthBtn = document.getElementById('cal-prev-month') as HTMLButtonElement;
+  const nextMonthBtn = document.getElementById('cal-next-month') as HTMLButtonElement;
   const visitorPick: { start: string | null; end: string | null } = { start: null, end: null };
 
   function renderCalendars() {
     container.innerHTML = '';
     const now = new Date();
-    for (let m = 0; m < MONTHS_AHEAD; m++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + m, 1);
-      container.appendChild(buildMonth(d.getFullYear(), d.getMonth()));
-    }
+    const d = new Date(now.getFullYear(), now.getMonth() + currentMonthOffset, 1);
+    container.appendChild(buildMonth(d.getFullYear(), d.getMonth()));
+    monthLabel.textContent = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    prevMonthBtn.disabled = currentMonthOffset <= 0;
+    nextMonthBtn.disabled = currentMonthOffset >= MONTHS_AHEAD - 1;
   }
+
+  prevMonthBtn.addEventListener('click', () => {
+    if (currentMonthOffset <= 0) return;
+    currentMonthOffset -= 1;
+    renderCalendars();
+  });
+  nextMonthBtn.addEventListener('click', () => {
+    if (currentMonthOffset >= MONTHS_AHEAD - 1) return;
+    currentMonthOffset += 1;
+    renderCalendars();
+  });
 
   function buildMonth(year: number, month: number): HTMLElement {
     const wrap = document.createElement('div'); wrap.className = 'cal-month';
@@ -600,6 +684,7 @@
   const confirmBtn = document.getElementById('cal-confirm-btn') as HTMLButtonElement;
 
   const pkgSuggestion = document.getElementById('cal-pkg-suggestion')!;
+  const pkgLabel = document.getElementById('cal-pkg-label')!;
   const pkgCard = document.getElementById('cal-pkg-card')!;
   const pkgOverride = document.getElementById('cal-pkg-override') as HTMLSelectElement;
 
@@ -615,9 +700,29 @@
 
   pkgOverride.addEventListener('change', updateBookingSummary);
 
+  function applyPackagePreference(packageKey: string) {
+    if (!PACKAGES.some(p => p.key === packageKey)) return;
+    pkgOverride.value = packageKey;
+    if (!serviceSelect.value) {
+      serviceSelect.value = 'overnight-doula';
+      serviceSelect.dispatchEvent(new Event('change'));
+    } else {
+      updateBookingSummary();
+    }
+    showToast('Package saved. Pick your preferred nights to customize it.');
+  }
+
+  document.querySelectorAll<HTMLAnchorElement>('.pkg-cta[data-package]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const packageKey = link.dataset.package || '';
+      setTimeout(() => applyPackagePreference(packageKey), 80);
+    });
+  });
+
   function getSelectedPackage(): typeof PACKAGES[0] | null {
     const override = pkgOverride.value;
-    if (override && override !== 'not-sure') return PACKAGES.find(p => p.key === override) || null;
+    if (override === 'not-sure' || override === 'custom') return null;
+    if (override && override !== 'not-sure' && override !== 'custom') return PACKAGES.find(p => p.key === override) || null;
     if (!visitorPick.start) return null;
     const nights = Math.max(nightsBetween(visitorPick.start, visitorPick.end || visitorPick.start), 1);
     return suggestPackage(nights);
@@ -642,9 +747,24 @@
     }
 
     // Package suggestion
-    if (hasDates && svc && svc !== 'consultation') {
+    const hasManualPackage = !!pkgOverride.value && pkgOverride.value !== 'not-sure' && pkgOverride.value !== 'custom';
+
+    if (svc === 'consultation') {
+      pkgSuggestion.setAttribute('hidden', '');
+    } else if (pkgOverride.value === 'custom') {
+      pkgLabel.textContent = 'Custom plan selected:';
+      pkgCard.innerHTML = `<p class="pkg-s-name">Custom plan</p><p class="pkg-s-detail">I&rsquo;ll help match your selected nights to the right total number of shifts after I learn more.</p>`;
+      pkgSuggestion.removeAttribute('hidden');
+      parts.push('Package: <strong>Custom plan</strong>');
+    } else if (pkgOverride.value === 'not-sure') {
+      pkgLabel.textContent = 'Package selected:';
+      pkgCard.innerHTML = `<p class="pkg-s-name">Not sure yet</p><p class="pkg-s-detail">I&rsquo;ll help you choose the right package during consultation.</p>`;
+      pkgSuggestion.removeAttribute('hidden');
+      parts.push('Package: <strong>Not sure yet</strong>');
+    } else if ((hasDates || hasManualPackage) && svc && svc !== 'consultation') {
       const pkg = getSelectedPackage();
       if (pkg) {
+        pkgLabel.textContent = hasManualPackage ? 'Package you selected as the starting point:' : 'Suggested package based on your selection:';
         pkgCard.innerHTML = `<p class="pkg-s-name">${pkg.name} &mdash; ${pkg.nights} nights</p><p class="pkg-s-price">$${pkg.price.toLocaleString()}</p><p class="pkg-s-detail">${pkg.timeframe} &middot; Special care: $${pkg.specialPrice.toLocaleString()}</p>`;
         pkgSuggestion.removeAttribute('hidden');
         parts.push(`Package: <strong>${pkg.name} ($${pkg.price.toLocaleString()})</strong>`);
@@ -701,6 +821,12 @@
     if (pkg && serviceSelect.value !== 'consultation') {
       document.getElementById('vm-pkgline')!.textContent = `${pkg.name} \u2014 ${pkg.nights} nights ($${pkg.price.toLocaleString()})`;
       pkgWrap.removeAttribute('hidden');
+    } else if (pkgOverride.value === 'custom' && serviceSelect.value !== 'consultation') {
+      document.getElementById('vm-pkgline')!.textContent = 'Custom plan';
+      pkgWrap.removeAttribute('hidden');
+    } else if (pkgOverride.value === 'not-sure' && serviceSelect.value !== 'consultation') {
+      document.getElementById('vm-pkgline')!.textContent = 'Not sure yet';
+      pkgWrap.removeAttribute('hidden');
     } else {
       pkgWrap.setAttribute('hidden', '');
     }
@@ -744,6 +870,8 @@
     // Build notes with extra context
     const notesParts: string[] = [];
     if (pkg) notesParts.push(`Package: ${pkg.name} (${pkg.nights} nights, $${pkg.price})`);
+    if (pkgOverride.value === 'custom') notesParts.push('Package: custom plan requested');
+    if (pkgOverride.value === 'not-sure') notesParts.push('Package: not sure yet');
     if (vmSpecialCare.checked) notesParts.push(`Special care: ${vmSpecialNotes.value.trim() || 'Yes'}`);
     if (vmWeeksUnsure.checked) notesParts.push('Weeks: not sure yet');
     if (vmNightsUnsure.checked) notesParts.push('Nights/week: not sure yet');
