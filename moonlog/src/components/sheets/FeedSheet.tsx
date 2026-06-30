@@ -66,7 +66,7 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
       const ev = await addFeed(shiftId, { at, method, amountMl, durationMin, note: trimmed });
       showToast(`Feed logged · ${fmtClockShort(ev.at)}`, {
         undo: () => deleteEvent(ev.id),
-        durationMs: 1000,
+        durationMs: 1800,
       });
     }
     buzz();
@@ -124,7 +124,8 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
         <DurationScroller
           value={duration}
           onChange={setDuration}
-          maxHours={3}
+          minutesOnly
+          maxMinutes={60}
           minuteStep={5}
           zeroLabel="No duration"
           ariaLabel="Feed duration"

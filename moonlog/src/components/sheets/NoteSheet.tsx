@@ -74,7 +74,7 @@ export function NoteSheet({ shiftId, onClose, editing }: Props) {
       const ev = await addNote(shiftId, data);
       showToast(`Note logged · ${fmtClockShort(ev.at)}`, {
         undo: () => deleteEvent(ev.id),
-        durationMs: 1000,
+        durationMs: 1800,
       });
     }
     buzz();

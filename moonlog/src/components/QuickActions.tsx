@@ -2,6 +2,7 @@ import { useRef } from 'react';
 
 interface Props {
   isAsleep: boolean;
+  babyName: string;
   onFeed: () => void;
   onDiaper: () => void;
   onSleepToggle: () => void;
@@ -13,6 +14,7 @@ const LONG_PRESS_MS = 500;
 
 export function QuickActions({
   isAsleep,
+  babyName,
   onFeed,
   onDiaper,
   onSleepToggle,
@@ -59,8 +61,8 @@ export function QuickActions({
         onPointerLeave={endPress}
         onPointerCancel={endPress}
         onContextMenu={(e) => e.preventDefault()}
-        aria-label={isAsleep ? 'Baby is sleeping. Tap when baby wakes.' : 'Baby is awake. Tap when baby sleeps.'}
-        title={isAsleep ? 'Tap when baby wakes · long-press to back-fill' : 'Tap when baby sleeps · long-press to back-fill'}
+        aria-label={isAsleep ? `${babyName} is sleeping. Tap when ${babyName} wakes.` : `${babyName} is awake. Tap when ${babyName} sleeps.`}
+        title={isAsleep ? `Tap when ${babyName} wakes · long-press to back-fill` : `Tap when ${babyName} sleeps · long-press to back-fill`}
       >
         <span className="qa__icon" aria-hidden="true">{isAsleep ? '💤' : '☀️'}</span>
         <span className="qa__label">{isAsleep ? 'Sleeping' : 'Awake'}</span>

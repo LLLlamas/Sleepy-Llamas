@@ -7,6 +7,7 @@ interface Props {
   events: LogEvent[];
   sleepSessions: SleepSession[];
   now: number;
+  babyName: string;
   unit: Unit;
   onEditEvent: (ev: LogEvent) => void;
   onEditSleep: (s: SleepSession) => void;
@@ -16,7 +17,7 @@ type Item =
   | { kind: 'event'; t: number; ev: LogEvent }
   | { kind: 'sleep'; t: number; s: SleepSession };
 
-export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEditSleep }: Props) {
+export function Timeline({ events, sleepSessions, now, babyName, unit, onEditEvent, onEditSleep }: Props) {
   const items: Item[] = [
     ...events.map((ev) => ({ kind: 'event' as const, t: new Date(ev.at).getTime(), ev })),
     ...sleepSessions.map((s) => ({ kind: 'sleep' as const, t: new Date(s.startAt).getTime(), s })),
@@ -68,7 +69,7 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
               </span>
               <span className="row__main">
                 <span className="row__title">
-                  {item.s.endAt ? 'Sleep' : 'Currently asleep'}
+                  {item.s.endAt ? 'Sleep' : `${babyName} is asleep`}
                 </span>
                 <span className="row__meta tabular">
                   {item.s.endAt

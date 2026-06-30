@@ -89,7 +89,7 @@ export default function App() {
     buzz();
     showToast(r.action === 'opened' ? 'Asleep — timer started' : 'Awake logged', {
       undo: () => undoSleepToggle(r),
-      durationMs: 1000,
+      durationMs: 1800,
     });
   };
 
@@ -145,10 +145,10 @@ export default function App() {
             sleepSessions={sleepSessions}
             openSleep={openSleep}
             now={now}
+            babyName={baby.name}
             unit={settings.unit}
             dueSoonHours={settings.dueSoonHours}
             onToggleSleep={onToggleSleep}
-            onAddSleep={() => setSheet({ k: 'sleep' })}
             onEditEvent={editEvent}
             onEditSleep={editSleep}
           />
@@ -171,6 +171,7 @@ export default function App() {
         {tab === 'tonight' && (
           <QuickActions
             isAsleep={!!openSleep}
+            babyName={baby.name}
             onFeed={() => setSheet({ k: 'feed' })}
             onDiaper={() => setSheet({ k: 'diaper' })}
             onSleepToggle={onToggleSleep}

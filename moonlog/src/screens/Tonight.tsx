@@ -8,10 +8,10 @@ interface Props {
   sleepSessions: SleepSession[];
   openSleep?: SleepSession;
   now: number;
+  babyName: string;
   unit: Unit;
   dueSoonHours: number;
   onToggleSleep: () => void;
-  onAddSleep: () => void;
   onEditEvent: (ev: LogEvent) => void;
   onEditSleep: (s: SleepSession) => void;
 }
@@ -21,10 +21,10 @@ export function Tonight({
   sleepSessions,
   openSleep,
   now,
+  babyName,
   unit,
   dueSoonHours,
   onToggleSleep,
-  onAddSleep,
   onEditEvent,
   onEditSleep,
 }: Props) {
@@ -34,14 +34,12 @@ export function Tonight({
         events={events}
         openSleep={openSleep}
         now={now}
+        babyName={babyName}
         dueSoonHours={dueSoonHours}
         onToggleSleep={onToggleSleep}
       />
       <div className="section-head">
         <span className="section-label">Timeline</span>
-        <button type="button" className="section-action" onClick={onAddSleep}>
-          Add past sleep
-        </button>
       </div>
       {(events.length > 0 || sleepSessions.length > 0) && (
         <p className="timeline-hint">Tap any entry to edit or delete it.</p>
@@ -50,6 +48,7 @@ export function Tonight({
         events={events}
         sleepSessions={sleepSessions}
         now={now}
+        babyName={babyName}
         unit={unit}
         onEditEvent={onEditEvent}
         onEditSleep={onEditSleep}

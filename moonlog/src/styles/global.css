@@ -236,6 +236,10 @@ select {
   font-size: 0.78rem;
   color: var(--soft);
 }
+.tile__sleepHint {
+  color: var(--accent);
+  font-weight: 700;
+}
 /* due-soon warming on the last-feed tile */
 .tile--approaching {
   /* gentle pre-warm in the hour before the threshold */
@@ -266,8 +270,27 @@ select {
   width: 4px;
   border-radius: 0 999px 999px 0;
   background: var(--line-strong);
+  z-index: 1;
+}
+.tile--sleep::after {
+  content: '';
+  position: absolute;
+  inset: -35% -45%;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--sleep-glow) 24%, transparent) 0%,
+      color-mix(in srgb, var(--sleep-glow) 14%, transparent) 34%,
+      transparent 68%
+    );
+  opacity: 0;
+  transform: translateX(-44%);
+  animation: sleep-tile-glow 5.4s var(--ease) infinite;
+  z-index: 0;
 }
 .tile--sleep.is-asleep {
+  --sleep-glow: var(--sleep);
   border-color: var(--sleep);
   background: color-mix(in srgb, var(--sleep) 15%, var(--raised));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--sleep) 20%, transparent), 0 16px 34px -30px var(--sleep);
@@ -277,6 +300,7 @@ select {
   background: var(--sleep);
 }
 .tile--sleep.is-awake {
+  --sleep-glow: var(--awake);
   border-color: var(--awake);
   background: color-mix(in srgb, var(--awake) 14%, var(--raised));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--awake) 18%, transparent);
@@ -289,6 +313,8 @@ select {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 .tile__sleepCopy {
   font-family: var(--font-display);
@@ -305,6 +331,8 @@ select {
   background: color-mix(in srgb, var(--sleep) 12%, var(--bg));
   border: 1px solid color-mix(in srgb, var(--sleep) 45%, var(--line));
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 .tile__sleepTimer.is-awake {
   color: var(--awake);
@@ -321,7 +349,26 @@ select {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--sleep) 24%, transparent), 0 18px 38px -26px var(--sleep);
   }
 }
-
+@keyframes sleep-tile-glow {
+  0% {
+    opacity: 0;
+    transform: translateX(-48%);
+  }
+  14% {
+    opacity: 0.72;
+  }
+  55% {
+    opacity: 0.46;
+  }
+  82% {
+    opacity: 0;
+    transform: translateX(48%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(48%);
+  }
+}
 /* ==========================================================================
    TIMELINE
    ========================================================================== */
@@ -422,6 +469,9 @@ select {
 .row--sleep.is-open {
   border-color: var(--sleep);
   background: color-mix(in srgb, var(--sleep) 12%, var(--raised));
+  border-width: 2px;
+  overflow: hidden;
+  position: relative;
 }
 
 .timeline-hint {
@@ -717,6 +767,12 @@ select {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+.duration-scroller--minutes .duration-scroller__wheels {
+  grid-template-columns: 1fr;
+}
+.duration-scroller--minutes .duration-wheel {
+  max-height: 176px;
 }
 .duration-wheel {
   max-height: 166px;
@@ -1234,6 +1290,11 @@ select {
   }
   .tile--sleep.is-asleep {
     animation: none;
+  }
+  .tile--sleep::after {
+    animation: none;
+    opacity: 0.18;
+    transform: none;
   }
 }
 

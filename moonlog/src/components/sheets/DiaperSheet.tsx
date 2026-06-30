@@ -39,7 +39,7 @@ export function DiaperSheet({ shiftId, onClose, editing }: Props) {
       const ev = await addDiaper(shiftId, { at, contents, stool: stoolVal, note: trimmed });
       showToast(`Diaper logged · ${fmtClockShort(ev.at)}`, {
         undo: () => deleteEvent(ev.id),
-        durationMs: 1000,
+        durationMs: 1800,
       });
     }
     buzz();

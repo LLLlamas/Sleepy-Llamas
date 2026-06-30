@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (timer.current) window.clearTimeout(timer.current);
     const id = ++seq.current;
     setToast({ id, message, undo: opts?.undo });
-    const duration = opts?.durationMs ?? (opts?.undo ? 6000 : 1000);
+    const duration = opts?.durationMs ?? (opts?.undo ? 1800 : 1000);
     timer.current = window.setTimeout(() => {
       // only clear if this is still the active toast
       setToast((t) => (t && t.id === id ? null : t));
