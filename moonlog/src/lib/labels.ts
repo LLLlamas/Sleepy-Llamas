@@ -4,6 +4,7 @@ import type {
   LogEvent,
   StoolColor,
 } from '../db/types';
+import { fmtShortMin } from './time';
 import { formatAmount, type Unit } from './units';
 
 export const METHOD_LABEL: Record<FeedMethod, string> = {
@@ -85,7 +86,7 @@ export function eventIcon(type: LogEvent['type']): string {
 export function eventSummary(ev: LogEvent, unit: Unit): string {
   switch (ev.type) {
     case 'feed': {
-      const dur = ev.durationMin ? ` · ${ev.durationMin}m` : '';
+      const dur = ev.durationMin ? ` · ${fmtShortMin(ev.durationMin)}` : '';
       return feedLabel(ev.method, ev.amountMl, unit) + dur;
     }
     case 'diaper':

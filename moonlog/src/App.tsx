@@ -91,7 +91,7 @@ export default function App() {
     buzz();
     showToast(r.action === 'opened' ? 'Asleep — timer started' : 'Awake logged', {
       undo: () => undoSleepToggle(r),
-      durationMs: 3500,
+      durationMs: 1800,
     });
   };
 
@@ -134,15 +134,8 @@ export default function App() {
   const showHeader = tab === 'tonight';
 
   return (
-    <div className="app">
-      {showHeader && (
-        <Header
-          baby={baby}
-          shift={shift}
-          now={now}
-          onEditShiftStart={() => setSheet({ k: 'shift-start' })}
-        />
-      )}
+    <div className={`app ${openSleep ? 'app--asleep' : 'app--awake'}`}>
+      {showHeader && <Header baby={baby} now={now} openSleep={openSleep} />}
 
       <div
         className="app__scroll"
@@ -154,10 +147,10 @@ export default function App() {
             sleepSessions={sleepSessions}
             openSleep={openSleep}
             now={now}
+            babyName={baby.name}
             unit={settings.unit}
             dueSoonHours={settings.dueSoonHours}
             onToggleSleep={onToggleSleep}
-            onAddSleep={() => setSheet({ k: 'sleep' })}
             onEditEvent={editEvent}
             onEditSleep={editSleep}
           />
@@ -181,6 +174,7 @@ export default function App() {
         {tab === 'tonight' && (
           <QuickActions
             isAsleep={!!openSleep}
+            babyName={baby.name}
             onFeed={() => setSheet({ k: 'feed' })}
             onDiaper={() => setSheet({ k: 'diaper' })}
             onSleepToggle={onToggleSleep}

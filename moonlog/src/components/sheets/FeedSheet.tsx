@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sheet } from '../ui/Sheet';
 import { Chip } from '../ui/Chip';
 import { Stepper } from '../ui/Stepper';
+import { DurationScroller } from '../ui/DurationScroller';
 import { TimeField } from './TimeField';
 import { DeleteRow } from './DeleteRow';
 import { useSettings } from '../../state/SettingsContext';
@@ -48,6 +49,7 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
   const [amount, setAmount] = useState(() =>
     editing?.amountMl != null ? displayAmount(editing.amountMl, unit) : defaultAmount(unit),
   );
+  const [duration, setDuration] = useState(editing?.durationMin ?? 0);
   const [note, setNote] = useState(editing?.note ?? '');
 
   const step = STEP[unit];
@@ -55,13 +57,17 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
   const save = async () => {
     const at = new Date(time).toISOString();
     const amountMl = isBottle(method) && amount > 0 ? toMl(amount, unit) : undefined;
+    const durationMin = duration > 0 ? duration : undefined;
     const trimmed = note.trim() || undefined;
     if (editing) {
-      await updateEvent(editing.id, { at, method, amountMl, note: trimmed });
+      await updateEvent(editing.id, { at, method, amountMl, durationMin, note: trimmed });
       showToast('Feed updated');
     } else {
-      const ev = await addFeed(shiftId, { at, method, amountMl, note: trimmed });
-      showToast(`Feed logged · ${fmtClockShort(ev.at)}`, { undo: () => deleteEvent(ev.id) });
+      const ev = await addFeed(shiftId, { at, method, amountMl, durationMin, note: trimmed });
+      showToast(`Feed logged · ${fmtClockShort(ev.at)}`, {
+        undo: () => deleteEvent(ev.id),
+        durationMs: 1800,
+      });
     }
     buzz();
     onClose();
@@ -72,7 +78,7 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
       title={editing ? 'Edit feed' : 'Feed'}
       onClose={onClose}
       onSave={save}
-      saveLabel={editing ? 'Update' : 'Save feed'}
+      saveLabel={editing ? 'Save edits' : 'Save feed'}
     >
       <TimeField value={time} onChange={setTime} />
 
@@ -112,6 +118,19 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
           </div>
         </div>
       )}
+
+      <div className="sheet__field">
+        <span className="field-label">Duration (optional)</span>
+        <DurationScroller
+          value={duration}
+          onChange={setDuration}
+          minutesOnly
+          maxMinutes={60}
+          minuteStep={5}
+          zeroLabel="No duration"
+          ariaLabel="Feed duration"
+        />
+      </div>
 
       <div className="sheet__field">
         <label htmlFor="feed-note">Note (optional)</label>

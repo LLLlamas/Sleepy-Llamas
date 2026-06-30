@@ -72,7 +72,10 @@ export function NoteSheet({ shiftId, onClose, editing }: Props) {
       showToast('Note updated');
     } else {
       const ev = await addNote(shiftId, data);
-      showToast(`Note logged · ${fmtClockShort(ev.at)}`, { undo: () => deleteEvent(ev.id) });
+      showToast(`Note logged · ${fmtClockShort(ev.at)}`, {
+        undo: () => deleteEvent(ev.id),
+        durationMs: 1800,
+      });
     }
     buzz();
     onClose();
@@ -83,7 +86,7 @@ export function NoteSheet({ shiftId, onClose, editing }: Props) {
       title={editing ? 'Edit note' : 'Note'}
       onClose={onClose}
       onSave={save}
-      saveLabel={editing ? 'Update' : 'Save note'}
+      saveLabel={editing ? 'Save edits' : 'Save note'}
       saveDisabled={!canSave}
     >
       <TimeField value={time} onChange={setTime} />

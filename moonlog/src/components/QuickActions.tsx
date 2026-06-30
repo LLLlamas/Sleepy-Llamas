@@ -2,6 +2,7 @@ import { useRef } from 'react';
 
 interface Props {
   isAsleep: boolean;
+  babyName: string;
   onFeed: () => void;
   onDiaper: () => void;
   onSleepToggle: () => void;
@@ -13,6 +14,7 @@ const LONG_PRESS_MS = 500;
 
 export function QuickActions({
   isAsleep,
+  babyName,
   onFeed,
   onDiaper,
   onSleepToggle,
@@ -52,17 +54,18 @@ export function QuickActions({
       </button>
       <button
         type="button"
-        className={`qa qa--sleep${isAsleep ? ' is-asleep' : ''}`}
+        className={`qa qa--sleep${isAsleep ? ' is-asleep' : ' is-awake'}`}
         onClick={onSleepClick}
         onPointerDown={startPress}
         onPointerUp={endPress}
         onPointerLeave={endPress}
         onPointerCancel={endPress}
         onContextMenu={(e) => e.preventDefault()}
-        title="Tap to toggle · long-press to back-fill"
+        aria-label={isAsleep ? `${babyName} is sleeping. Tap when ${babyName} wakes.` : `${babyName} is awake. Tap when ${babyName} sleeps.`}
+        title={isAsleep ? `Tap when ${babyName} wakes · long-press to back-fill` : `Tap when ${babyName} sleeps · long-press to back-fill`}
       >
-        <span className="qa__icon" aria-hidden="true">{isAsleep ? '😴' : '🌙'}</span>
-        <span className="qa__label">{isAsleep ? 'Woke up' : 'Sleep'}</span>
+        <span className="qa__icon" aria-hidden="true">{isAsleep ? '💤' : '☀️'}</span>
+        <span className="qa__label">{isAsleep ? 'Sleeping' : 'Awake'}</span>
       </button>
       <button type="button" className="qa" onClick={onNote}>
         <span className="qa__icon" aria-hidden="true">📝</span>

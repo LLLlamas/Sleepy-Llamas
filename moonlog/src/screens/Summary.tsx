@@ -7,7 +7,9 @@ import { useRecentShifts } from '../db/hooks';
 import { useToast } from '../state/ToastContext';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import {
+  dayNumber,
   fmtClockLong,
+  fmtClockShort,
   fmtDuration,
   fmtShortMin,
   sinceISO,
@@ -96,7 +98,7 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
     } catch {
       /* ignore */
     }
-    showToast('Reset to the auto-generated summary');
+    showToast('Reset to the live handoff');
   };
 
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -136,29 +138,42 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
   const stoolProgression = totals.stoolProgression.map((s) => STOOL_LABEL[s]).join(' → ');
   const startMs = new Date(shift.startedAt).getTime();
   const endMs = shift.endedAt ? new Date(shift.endedAt).getTime() : now;
-  const dateLabel = format(new Date(startMs), 'EEEE, MMM d');
   const crossedMidnight = !isSameDay(new Date(startMs), new Date(endMs));
   const isEmpty = events.length === 0 && sleepSessions.length === 0;
+  const currentDate = format(new Date(now), 'EEE, MMM d');
+  const currentTime = fmtClockLong(now);
+  const shiftStarted = fmtClockLong(startMs);
 
   const archived = (recent ?? []).filter((s) => s.endedAt && s.id !== shift.id);
 
   return (
     <>
-      <h1 className="screen-title">Shift summary</h1>
-      <p className="screen-sub">{baby.name} · {dateLabel}</p>
+      <div className="summary-hero">
+        <div>
+          <h1 className="screen-title">Shift summary</h1>
+          <p className="summary-hero__date tabular">
+            {currentDate} · {currentTime}
+          </p>
+        </div>
+        <span className="summary-hero__badge">EDIT</span>
+      </div>
+      <p className="screen-sub summary-start">
+        Shift started at {shiftStarted} · {baby.name}, Day {dayNumber(baby.birthAt, now)} ·{' '}
+        through {shift.endedAt ? fmtClockShort(shift.endedAt) : fmtClockShort(endMs)}
+      </p>
       <button
         type="button"
         className="summary-shift"
         onClick={onEditShiftStart}
-        aria-label={`Shift ${fmtClockLong(startMs)} to ${shift.endedAt ? fmtClockLong(endMs) : 'now'} — tap to adjust the start time`}
+        aria-label={`Shift started at ${fmtClockLong(startMs)} and runs to ${shift.endedAt ? fmtClockLong(endMs) : 'now'} - tap to edit the start time`}
       >
         <span className="summary-shift__times tabular">
-          {fmtClockLong(startMs)} – {shift.endedAt ? fmtClockLong(endMs) : 'now'}
+          {fmtClockLong(startMs)} - {shift.endedAt ? fmtClockLong(endMs) : 'now'}
           {crossedMidnight && <span className="summary-shift__next"> · +1 day</span>}
         </span>
         <span className="summary-shift__meta">
           <span className="summary-shift__len tabular">{fmtDuration(endMs - startMs)}</span>
-          <span className="summary-shift__edit"><PencilIcon /> start</span>
+          <span className="summary-shift__edit"><PencilIcon /> edit</span>
         </span>
       </button>
 

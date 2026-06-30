@@ -37,7 +37,10 @@ export function DiaperSheet({ shiftId, onClose, editing }: Props) {
       showToast('Diaper updated');
     } else {
       const ev = await addDiaper(shiftId, { at, contents, stool: stoolVal, note: trimmed });
-      showToast(`Diaper logged · ${fmtClockShort(ev.at)}`, { undo: () => deleteEvent(ev.id) });
+      showToast(`Diaper logged · ${fmtClockShort(ev.at)}`, {
+        undo: () => deleteEvent(ev.id),
+        durationMs: 1800,
+      });
     }
     buzz();
     onClose();
@@ -48,7 +51,7 @@ export function DiaperSheet({ shiftId, onClose, editing }: Props) {
       title={editing ? 'Edit diaper' : 'Diaper'}
       onClose={onClose}
       onSave={save}
-      saveLabel={editing ? 'Update' : 'Save diaper'}
+      saveLabel={editing ? 'Save edits' : 'Save diaper'}
     >
       <TimeField value={time} onChange={setTime} />
 
