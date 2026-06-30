@@ -21,6 +21,10 @@ html[data-theme='night'] {
   --accent-faint: #3a2a1d;
   --accent-ink: #1a0a0e; /* text on accent fills */
   --calm: #8fb8a8; /* sleep / positive */
+  --sleep: #8fb8a8;
+  --sleep-faint: #23362f;
+  --awake: #d9a96b;
+  --awake-faint: #3a2a1d;
   --warn: #db8893; /* due-soon / caution (brand rose) */
   --warn-faint: #38202a;
   --stop: #e36d6d; /* fever flag / destructive */
@@ -45,6 +49,10 @@ html[data-theme='deep-night'] {
   --accent-faint: #2f2218;
   --accent-ink: #100508;
   --calm: #84ab9c;
+  --sleep: #84ab9c;
+  --sleep-faint: #1c3029;
+  --awake: #cc9a5e;
+  --awake-faint: #2f2218;
   --warn: #cf7d88;
   --warn-faint: #2e1a22;
   --stop: #d96363;
@@ -69,6 +77,10 @@ html[data-theme='day'] {
   --accent-faint: #f7e6e2;
   --accent-ink: #fffaf5;
   --calm: #3f7d68;
+  --sleep: #3f7d68;
+  --sleep-faint: #e1f0e9;
+  --awake: #a83246;
+  --awake-faint: #f7e6e2;
   --warn: #b0506a;
   --warn-faint: #f7e0e6;
   --stop: #b8324a;

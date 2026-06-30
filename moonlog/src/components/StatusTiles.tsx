@@ -31,6 +31,24 @@ export function StatusTiles({ events, openSleep, now, dueSoonHours, onToggleSlee
 
   return (
     <div className="tiles">
+      <button
+        type="button"
+        className={`tile tile--sleep${asleep ? ' is-asleep' : ' is-awake'}`}
+        onClick={onToggleSleep}
+        aria-label={asleep ? 'Baby is sleeping. Tap to mark awake.' : 'Baby is awake. Tap to mark asleep.'}
+      >
+        <span className="tile__sleepState">
+          <span className="tile__label">Baby status</span>
+          <span className="tile__sleepCopy">{asleep ? 'Baby is asleep' : 'Baby is awake'}</span>
+          <span className="tile__sub">
+            {asleep ? `Since ${fmtClockShort(openSleep!.startAt)} · tap when baby wakes` : 'Tap when baby falls asleep'}
+          </span>
+        </span>
+        <span className={`tile__sleepTimer tabular${asleep ? '' : ' is-awake'}`}>
+          {asleep ? `Asleep ${fmtDuration(sleepMs)}` : 'Awake'}
+        </span>
+      </button>
+
       <div className={`tile${dueSoon ? ' tile--warn' : approaching ? ' tile--approaching' : ''}`}>
         <span className="tile__label">Last feed</span>
         <span className="tile__value tabular">{lastFeed ? sinceISO(lastFeed.at, now) : '—'}</span>
@@ -48,23 +66,6 @@ export function StatusTiles({ events, openSleep, now, dueSoonHours, onToggleSlee
           {lastDiaper ? `at ${fmtClockShort(lastDiaper.at)}` : 'none yet'}
         </span>
       </div>
-
-      <button
-        type="button"
-        className={`tile tile--sleep${asleep ? ' is-asleep' : ''}`}
-        onClick={onToggleSleep}
-        aria-label={asleep ? 'Tap to mark awake' : 'Tap to mark asleep'}
-      >
-        <span className="tile__sleepState">
-          <span className="tile__label">Sleep</span>
-          <span className="tile__sub">
-            {asleep ? `asleep since ${fmtClockShort(openSleep!.startAt)} · tap = woke` : 'awake · tap = put down'}
-          </span>
-        </span>
-        <span className={`tile__sleepTimer tabular${asleep ? '' : ' is-awake'}`}>
-          {asleep ? fmtDuration(sleepMs) : 'Awake'}
-        </span>
-      </button>
     </div>
   );
 }

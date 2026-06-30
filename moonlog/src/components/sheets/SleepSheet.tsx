@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Sheet } from '../ui/Sheet';
+import { DurationScroller } from '../ui/DurationScroller';
 import { DeleteRow } from './DeleteRow';
 import { useToast } from '../../state/ToastContext';
 import {
@@ -32,8 +33,17 @@ export function SleepSheet({ shiftId, onClose, editing }: Props) {
 
   const startMs = new Date(startStr).getTime();
   const endMs = endStr ? new Date(endStr).getTime() : undefined;
+  const durationMin =
+    endMs !== undefined && !Number.isNaN(startMs) && !Number.isNaN(endMs) && endMs > startMs
+      ? Math.round((endMs - startMs) / 60000)
+      : 0;
   const valid =
     !Number.isNaN(startMs) && (endMs === undefined || (!Number.isNaN(endMs) && endMs > startMs));
+
+  const setDuration = (minutes: number) => {
+    if (Number.isNaN(startMs)) return;
+    setEndStr(minutes > 0 ? toLocalInput(startMs + minutes * 60000) : '');
+  };
 
   const save = async () => {
     const startAt = new Date(startMs).toISOString();
@@ -54,7 +64,7 @@ export function SleepSheet({ shiftId, onClose, editing }: Props) {
       title={editing ? 'Edit sleep' : 'Add sleep'}
       onClose={onClose}
       onSave={save}
-      saveLabel={editing ? 'Update' : 'Save'}
+      saveLabel={editing ? 'Save edits' : 'Save'}
       saveDisabled={!valid}
     >
       <div className="sheet__field">
@@ -79,6 +89,19 @@ export function SleepSheet({ shiftId, onClose, editing }: Props) {
           onChange={(e) => setEndStr(e.target.value)}
         />
         {!valid && endStr && <p className="field__hint">Wake time must be after the sleep time.</p>}
+      </div>
+
+      <div className="sheet__field">
+        <span className="field-label">Duration</span>
+        <DurationScroller
+          value={durationMin}
+          onChange={setDuration}
+          maxHours={12}
+          minuteStep={5}
+          zeroLabel="Still asleep"
+          ariaLabel="Sleep duration"
+        />
+        <p className="field__hint">Scroll hours and minutes to adjust the wake time.</p>
       </div>
 
       {editing && (

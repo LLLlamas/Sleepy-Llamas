@@ -89,6 +89,7 @@ export default function App() {
     buzz();
     showToast(r.action === 'opened' ? 'Asleep — timer started' : 'Awake logged', {
       undo: () => undoSleepToggle(r),
+      durationMs: 1000,
     });
   };
 
@@ -131,8 +132,8 @@ export default function App() {
   const showHeader = tab === 'tonight';
 
   return (
-    <div className="app">
-      {showHeader && <Header baby={baby} shift={shift} now={now} />}
+    <div className={`app ${openSleep ? 'app--asleep' : 'app--awake'}`}>
+      {showHeader && <Header baby={baby} now={now} openSleep={openSleep} />}
 
       <div
         className="app__scroll"

@@ -155,10 +155,10 @@ export function Settings({ baby, shift, now }: Props) {
           onBlur={saveName}
         />
       </div>
-      <div className="setting">
+      <div className="setting setting--birth">
         <div className="setting__label">Date & time of birth</div>
         <input
-          className="input"
+          className="input input--datetime"
           type="datetime-local"
           value={birth}
           max={format(new Date(now), "yyyy-MM-dd'T'HH:mm")}

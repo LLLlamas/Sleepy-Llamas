@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Sheet } from '../ui/Sheet';
 import { Chip } from '../ui/Chip';
 import { Stepper } from '../ui/Stepper';
+import { DurationScroller } from '../ui/DurationScroller';
 import { TimeField } from './TimeField';
 import { DeleteRow } from './DeleteRow';
 import { useSettings } from '../../state/SettingsContext';
 import { useToast } from '../../state/ToastContext';
 import { addFeed, updateEvent, deleteEvent, restoreEvent } from '../../db/hooks';
 import { buzz } from '../../lib/haptics';
-import { fmtClockShort, fmtShortMin } from '../../lib/time';
+import { fmtClockShort } from '../../lib/time';
 import { STEP, displayAmount, toMl, type Unit } from '../../lib/units';
 import { METHOD_LABEL, isBottle } from '../../lib/labels';
 import type { FeedEvent, FeedMethod } from '../../db/types';
@@ -63,7 +64,10 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
       showToast('Feed updated');
     } else {
       const ev = await addFeed(shiftId, { at, method, amountMl, durationMin, note: trimmed });
-      showToast(`Feed logged · ${fmtClockShort(ev.at)}`, { undo: () => deleteEvent(ev.id) });
+      showToast(`Feed logged · ${fmtClockShort(ev.at)}`, {
+        undo: () => deleteEvent(ev.id),
+        durationMs: 1000,
+      });
     }
     buzz();
     onClose();
@@ -74,7 +78,7 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
       title={editing ? 'Edit feed' : 'Feed'}
       onClose={onClose}
       onSave={save}
-      saveLabel={editing ? 'Update' : 'Save feed'}
+      saveLabel={editing ? 'Save edits' : 'Save feed'}
     >
       <TimeField value={time} onChange={setTime} />
 
@@ -117,16 +121,14 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
 
       <div className="sheet__field">
         <span className="field-label">Duration (optional)</span>
-        <Stepper
-          ariaLabel="duration"
-          decLabel="−5"
-          incLabel="+5"
-          onDec={() => setDuration((d) => Math.max(0, d - 5))}
-          onInc={() => setDuration((d) => d + 5)}
-          decDisabled={duration <= 0}
-        >
-          {duration > 0 ? fmtShortMin(duration) : '—'}
-        </Stepper>
+        <DurationScroller
+          value={duration}
+          onChange={setDuration}
+          maxHours={3}
+          minuteStep={5}
+          zeroLabel="No duration"
+          ariaLabel="Feed duration"
+        />
       </div>
 
       <div className="sheet__field">

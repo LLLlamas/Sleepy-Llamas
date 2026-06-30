@@ -1,13 +1,17 @@
-import type { Baby, Shift } from '../db/types';
-import { dayNumber, fmtClockShort, sinceISO } from '../lib/time';
+import type { Baby, SleepSession } from '../db/types';
+import { format } from 'date-fns';
+import { dayNumber, fmtClockLong, fmtDuration } from '../lib/time';
 
 interface Props {
   baby: Baby;
-  shift: Shift;
   now: number;
+  openSleep?: SleepSession;
 }
 
-export function Header({ baby, shift, now }: Props) {
+export function Header({ baby, now, openSleep }: Props) {
+  const asleep = !!openSleep;
+  const sleepMs = openSleep ? now - new Date(openSleep.startAt).getTime() : 0;
+
   return (
     <header className="header">
       <div className="header__brand">
@@ -16,13 +20,16 @@ export function Header({ baby, shift, now }: Props) {
         </span>
         Moonlog
       </div>
-      <div className="header__baby">
+      <div className="header__center">
         <div className="header__name">
           {baby.name} · Day {dayNumber(baby.birthAt, now)}
         </div>
-        <div className="header__meta tabular">
-          Shift {fmtClockShort(shift.startedAt)} · {sinceISO(shift.startedAt, now)}
+        <div className="header__datetime tabular">
+          {format(new Date(now), 'EEE, MMM d')} · {fmtClockLong(now)}
         </div>
+      </div>
+      <div className={`header__state tabular${asleep ? ' is-asleep' : ' is-awake'}`}>
+        {asleep ? `Asleep · ${fmtDuration(sleepMs)}` : 'Awake now'}
       </div>
     </header>
   );

@@ -40,7 +40,7 @@ export function Tonight({
       <div className="section-head">
         <span className="section-label">Timeline</span>
         <button type="button" className="section-action" onClick={onAddSleep}>
-          + past sleep
+          Add past sleep
         </button>
       </div>
       {(events.length > 0 || sleepSessions.length > 0) && (

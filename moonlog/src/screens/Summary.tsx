@@ -89,7 +89,7 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
     } catch {
       /* ignore */
     }
-    showToast('Reset to the auto-generated summary');
+    showToast('Reset to the live handoff');
   };
 
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -113,15 +113,26 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
   const stoolProgression = totals.stoolProgression.map((s) => STOOL_LABEL[s]).join(' → ');
   const endText = shift.endedAt ?? now;
   const isEmpty = events.length === 0 && sleepSessions.length === 0;
+  const currentDate = format(new Date(now), 'EEE, MMM d');
+  const currentTime = fmtClockLong(now);
+  const shiftStarted = fmtClockLong(shift.startedAt);
 
   const archived = (recent ?? []).filter((s) => s.endedAt && s.id !== shift.id);
 
   return (
     <>
-      <h1 className="screen-title">Shift summary</h1>
-      <p className="screen-sub">
-        {baby.name}, Day {dayNumber(baby.birthAt, now)} · {fmtClockShort(shift.startedAt)} –{' '}
-        {shift.endedAt ? fmtClockShort(shift.endedAt) : fmtClockShort(endText)}
+      <div className="summary-hero">
+        <div>
+          <h1 className="screen-title">Shift summary</h1>
+          <p className="summary-hero__date tabular">
+            {currentDate} · {currentTime}
+          </p>
+        </div>
+        <span className="summary-hero__badge">EDIT</span>
+      </div>
+      <p className="screen-sub summary-start">
+        Shift started at {shiftStarted} · {baby.name}, Day {dayNumber(baby.birthAt, now)} ·{' '}
+        through {shift.endedAt ? fmtClockShort(shift.endedAt) : fmtClockShort(endText)}
       </p>
 
       {isEmpty && (

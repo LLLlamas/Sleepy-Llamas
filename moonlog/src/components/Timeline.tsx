@@ -28,7 +28,7 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
         <span className="moon" aria-hidden="true">
           🌙
         </span>
-        Quiet so far. Tap below to log the first feed.
+        Quiet start. Log the first feed, diaper, sleep, or note below.
       </div>
     );
   }
@@ -58,18 +58,22 @@ export function Timeline({ events, sleepSessions, now, unit, onEditEvent, onEdit
           </li>
         ) : (
           <li key={item.s.id}>
-            <button type="button" className="row row--sleep" onClick={() => onEditSleep(item.s)}>
+            <button
+              type="button"
+              className={`row row--sleep${item.s.endAt ? '' : ' is-open'}`}
+              onClick={() => onEditSleep(item.s)}
+            >
               <span className="row__icon" aria-hidden="true">
                 😴
               </span>
               <span className="row__main">
                 <span className="row__title">
-                  Sleep · {fmtClockShort(item.s.startAt)} →{' '}
-                  {item.s.endAt ? fmtClockShort(item.s.endAt) : 'now'}
+                  {item.s.endAt ? 'Sleep' : 'Currently asleep'}
                 </span>
                 <span className="row__meta tabular">
-                  {fmtShortMin(spanMinutes(item.s.startAt, item.s.endAt ?? now))}
-                  {item.s.endAt ? '' : ' · running'}
+                  {item.s.endAt
+                    ? `${fmtClockShort(item.s.startAt)} → ${fmtClockShort(item.s.endAt)} · ${fmtShortMin(spanMinutes(item.s.startAt, item.s.endAt))}`
+                    : `Started ${fmtClockShort(item.s.startAt)} · ${fmtShortMin(spanMinutes(item.s.startAt, now))}`}
                 </span>
               </span>
               <span className="row__chev" aria-hidden="true">›</span>

@@ -39,8 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (timer.current) window.clearTimeout(timer.current);
     const id = ++seq.current;
     setToast({ id, message, undo: opts?.undo });
-    // give the only recovery path (Undo) a longer window for a tired user
-    const duration = opts?.durationMs ?? (opts?.undo ? 8000 : 4000);
+    const duration = opts?.durationMs ?? (opts?.undo ? 6000 : 1000);
     timer.current = window.setTimeout(() => {
       // only clear if this is still the active toast
       setToast((t) => (t && t.id === id ? null : t));

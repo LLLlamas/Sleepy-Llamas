@@ -119,10 +119,12 @@ export function buildSummaryText(
   const dateLabel = format(new Date(shift.startedAt), 'EEE, MMM d');
   const start = fmtClockLong(shift.startedAt);
   const end = fmtClockLong(shift.endedAt ?? now);
+  const current = fmtClockLong(now);
 
   const L: string[] = [];
   L.push(`🌙 ${baby.name}'s night · Day ${day}`);
-  L.push(`${dateLabel} · ${start} – ${end}`);
+  L.push(`${dateLabel} · current time ${current}`);
+  L.push(`Shift started at ${start} · summary through ${end}`);
   if (shift.caregiver) L.push(`Cared for by ${shift.caregiver}`);
   L.push('');
 
