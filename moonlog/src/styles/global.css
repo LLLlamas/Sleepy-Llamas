@@ -128,6 +128,13 @@ select {
   gap: 12px;
   border-bottom: 1px solid var(--line);
 }
+.header__left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  flex: 0 0 auto;
+}
 .header__brand {
   display: flex;
   align-items: center;
@@ -139,20 +146,65 @@ select {
 .header__brand .moon {
   font-size: 1.2rem;
 }
+/* tappable "shift started" pill with a tiny edit cue */
+.header__shift {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: var(--raised2);
+  border: 1px solid var(--line);
+  transition: background 0.15s var(--ease);
+}
+.header__shift:active {
+  background: var(--chip);
+}
+.header__shift-text {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--soft);
+}
+.header__edit {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  opacity: 0.85;
+}
 .header__baby {
   text-align: right;
   line-height: 1.25;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .header__name {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   color: var(--ink);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.header__meta {
+.header__when {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.02em;
   color: var(--faint);
+  white-space: nowrap;
+}
+/* gentle nudge that the calendar date moved on past midnight */
+.header__when.is-daychange {
+  color: var(--accent);
+  background: var(--accent-faint);
+  border-radius: var(--r-pill);
+  padding: 2px 9px;
 }
 
 /* ==========================================================================
@@ -251,12 +303,15 @@ select {
   margin: 0;
 }
 .section-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.03em;
   color: var(--accent);
   padding: 7px 12px;
-  min-height: 40px;
+  min-height: 44px;
   border-radius: var(--r-pill);
 }
 .section-action:active {
@@ -442,9 +497,13 @@ select {
   border-top-right-radius: 22px;
   border-top: 1px solid var(--line-strong);
   box-shadow: var(--shadow);
-  padding: 8px 18px calc(18px + env(safe-area-inset-bottom));
+  padding: 8px 18px calc(env(safe-area-inset-bottom) + 28px);
   max-height: 90vh;
+  /* dvh excludes the mobile browser's collapsing toolbar so a bottom-pinned
+     sheet never tucks its action buttons behind it (the End-shift cutoff). */
+  max-height: 90dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   transform: translateY(100%);
   animation: sheet-in 0.26s var(--ease) forwards;
 }
@@ -461,8 +520,41 @@ select {
   color: var(--ink);
   margin-bottom: 14px;
 }
+.sheet__note {
+  color: var(--soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
 .sheet__field {
   margin-bottom: 16px;
+}
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+/* small inline on/off toggle (e.g. "Still asleep") */
+.mini-toggle {
+  min-height: 44px;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  color: var(--soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: all 0.14s var(--ease);
+}
+.mini-toggle.is-on {
+  background: color-mix(in srgb, var(--calm) 24%, var(--chip));
+  border-color: color-mix(in srgb, var(--calm) 55%, var(--line));
+  color: var(--ink);
+}
+.mini-toggle:active {
+  transform: scale(0.97);
 }
 .sheet__field > label,
 .field-label {
@@ -528,8 +620,8 @@ select {
   gap: 8px;
 }
 .chip {
-  min-height: 46px;
-  padding: 8px 16px;
+  min-height: 48px;
+  padding: 9px 16px;
   border-radius: var(--r-pill);
   background: var(--chip);
   border: 1px solid var(--line);
@@ -551,32 +643,198 @@ select {
   transform: scale(0.97);
 }
 
-/* native time picker (scroll wheel + AM/PM on phones) */
-.time-row {
+/* ==========================================================================
+   TIME PICKER  (compact, tap-to-reveal, brand-themed — no native scroll wheel)
+   ========================================================================== */
+.timepick {
+  width: 100%;
+}
+/* collapsed trigger: looks like an editable field with a tiny edit cue */
+.timepick__trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
   display: flex;
-  gap: 10px;
-  align-items: stretch;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  text-align: left;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
-.time-input {
-  flex: 1 1 auto;
-  min-height: 56px;
+.timepick.is-open .timepick__trigger {
+  border-color: var(--accent);
+  background: var(--raised);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.timepick__time {
   font-family: var(--font-display);
-  font-size: 1.4rem;
-  padding: 8px 14px;
+  font-size: 1.45rem;
+  line-height: 1;
 }
-.time-now {
+.timepick__period {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--soft);
+  letter-spacing: 0.04em;
+}
+.timepick__daychip {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  background: var(--accent-faint);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+/* the TINY edit indicator the field is tappable */
+.timepick__edit {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  opacity: 0.85;
   flex: 0 0 auto;
-  min-height: 56px;
-  padding: 0 20px;
+}
+
+/* revealed panel */
+.timepick__panel {
+  background: var(--raised2);
+  border: 1.5px solid var(--accent);
+  border-top: none;
+  border-bottom-left-radius: var(--r-md);
+  border-bottom-right-radius: var(--r-md);
+  padding: 14px 14px 12px;
+  animation: timepick-in 0.16s var(--ease);
+}
+@keyframes timepick-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+.timepick__readout {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.timepick__readout-period {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--soft);
+  margin-left: 4px;
+}
+.timepick__rows {
+  display: flex;
+  gap: 12px;
+}
+.timepick__unit {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.timepick__unit-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+.timepick__nudge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.timepick__btn {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
   border-radius: var(--r-md);
   background: var(--chip);
   border: 1px solid var(--line-strong);
   color: var(--ink);
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
 }
-.time-now:active {
-  background: var(--raised2);
+.timepick__btn:active {
+  background: var(--raised);
+  transform: scale(0.96);
+}
+.timepick__num {
+  min-width: 2ch;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  color: var(--ink);
+}
+.timepick__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+.timepick__ampm {
+  display: inline-flex;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 3px;
+  gap: 3px;
+}
+.timepick__seg {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  color: var(--soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.timepick__seg.is-on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.timepick__now {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.timepick__now:active {
+  background: var(--chip);
+}
+.timepick__hint {
+  margin: 10px 2px 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--faint);
+  text-align: center;
 }
 
 /* quick-pick presets (bottle amount) below the stepper */
@@ -587,7 +845,7 @@ select {
 }
 .preset {
   flex: 1 1 0;
-  min-height: 46px;
+  min-height: 48px;
   border-radius: var(--r-md);
   background: var(--chip);
   border: 1px solid var(--line);
@@ -729,7 +987,7 @@ select {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--tap) + 64px + env(safe-area-inset-bottom));
+  bottom: calc(var(--tap) + 80px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: center;
   padding: 0 16px;
@@ -782,7 +1040,113 @@ select {
   font-family: var(--font-mono);
   font-size: 0.74rem;
   color: var(--faint);
-  margin: 0 2px 16px;
+  margin: 0 2px 12px;
+}
+
+/* adjustable "shift started" row on the summary */
+.summary-shift {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 0 18px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: background 0.15s var(--ease);
+}
+.summary-shift:active {
+  background: var(--raised2);
+}
+.summary-shift__times {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--ink);
+  min-width: 0;
+}
+.summary-shift__next {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+.summary-shift__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+.summary-shift__len {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--faint);
+}
+.summary-shift__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+/* summary stat tiles — category-accented, echoes the printable handoff */
+.sum-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sum-stat {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: 13px 15px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sum-stat--feeds { border-top-color: var(--warn); }
+.sum-stat--diapers { border-top-color: var(--accent); }
+.sum-stat--sleep { border-top-color: var(--calm); }
+.sum-stat--notes { border-top-color: var(--accent-deep); }
+.sum-stat__label {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+.sum-stat__value {
+  font-family: var(--font-display);
+  font-size: 1.95rem;
+  line-height: 1;
+  color: var(--ink);
+}
+.sum-stat__sub {
+  font-size: 0.78rem;
+  color: var(--soft);
+  line-height: 1.35;
+}
+.sum-stool {
+  margin: -2px 2px 16px;
+  font-size: 0.82rem;
+  color: var(--soft);
+}
+.sum-stool__label {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  margin-right: 6px;
 }
 
 .stat-card {
@@ -824,7 +1188,17 @@ select {
 .btn-row {
   display: flex;
   gap: 10px;
-  margin: 8px 0 18px;
+  margin: 8px 0 8px;
+}
+.btn-row-hint {
+  margin: 0 2px 18px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--faint);
+}
+.btn-row-hint strong {
+  color: var(--soft);
+  font-weight: 600;
 }
 .btn {
   flex: 1 1 0;
@@ -884,7 +1258,7 @@ select {
   flex-wrap: wrap;
 }
 .segmented__opt {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   border-radius: var(--r-pill);
   color: var(--soft);

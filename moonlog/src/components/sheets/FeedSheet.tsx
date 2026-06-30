@@ -8,7 +8,7 @@ import { useSettings } from '../../state/SettingsContext';
 import { useToast } from '../../state/ToastContext';
 import { addFeed, updateEvent, deleteEvent, restoreEvent } from '../../db/hooks';
 import { buzz } from '../../lib/haptics';
-import { fmtClockShort, fmtShortMin } from '../../lib/time';
+import { fmtClockShort } from '../../lib/time';
 import { STEP, displayAmount, toMl, type Unit } from '../../lib/units';
 import { METHOD_LABEL, isBottle } from '../../lib/labels';
 import type { FeedEvent, FeedMethod } from '../../db/types';
@@ -48,7 +48,6 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
   const [amount, setAmount] = useState(() =>
     editing?.amountMl != null ? displayAmount(editing.amountMl, unit) : defaultAmount(unit),
   );
-  const [duration, setDuration] = useState(editing?.durationMin ?? 0);
   const [note, setNote] = useState(editing?.note ?? '');
 
   const step = STEP[unit];
@@ -56,13 +55,12 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
   const save = async () => {
     const at = new Date(time).toISOString();
     const amountMl = isBottle(method) && amount > 0 ? toMl(amount, unit) : undefined;
-    const durationMin = duration > 0 ? duration : undefined;
     const trimmed = note.trim() || undefined;
     if (editing) {
-      await updateEvent(editing.id, { at, method, amountMl, durationMin, note: trimmed });
+      await updateEvent(editing.id, { at, method, amountMl, note: trimmed });
       showToast('Feed updated');
     } else {
-      const ev = await addFeed(shiftId, { at, method, amountMl, durationMin, note: trimmed });
+      const ev = await addFeed(shiftId, { at, method, amountMl, note: trimmed });
       showToast(`Feed logged · ${fmtClockShort(ev.at)}`, { undo: () => deleteEvent(ev.id) });
     }
     buzz();
@@ -114,20 +112,6 @@ export function FeedSheet({ shiftId, onClose, editing, lastMethod }: Props) {
           </div>
         </div>
       )}
-
-      <div className="sheet__field">
-        <span className="field-label">Duration (optional)</span>
-        <Stepper
-          ariaLabel="duration"
-          decLabel="−5"
-          incLabel="+5"
-          onDec={() => setDuration((d) => Math.max(0, d - 5))}
-          onInc={() => setDuration((d) => d + 5)}
-          decDisabled={duration <= 0}
-        >
-          {duration > 0 ? fmtShortMin(duration) : '—'}
-        </Stepper>
-      </div>
 
       <div className="sheet__field">
         <label htmlFor="feed-note">Note (optional)</label>

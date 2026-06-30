@@ -46,6 +46,7 @@ export function Onboarding() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Theo"
+            maxLength={24}
             autoFocus
           />
         </div>

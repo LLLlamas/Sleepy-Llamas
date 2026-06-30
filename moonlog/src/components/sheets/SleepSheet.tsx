@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
 import { Sheet } from '../ui/Sheet';
+import { TimePicker } from '../ui/TimePicker';
 import { DeleteRow } from './DeleteRow';
 import { useToast } from '../../state/ToastContext';
 import {
@@ -10,9 +10,8 @@ import {
   restoreSleep,
 } from '../../db/hooks';
 import { buzz } from '../../lib/haptics';
+import { fmtShortMin } from '../../lib/time';
 import type { SleepSession } from '../../db/types';
-
-const toLocalInput = (ms: number) => format(new Date(ms), "yyyy-MM-dd'T'HH:mm");
 
 interface Props {
   shiftId: string;
@@ -20,24 +19,39 @@ interface Props {
   editing?: SleepSession;
 }
 
-/** Manual sleep entry / back-fill (spec: long-press → manual session). */
+/**
+ * Manual sleep entry / back-fill. Time-only (no calendar): pick the asleep and
+ * woke clock times and we work out the dates — if "woke" reads earlier than
+ * "asleep" it's treated as the next morning, so an 11:40pm → 12:25am stretch
+ * just works.
+ */
 export function SleepSheet({ shiftId, onClose, editing }: Props) {
   const { showToast } = useToast();
-  const [startStr, setStartStr] = useState(() =>
-    toLocalInput(editing ? new Date(editing.startAt).getTime() : Date.now() - 30 * 60000),
+  const now = Date.now();
+
+  const [startMs, setStartMs] = useState(() =>
+    editing ? new Date(editing.startAt).getTime() : now - 30 * 60000,
   );
-  const [endStr, setEndStr] = useState(() =>
-    editing?.endAt ? toLocalInput(new Date(editing.endAt).getTime()) : '',
+  const [stillAsleep, setStillAsleep] = useState(() => (editing ? !editing.endAt : false));
+  const [endMs, setEndMs] = useState(() =>
+    editing?.endAt ? new Date(editing.endAt).getTime() : now,
   );
 
-  const startMs = new Date(startStr).getTime();
-  const endMs = endStr ? new Date(endStr).getTime() : undefined;
-  const valid =
-    !Number.isNaN(startMs) && (endMs === undefined || (!Number.isNaN(endMs) && endMs > startMs));
+  // If the woke clock-time lands before the asleep instant, roll it to the next
+  // day so an overnight stretch reads correctly.
+  const resolvedEnd = (() => {
+    if (stillAsleep) return undefined;
+    let e = endMs;
+    if (e <= startMs) e += 24 * 60 * 60 * 1000;
+    return e;
+  })();
+
+  const valid = stillAsleep || (resolvedEnd !== undefined && resolvedEnd > startMs);
+  const durationMin = resolvedEnd !== undefined ? Math.round((resolvedEnd - startMs) / 60000) : 0;
 
   const save = async () => {
     const startAt = new Date(startMs).toISOString();
-    const endAt = endMs !== undefined ? new Date(endMs).toISOString() : undefined;
+    const endAt = resolvedEnd !== undefined ? new Date(resolvedEnd).toISOString() : undefined;
     if (editing) {
       await updateSleep(editing.id, { startAt, endAt });
       showToast('Sleep updated');
@@ -58,27 +72,32 @@ export function SleepSheet({ shiftId, onClose, editing }: Props) {
       saveDisabled={!valid}
     >
       <div className="sheet__field">
-        <label htmlFor="sleep-start">Asleep at</label>
-        <input
-          id="sleep-start"
-          className="input"
-          type="datetime-local"
-          value={startStr}
-          onChange={(e) => setStartStr(e.target.value)}
-        />
+        <span className="field-label">Asleep at</span>
+        <TimePicker value={startMs} onChange={setStartMs} ariaLabel="asleep time" referenceMs={now} />
       </div>
 
       <div className="sheet__field">
-        <label htmlFor="sleep-end">Woke at (leave empty if still asleep)</label>
-        <input
-          id="sleep-end"
-          className="input"
-          type="datetime-local"
-          value={endStr}
-          min={startStr}
-          onChange={(e) => setEndStr(e.target.value)}
-        />
-        {!valid && endStr && <p className="field__hint">Wake time must be after the sleep time.</p>}
+        <div className="field-label-row">
+          <span className="field-label" style={{ marginBottom: 0 }}>Woke at</span>
+          <button
+            type="button"
+            className={`mini-toggle${stillAsleep ? ' is-on' : ''}`}
+            aria-pressed={stillAsleep}
+            onClick={() => setStillAsleep((s) => !s)}
+          >
+            Still asleep
+          </button>
+        </div>
+        {stillAsleep ? (
+          <p className="field__hint">Open stretch — the timer keeps running until you log a wake time.</p>
+        ) : (
+          <>
+            <TimePicker value={endMs} onChange={setEndMs} ariaLabel="woke time" referenceMs={now} />
+            <p className="field__hint">
+              {valid ? `Slept ${fmtShortMin(durationMin)}` : 'Wake time must be after the sleep time.'}
+            </p>
+          </>
+        )}
       </div>
 
       {editing && (
