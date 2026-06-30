@@ -267,22 +267,27 @@ select {
 }
 .tile--sleep {
   grid-column: 1 / -1;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  min-height: 108px;
-  padding: 16px;
+  justify-content: center;
+  gap: 11px;
+  min-height: 122px;
+  padding: 20px 16px 18px;
   border-width: 2px;
   position: relative;
   overflow: hidden;
+  text-align: center;
 }
 .tile--sleep::before {
   content: '';
   position: absolute;
-  inset: 14px auto 14px 0;
-  width: 4px;
-  border-radius: 0 999px 999px 0;
+  top: 12px;
+  left: 50%;
+  width: 62px;
+  height: 3px;
+  border-radius: var(--r-pill);
   background: var(--line-strong);
+  transform: translateX(-50%);
   z-index: 1;
 }
 .tile--sleep::after {
@@ -324,6 +329,7 @@ select {
 .tile__sleepState {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
   min-width: 0;
   position: relative;
@@ -1643,9 +1649,8 @@ select {
     font-size: 1.2rem;
   }
   .tile--sleep {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 11px;
   }
   .tile__sleepTimer {
     white-space: normal;

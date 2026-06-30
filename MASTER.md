@@ -75,6 +75,7 @@ installs Moonlog dependencies, builds Moonlog, and copies `moonlog/dist/` into
 - Header shows Moonlog, baby name/day, centered current date/time, and an
   awake/asleep state pill.
 - The sleep status tile is first and spans the full tile grid.
+- Sleep status tile content is center-aligned with a centered accent mark.
 - Sleep tile copy uses the entered baby name, such as `Luna is asleep`.
 - The sleep tile uses a soft left-to-right glow using the current state color:
   blue/calm while asleep, gold/accent while awake.
