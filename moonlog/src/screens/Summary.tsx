@@ -2,19 +2,26 @@ import { useEffect, useState } from 'react';
 import type { Baby, LogEvent, Shift, SleepSession } from '../db/types';
 import type { Unit } from '../lib/units';
 import { computeTotals, buildSummaryText } from '../lib/summary';
+import { buildHandoffHtml } from '../lib/handoffHtml';
 import { useRecentShifts } from '../db/hooks';
 import { useToast } from '../state/ToastContext';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import {
-  dayNumber,
   fmtClockLong,
-  fmtClockShort,
+  fmtDuration,
   fmtShortMin,
   sinceISO,
 } from '../lib/time';
 import { formatAmount } from '../lib/units';
 import { STOOL_LABEL } from '../lib/labels';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
+
+const PencilIcon = () => (
+  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
 
 interface Props {
   baby: Baby;
@@ -24,6 +31,7 @@ interface Props {
   now: number;
   unit: Unit;
   onEndShift: () => void;
+  onEditShiftStart: () => void;
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -47,12 +55,11 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndShift }: Props) {
+export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndShift, onEditShiftStart }: Props) {
   const { showToast } = useToast();
   const recent = useRecentShifts(baby.id);
   const totals = computeTotals(events, sleepSessions, now);
   const generated = buildSummaryText(baby, shift, events, sleepSessions, unit, now);
-  const [shareSupported] = useState(() => typeof navigator !== 'undefined' && 'share' in navigator);
 
   // Editable handoff: `draft` holds the user's edits (persisted per shift so a
   // tab switch / reload doesn't lose them). null = use the live auto-generated text.
@@ -98,20 +105,39 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
     const ok = await copyText(text);
     showToast(ok ? 'Summary copied' : 'Copy failed — select & copy manually');
   };
-  const onShare = async () => {
-    if (shareSupported) {
-      try {
-        await navigator.share({ text });
-        return;
-      } catch {
-        /* user cancelled or failed — fall through to copy */
-      }
+  // "Share" opens the Sleepy-Llamas-themed keepsake page in a new tab; from there
+  // the client reads it in the browser or taps "Save as PDF". Distinct from the
+  // plain-text "Copy" that pastes into Messages/Notes.
+  const onShareHandoff = async () => {
+    // fonts are embedded so the keepsake renders identically offline; lazy-loaded
+    // so the ~130KB of woff2 never weighs down the app's initial bundle
+    const { HANDOFF_FONT_CSS } = await import('../lib/handoffFonts');
+    const html = buildHandoffHtml(baby, shift, events, sleepSessions, unit, now, HANDOFF_FONT_CSS);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) {
+      // pop-up blocked (e.g. installed PWA) — fall back to a download link
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.download = `moonlog-${format(new Date(shift.startedAt), 'yyyy-MM-dd')}-${baby.name || 'handoff'}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Saved the handoff page — open it to view or Save as PDF');
+    } else {
+      showToast('Opened the handoff — Save as PDF from your browser');
     }
-    onCopy();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   const stoolProgression = totals.stoolProgression.map((s) => STOOL_LABEL[s]).join(' → ');
-  const endText = shift.endedAt ?? now;
+  const startMs = new Date(shift.startedAt).getTime();
+  const endMs = shift.endedAt ? new Date(shift.endedAt).getTime() : now;
+  const dateLabel = format(new Date(startMs), 'EEEE, MMM d');
+  const crossedMidnight = !isSameDay(new Date(startMs), new Date(endMs));
   const isEmpty = events.length === 0 && sleepSessions.length === 0;
 
   const archived = (recent ?? []).filter((s) => s.endedAt && s.id !== shift.id);
@@ -119,62 +145,74 @@ export function Summary({ baby, shift, events, sleepSessions, now, unit, onEndSh
   return (
     <>
       <h1 className="screen-title">Shift summary</h1>
-      <p className="screen-sub">
-        {baby.name}, Day {dayNumber(baby.birthAt, now)} · {fmtClockShort(shift.startedAt)} –{' '}
-        {shift.endedAt ? fmtClockShort(shift.endedAt) : fmtClockShort(endText)}
-      </p>
+      <p className="screen-sub">{baby.name} · {dateLabel}</p>
+      <button
+        type="button"
+        className="summary-shift"
+        onClick={onEditShiftStart}
+        aria-label={`Shift ${fmtClockLong(startMs)} to ${shift.endedAt ? fmtClockLong(endMs) : 'now'} — tap to adjust the start time`}
+      >
+        <span className="summary-shift__times tabular">
+          {fmtClockLong(startMs)} – {shift.endedAt ? fmtClockLong(endMs) : 'now'}
+          {crossedMidnight && <span className="summary-shift__next"> · +1 day</span>}
+        </span>
+        <span className="summary-shift__meta">
+          <span className="summary-shift__len tabular">{fmtDuration(endMs - startMs)}</span>
+          <span className="summary-shift__edit"><PencilIcon /> start</span>
+        </span>
+      </button>
 
       {isEmpty && (
         <p className="note-banner">Nothing logged this shift yet — the summary fills in as you log.</p>
       )}
 
-      <div className="stat-card">
-        <div className="stat">
-          <span className="stat__label">Feeds</span>
-          <span className="stat__value tabular">
-            {totals.feeds}
-            {totals.feedMl ? <span className="stat__detail"> · {formatAmount(totals.feedMl, unit)}</span> : null}
+      <div className="sum-stats">
+        <div className="sum-stat sum-stat--feeds">
+          <span className="sum-stat__label">Feeds</span>
+          <span className="sum-stat__value tabular">{totals.feeds}</span>
+          {totals.feedMl ? (
+            <span className="sum-stat__sub">{formatAmount(totals.feedMl, unit)}</span>
+          ) : null}
+        </div>
+        <div className="sum-stat sum-stat--diapers">
+          <span className="sum-stat__label">Diapers</span>
+          <span className="sum-stat__value tabular">{totals.diapers}</span>
+          <span className="sum-stat__sub">{totals.wet} wet · {totals.dirty} dirty</span>
+        </div>
+        <div className="sum-stat sum-stat--sleep">
+          <span className="sum-stat__label">Sleep</span>
+          <span className="sum-stat__value tabular">{fmtShortMin(totals.sleepMin)}</span>
+          <span className="sum-stat__sub">
+            {totals.stretches} stretch{totals.stretches === 1 ? '' : 'es'}
+            {totals.longestMin ? ` · longest ${fmtShortMin(totals.longestMin)}` : ''}
           </span>
         </div>
-        <div className="stat">
-          <span className="stat__label">Diapers</span>
-          <span className="stat__value tabular">
-            {totals.diapers}
-            <span className="stat__detail">
-              {' '}· {totals.wet} wet · {totals.dirty} dirty
-            </span>
-          </span>
-        </div>
-        {stoolProgression && (
-          <div className="stat">
-            <span className="stat__label">Stool</span>
-            <span className="stat__detail">{stoolProgression}</span>
-          </div>
-        )}
-        <div className="stat">
-          <span className="stat__label">Sleep</span>
-          <span className="stat__value tabular">
-            {fmtShortMin(totals.sleepMin)}
-            <span className="stat__detail">
-              {' '}· {totals.stretches} stretch{totals.stretches === 1 ? '' : 'es'}
-              {totals.longestMin ? ` · longest ${fmtShortMin(totals.longestMin)}` : ''}
-            </span>
-          </span>
-        </div>
-        <div className="stat">
-          <span className="stat__label">Notes</span>
-          <span className="stat__value tabular">{totals.notes}</span>
+        <div className="sum-stat sum-stat--notes">
+          <span className="sum-stat__label">Notes</span>
+          <span className="sum-stat__value tabular">{totals.notes}</span>
+          {totals.notes > 0 && (
+            <span className="sum-stat__sub">moment{totals.notes === 1 ? '' : 's'} kept</span>
+          )}
         </div>
       </div>
+      {stoolProgression && (
+        <p className="sum-stool">
+          <span className="sum-stool__label">Stool</span> {stoolProgression}
+        </p>
+      )}
 
       <div className="btn-row">
-        <button type="button" className="btn btn--primary" onClick={onCopy}>
-          Copy summary
+        <button type="button" className="btn btn--ghost" onClick={onCopy}>
+          Copy text
         </button>
-        <button type="button" className="btn btn--ghost" onClick={onShare}>
-          {shareSupported ? 'Share' : 'Copy as text'}
+        <button type="button" className="btn btn--primary" onClick={onShareHandoff}>
+          Share handoff
         </button>
       </div>
+      <p className="btn-row-hint">
+        <strong>Copy</strong> pastes into Messages or Notes. <strong>Share</strong> opens a keepsake
+        page to view or Save as PDF.
+      </p>
 
       <div className="section-head">
         <span className="section-label">Handoff — edit before sending</span>

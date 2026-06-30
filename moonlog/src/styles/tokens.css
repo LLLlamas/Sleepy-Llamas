@@ -69,7 +69,7 @@ html[data-theme='day'] {
   --accent-faint: #f7e6e2;
   --accent-ink: #fffaf5;
   --calm: #3f7d68;
-  --warn: #b0506a;
+  --warn: #9c3a54; /* darkened for AA on the cream Day surfaces (overdue-feed value) */
   --warn-faint: #f7e0e6;
   --stop: #b8324a;
   --stop-faint: #fbe6ea;

@@ -13,6 +13,7 @@ import {
 } from '../db/hooks';
 import { Stepper } from '../components/ui/Stepper';
 import { DeleteRow } from '../components/sheets/DeleteRow';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { dayNumber } from '../lib/time';
 import { METHOD_LABEL } from '../lib/labels';
 import type { Unit } from '../lib/units';
@@ -86,6 +87,7 @@ export function Settings({ baby, shift, now }: Props) {
   const [birth, setBirth] = useState(format(new Date(baby.birthAt), "yyyy-MM-dd'T'HH:mm"));
   const [caregiver, setCaregiver] = useState(shift.caregiver ?? settings.caregiver);
   const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const wakeSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 
   useEffect(() => {
@@ -153,6 +155,7 @@ export function Settings({ baby, shift, now }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
+          maxLength={24}
         />
       </div>
       <div className="setting">
@@ -264,13 +267,18 @@ export function Settings({ baby, shift, now }: Props) {
         />
       </div>
       <div className="setting" style={{ borderBottom: 'none' }}>
-        <DeleteRow
-          label="Clear ALL data"
-          onDelete={async () => {
-            await clearAllData();
-            showToast('All data cleared');
-          }}
-        />
+        <div className="setting__label">Reset Moonlog</div>
+        <div className="setting__hint">
+          Erases {baby.name}'s profile and every shift, log, and note on this device, then
+          returns to setup. Export first if you want to keep a copy.
+        </div>
+        <button
+          type="button"
+          className="btn btn--danger btn--block"
+          onClick={() => setConfirmReset(true)}
+        >
+          Reset &amp; start fresh
+        </button>
       </div>
 
       <p className="note-banner" style={{ marginTop: 18 }}>
@@ -279,6 +287,21 @@ export function Settings({ baby, shift, now }: Props) {
         The temperature flag is a visual cue only; always tell the parents and let them and
         their pediatrician decide.
       </p>
+
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset Moonlog?"
+          message={`This permanently erases ${baby.name}'s profile and every shift, log, and note on this device, then returns to the welcome screen. This can't be undone — export your data first if you want to keep it.`}
+          confirmLabel="Reset everything"
+          danger
+          onCancel={() => setConfirmReset(false)}
+          onConfirm={async () => {
+            setConfirmReset(false);
+            await clearAllData();
+            showToast('Moonlog reset — starting fresh');
+          }}
+        />
+      )}
     </>
   );
 }

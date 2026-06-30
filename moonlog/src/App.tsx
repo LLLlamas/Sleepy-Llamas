@@ -10,6 +10,7 @@ import { FeedSheet } from './components/sheets/FeedSheet';
 import { DiaperSheet } from './components/sheets/DiaperSheet';
 import { NoteSheet } from './components/sheets/NoteSheet';
 import { SleepSheet } from './components/sheets/SleepSheet';
+import { ShiftStartSheet } from './components/sheets/ShiftStartSheet';
 import {
   useBabies,
   useActiveShifts,
@@ -40,6 +41,7 @@ type SheetState =
   | { k: 'diaper'; editing?: DiaperEvent }
   | { k: 'note'; editing?: NoteEvent }
   | { k: 'sleep'; editing?: SleepSession }
+  | { k: 'shift-start' }
   | null;
 
 const EMPTY: never[] = [];
@@ -89,6 +91,7 @@ export default function App() {
     buzz();
     showToast(r.action === 'opened' ? 'Asleep — timer started' : 'Awake logged', {
       undo: () => undoSleepToggle(r),
+      durationMs: 3500,
     });
   };
 
@@ -132,7 +135,14 @@ export default function App() {
 
   return (
     <div className="app">
-      {showHeader && <Header baby={baby} shift={shift} now={now} />}
+      {showHeader && (
+        <Header
+          baby={baby}
+          shift={shift}
+          now={now}
+          onEditShiftStart={() => setSheet({ k: 'shift-start' })}
+        />
+      )}
 
       <div
         className="app__scroll"
@@ -161,6 +171,7 @@ export default function App() {
             now={now}
             unit={settings.unit}
             onEndShift={onEndShift}
+            onEditShiftStart={() => setSheet({ k: 'shift-start' })}
           />
         )}
         {tab === 'settings' && <Settings baby={baby} shift={shift} now={now} />}
@@ -191,6 +202,9 @@ export default function App() {
       )}
       {sheet?.k === 'sleep' && (
         <SleepSheet shiftId={shift.id} editing={sheet.editing} onClose={closeSheet} />
+      )}
+      {sheet?.k === 'shift-start' && (
+        <ShiftStartSheet shift={shift} onClose={closeSheet} />
       )}
     </div>
   );
