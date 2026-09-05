@@ -31,7 +31,7 @@ Updated 2026-09-05.
 
 | What | When | Why |
 |---|---|---|
-| **Sign in to Xcode with your Apple ID** | before any device build | **Blocking.** `security find-identity` reports zero signing identities and there are no provisioning profiles — Xcode has no account on this machine. Xcode → Settings → Accounts → **+** → Apple ID. Automatic signing does the rest. |
+| ~~Xcode signing~~ | done | Signed in 2026-09-05. Device build verified: "Apple Development: Lorenzo Llamas", wildcard team profile, all four targets. Signing under team `GYFN949Q5E` — the same team as The-Llamas-Cookbook. |
 | iCloud capability + container + Background Modes → Remote notifications | before sync works | Xcode UI and the developer portal. Flip `MOONLOG_CLOUDKIT` at the same time. |
 | NFC Tag Reading on the App ID | before NFC | Developer portal. |
 | `git push -u origin moonlog-ios` | whenever | Outward-facing, so it is the user's call. Nothing has left the machine. A local archive to TestFlight does not need it. |

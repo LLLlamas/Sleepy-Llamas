@@ -30,6 +30,13 @@ xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
 Adding a new `Sources/` subdirectory means adding it to `project.yml`; XcodeGen
 errors on a source path that does not exist yet.
 
+Device build (verifies signing):
+
+```bash
+xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
+  -destination "generic/platform=iOS" -allowProvisioningUpdates build
+```
+
 Before archiving: `agvtool new-version -all $(date -u +%s)`. `CURRENT_PROJECT_VERSION`
 must be a Unix timestamp or App Store Connect rejects the build, and `xcodegen
 generate` resets it to a placeholder.
