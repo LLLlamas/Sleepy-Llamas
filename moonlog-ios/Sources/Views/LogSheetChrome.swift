@@ -22,6 +22,10 @@ struct LogSheetChrome<Content: View>: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
 
+    /// The Save button stays hit-testable during the dismiss animation, and the
+    /// write is async, so without this a second tap writes a second record.
+    @State private var isSaving = false
+
     /// A minute of slack, so setting "now" by hand is never rejected by a race.
     private var isFuture: Bool { at > Date().addingTimeInterval(60) }
 
@@ -32,7 +36,7 @@ struct LogSheetChrome<Content: View>: View {
         return false
     }
 
-    private var canSave: Bool { saveEnabled && !isFuture }
+    private var canSave: Bool { saveEnabled && !isFuture && !isSaving }
 
     var body: some View {
         NavigationStack {
@@ -83,7 +87,13 @@ struct LogSheetChrome<Content: View>: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { onSave(); dismiss() }.disabled(!canSave)
+                    Button("Save") {
+                        guard !isSaving else { return }
+                        isSaving = true
+                        onSave()
+                        dismiss()
+                    }
+                    .disabled(!canSave)
                 }
             }
         }

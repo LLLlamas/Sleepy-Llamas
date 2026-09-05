@@ -13,13 +13,14 @@ struct OnboardingView: View {
     @State private var babyName = ""
     @State private var birthAt = Date()
     @State private var unit: VolumeUnit = .oz
+    @State private var isCreating = false
 
     @Environment(\.palette) private var palette
 
     private var trimmedFamily: String { familyName.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var trimmedBaby: String { babyName.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canCreate: Bool {
-        !trimmedFamily.isEmpty && !trimmedBaby.isEmpty && birthAt <= Date()
+        !trimmedFamily.isEmpty && !trimmedBaby.isEmpty && birthAt <= Date() && !isCreating
     }
 
     var body: some View {
@@ -56,7 +57,11 @@ struct OnboardingView: View {
             .listRowBackground(palette.raised)
 
             Section {
+                // A second tap creates a second Family. `families.first` then hides
+                // it forever and there is no in-app delete.
                 Button("Create") {
+                    guard !isCreating else { return }
+                    isCreating = true
                     onCreate(trimmedFamily, trimmedBaby, birthAt, unit)
                 }
                 .disabled(!canCreate)
@@ -77,7 +82,11 @@ struct StartShiftView: View {
     let onStart: (Date, String?) -> Void
 
     @AppStorage("moonlog.lastCaregiver") private var caregiver = ""
+    /// Seeded on appear, not at construction. This view is the root whenever no
+    /// shift is open, so a `Date()` captured here survives backgrounding — open the
+    /// app at 21:50, start the shift at 22:35, and it would record 21:50.
     @State private var startedAt = Date()
+    @State private var isStarting = false
 
     @Environment(\.palette) private var palette
 
@@ -110,18 +119,21 @@ struct StartShiftView: View {
 
             Section {
                 Button("Start shift") {
+                    guard !isStarting else { return }
+                    isStarting = true
                     onStart(
                         startedAt,
                         caregiver.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             ? nil : caregiver)
                 }
-                .disabled(isFuture)
+                .disabled(isFuture || isStarting)
                 .frame(maxWidth: .infinity)
             }
             .listRowBackground(palette.raised)
         }
         .scrollContentBackground(.hidden)
         .background(palette.bg)
+        .onAppear { startedAt = Date() }
     }
 }
 
@@ -132,6 +144,7 @@ struct AddBabySheet: View {
 
     @State private var name = ""
     @State private var birthAt = Date()
+    @State private var isAdding = false
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
@@ -155,8 +168,15 @@ struct AddBabySheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { onAdd(trimmed, birthAt); dismiss() }
-                        .disabled(trimmed.isEmpty)
+                    // Two taps produce two identical babies. The timeline then
+                    // splits one infant's night across two cards.
+                    Button("Add") {
+                        guard !isAdding else { return }
+                        isAdding = true
+                        onAdd(trimmed, birthAt)
+                        dismiss()
+                    }
+                    .disabled(trimmed.isEmpty || isAdding)
                 }
             }
         }

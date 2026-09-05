@@ -246,6 +246,48 @@ final class CareStoreTests: XCTestCase {
         XCTAssertEqual(sessions[0].babyIDRaw, mia, "attribution set via attach")
     }
 
+    /// The correction path. Wake the baby, then adjust the time — there is no open
+    /// session any more, so `recordSleep` used to fall through to its insert branch
+    /// and write a SECOND overlapping session. Totals sum sessions independently, so
+    /// the handoff reported roughly double the real sleep.
+    func testCorrectingAJustClosedSessionDoesNotDoubleCount() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+
+        // Asleep 22:00, "Wake" tapped at 23:30.
+        try await store.toggleSleep(shiftID: shift, babyID: mia, at: shiftStart)
+        try await store.toggleSleep(
+            shiftID: shift, babyID: mia, at: shiftStart.addingTimeInterval(5400))
+
+        // Realises the wake tap was late; corrects to 22:00–23:20.
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia,
+            startAt: shiftStart,
+            endAt: shiftStart.addingTimeInterval(4800))
+
+        let sessions = try ModelContext(container)
+            .fetch(FetchDescriptor<SleepSession>())
+            .filter { $0.babyIDRaw == mia }
+            .sorted { $0.startAt < $1.startAt }
+
+        // Whatever the merge decides, the invariant is that nothing overlaps —
+        // overlapping sessions are what produce the doubled total.
+        for (a, b) in zip(sessions, sessions.dropFirst()) {
+            let aEnd = try XCTUnwrap(a.endAt, "only the last session may be open")
+            XCTAssertLessThanOrEqual(aEnd, b.startAt, "sessions must not overlap")
+        }
+
+        let snapshots = sessions.compactMap(\.snapshot)
+        let window = ShiftWindow(startedAt: shiftStart, endedAt: nil)
+        let total = SleepMath.totalSeconds(
+            of: snapshots, clippedTo: window,
+            asOf: shiftStart.addingTimeInterval(6 * 3600))
+        XCTAssertLessThanOrEqual(
+            total, 5400,
+            "total cannot exceed the real 90-minute stretch — it was ~2x before")
+    }
+
     // MARK: - Reconciliation
 
     /// Simulates what CloudKit can actually deliver: two devices each opening a

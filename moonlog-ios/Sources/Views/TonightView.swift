@@ -17,7 +17,16 @@ struct TonightView: View {
     @State private var sheet: LogSheet?
     @State private var editingBaby: Baby?
     @State private var confirmation: String?
+    /// Only the newest confirmation may clear itself. Without this an older write's
+    /// two-second timer wipes a newer write's banner — and since the banner is the
+    /// only feedback that a write landed, that makes the user log it again.
+    @State private var confirmationToken = 0
     @State private var saveError: String?
+    /// Babies with a write in flight. The sleep toggle is the most-pressed control
+    /// in the app and the card cannot update until the actor round-trip lands, so
+    /// without this a second tap immediately closes the session that just opened —
+    /// leaving a ~20ms sleep and a card reading "Awake".
+    @State private var busy: Set<UUID> = []
     @State private var addingBaby = false
     @State private var confirmEndShift = false
 
@@ -41,6 +50,7 @@ struct TonightView: View {
                     BabyStatusCard(
                         baby: presentation,
                         now: data.now,
+                        isBusy: busy.contains(presentation.id),
                         onFeed: { sheet = .feed(babyID: presentation.id) },
                         onDiaper: { sheet = .diaper(babyID: presentation.id) },
                         onToggleSleep: { toggleSleep(presentation) },
@@ -111,9 +121,17 @@ struct TonightView: View {
         }
         .sheet(item: $editingBaby) { baby in
             BabyDetailSheet(name: baby.name, accent: baby.accent) { name, accent in
-                baby.name = name
-                baby.accentRaw = accent.rawValue
-                try? modelContext.save()
+                // Through the store, not the view's context: writing the model
+                // directly skipped `updateBaby`'s trim and empty-name guard, and the
+                // `try?` meant a failed save still rendered the new name.
+                guard let store else {
+                    saveError = "The data store is unavailable. Nothing was saved."
+                    return
+                }
+                Task {
+                    do { try await store.updateBaby(baby.id, name: name, accent: accent) }
+                    catch { saveError = "\(error)" }
+                }
             }
             .presentationDetents([.medium, .large])
         }
@@ -126,7 +144,7 @@ private extension TonightView {
 
     @ViewBuilder
     func logSheet(_ which: LogSheet, data: Tonight) -> some View {
-        if let baby = data.babies.first(where: { $0.id == which.babyID }) {
+        if let baby = data.babies.first(where: { $0.id == which.babyID }) {  // swiftlint:disable:this all
             switch which {
             case .feed:
                 FeedSheet(baby: baby, shift: shift.window, unit: family.volumeUnit) { entry in
@@ -176,6 +194,11 @@ private extension TonightView {
                     }
                 }
             }
+        } else {
+            // The baby vanished between tapping and presenting — archived, or a
+            // relationship transiently nil during sync. Presenting nothing would
+            // leave an empty sheet with no way out.
+            Color.clear.onAppear { sheet = nil }
         }
     }
 
@@ -186,6 +209,7 @@ private extension TonightView {
     }
 
     func toggleSleep(_ baby: BabyPresentation) {
+        guard !busy.contains(baby.id) else { return }
         write(baby, baby.isAsleep ? "\(baby.name) awake" : "\(baby.name) asleep") { store in
             try await store.toggleSleep(shiftID: shift.id, babyID: baby.id, at: Date())
         }
@@ -199,13 +223,23 @@ private extension TonightView {
         _ success: String,
         _ action: @escaping (CareStore) async throws -> Void
     ) {
-        guard let store else { return }
+        guard let store else {
+            // Silently returning would dismiss the sheet and drop the entry with no
+            // banner and no alert — total, invisible data loss.
+            saveError = "The data store is unavailable. Nothing was saved."
+            return
+        }
+        busy.insert(baby.id)
         Task {
+            defer { busy.remove(baby.id) }
             do {
                 try await action(store)
+                confirmationToken &+= 1
+                let token = confirmationToken
                 confirmation = success.contains(baby.name) ? success : "\(success) · \(baby.name)"
                 try? await Task.sleep(for: .seconds(2))
-                confirmation = nil
+                // Only clear if no newer confirmation replaced this one.
+                if confirmationToken == token { confirmation = nil }
             } catch {
                 saveError = "\(error)"
             }
@@ -304,7 +338,7 @@ private struct Tonight {
             }
         }
 
-        timeline.sort { $0.at > $1.at }
+        timeline.sort { $0.at == $1.at ? $0.id.uuidString < $1.id.uuidString : $0.at > $1.at }
         self.timeline = timeline
         self.names = names
         self.accents = accents
@@ -322,12 +356,13 @@ private struct Tonight {
                 asleepSince: openSleep[baby.id]?.startAt,
                 lastFeedAt: feedAt,
                 lastDiaperAt: lastDiaper[baby.id],
-                // A future-dated entry must not suppress the warning, which is
-                // what a negative elapsed time did in the web version.
-                feedIsDue: feedAt.map {
-                    let elapsed = now.timeIntervalSince($0)
-                    return elapsed >= 0 && elapsed >= Self.feedDueAfter
-                } ?? false)
+                // A future-dated feed (only reachable via sync from a device with a
+                // skewed clock) must not suppress the warning. The previous guard
+                // was a no-op — `elapsed >= 0` is subsumed by `elapsed >= 10800` —
+                // so it silently reproduced the web version's bug. Treat a future
+                // stamp as overdue rather than as "just fed".
+                feedIsDue: feedAt.map { now.timeIntervalSince($0) < 0
+                    || now.timeIntervalSince($0) >= Self.feedDueAfter } ?? false)
         }
     }
 

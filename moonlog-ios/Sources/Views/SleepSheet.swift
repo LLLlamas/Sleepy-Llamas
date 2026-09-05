@@ -38,6 +38,13 @@ struct SleepSheet: View {
     /// sleep — and its own error message was unreachable.
     private var endIsBeforeStart: Bool { !stillAsleep && endAt <= startAt }
 
+    /// `LogSheetChrome` bounds only the start. Nothing bounded the wake time, so a
+    /// mis-nudged date wheel could save a wake 24 hours ahead — and because totals
+    /// clip to the shift window, that absorbed the entire rest of the shift as sleep.
+    private var endIsInFuture: Bool {
+        !stillAsleep && endAt > Date().addingTimeInterval(60)
+    }
+
     private var duration: TimeInterval? {
         stillAsleep ? nil : max(0, endAt.timeIntervalSince(startAt))
     }
@@ -49,7 +56,7 @@ struct SleepSheet: View {
             accent: baby.accent.color(for: theme),
             at: $startAt,
             shift: shift,
-            saveEnabled: !endIsBeforeStart,
+            saveEnabled: !endIsBeforeStart && !endIsInFuture,
             onSave: {
                 onSave(SleepEntry(startAt: startAt, endAt: stillAsleep ? nil : endAt))
             }
@@ -65,6 +72,11 @@ struct SleepSheet: View {
             Section {
                 if endIsBeforeStart {
                     Label("Wake time must be after the sleep time",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(palette.stop)
+                        .font(.footnote)
+                } else if endIsInFuture {
+                    Label("That wake time is in the future",
                           systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(palette.stop)
                         .font(.footnote)

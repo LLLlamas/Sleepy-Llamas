@@ -22,6 +22,8 @@ struct BabyStatusCard: View {
     let baby: BabyPresentation
     let now: Date
 
+    /// A write is in flight for this baby; actions are inert until it lands.
+    var isBusy: Bool
     var onFeed: () -> Void
     var onDiaper: () -> Void
     var onToggleSleep: () -> Void
@@ -136,7 +138,7 @@ struct BabyStatusCard: View {
     private func action(
         _ title: String, _ icon: String, _ run: @escaping () -> Void, tint: Color? = nil
     ) -> some View {
-        Button(action: run) {
+        Button(action: { guard !isBusy else { return }; run() }) {
             VStack(spacing: 4) {
                 Image(systemName: icon).font(.body)
                 Text(title).font(.caption.weight(.medium))
@@ -145,7 +147,7 @@ struct BabyStatusCard: View {
             .frame(height: 56)   // --tap floor: one hand, in the dark
         }
         .buttonStyle(.plain)
-        .foregroundStyle(tint ?? palette.ink)
+        .foregroundStyle((tint ?? palette.ink).opacity(isBusy ? 0.4 : 1))
         .background(palette.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityLabel("\(title) for \(baby.name)")

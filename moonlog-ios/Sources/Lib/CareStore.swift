@@ -165,8 +165,13 @@ actor CareStore {
         return .opened(session.id)
     }
 
-    /// Creates a session, or corrects the one already running. Never opens a second
-    /// — reopening is how the web version accumulated invisible sessions.
+    /// Corrects the running session, or records one that was missed.
+    ///
+    /// Reconciles afterwards. Without it, correcting a session that was *already
+    /// closed* — the "I tapped Wake ten minutes late" case — falls through to the
+    /// insert branch and writes a second, overlapping session. Totals sum sessions
+    /// independently, so the parents would be told the baby slept roughly twice as
+    /// long as she did.
     func recordSleep(shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date?) throws {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
@@ -180,6 +185,16 @@ actor CareStore {
             session.attach(to: shift, baby: baby)
             modelContext.insert(session)
         }
+        try modelContext.save()
+        try reconcileSleep(shiftID: shiftID, babyID: babyID)
+    }
+
+    /// Removes a sleep session outright. A closed session is otherwise unreachable.
+    func deleteSleepSession(_ id: UUID) throws {
+        guard let session = try one(
+            FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
+        else { return }
+        modelContext.delete(session)
         try modelContext.save()
     }
 
