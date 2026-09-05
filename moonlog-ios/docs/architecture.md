@@ -29,10 +29,14 @@ Shift    ─── belongs to ONE Family, covers ALL of its babies
           ├─ events:        [LogEvent]
           └─ sleepSessions: [SleepSession]
 
-LogEvent ────── belongs to a Shift AND a Baby
+LogEvent ────── belongs to a Shift AND a Baby (except `pump`, see below)
 SleepSession ── belongs to a Shift AND a Baby
+NoteTagPreset ─ belongs to a Family (user-defined note tags)
 TagBinding ──── belongs to a Family (NFC)
 ```
+
+Seven models. `SchemaCloudKitCompatibilityTests` asserts the exact set by name, so
+one added or dropped fails a test rather than silently stopping syncing.
 
 - **Family** is the client household. Every query and export is scoped to one, so
   one family's data can never appear in another's report.
@@ -40,6 +44,14 @@ TagBinding ──── belongs to a Family (NFC)
   babies within it are separate subjects, not separate shifts.
 - **Sleep is per baby.** With twins, "is she asleep" is a per-baby question. The web
   version could only ask it per shift, which is what multi-baby invalidates.
+- **Volume unit is per family** (`Family.volumeUnit`). Storage stays canonical
+  millilitres; display and entry follow the household. Weight follows the same unit
+  system.
+- **Event kinds beyond the core three are opt-in per family**
+  (`Family.enabledKinds`). `pump` is about the mother and carries **no baby** —
+  `EventKind.attachesToBaby` is false and totals count it for the shift.
+- **A breast feed carries a duration per side** (`leftSeconds` / `rightSeconds`),
+  since one feed commonly uses both. A single-sided feed leaves the other nil.
 - **`LogEvent` is flat**, discriminated by `kindRaw`, rather than three models or a
   class hierarchy. Reasons in `docs/decisions.md`.
 

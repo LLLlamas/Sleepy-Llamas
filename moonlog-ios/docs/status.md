@@ -29,6 +29,11 @@ Updated 2026-09-05.
 4. History → trends → export.
 5. NFC.
 
+## Before TestFlight
+
+See `docs/testflight.md` for the full list. Three of them are hard blockers on
+upload, not polish.
+
 ## Needs the user
 
 | What | When | Why |
