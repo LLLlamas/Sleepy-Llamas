@@ -15,6 +15,20 @@ enum DemoSeed {
         UserDefaults.standard.bool(forKey: "moonlogSeedDemo")
     }
 
+    /// `-moonlogOpenSheet feed|diaper|sleep|note` — opens that sheet on appear.
+    static func requestedSheet(for babyID: UUID?) -> LogSheet? {
+        guard let babyID,
+              let name = UserDefaults.standard.string(forKey: "moonlogOpenSheet")
+        else { return nil }
+        switch name {
+        case "feed": return .feed(babyID: babyID)
+        case "diaper": return .diaper(babyID: babyID)
+        case "sleep": return .sleep(babyID: babyID)
+        case "note": return .note(babyID: babyID)
+        default: return nil
+        }
+    }
+
     @MainActor
     static func seedIfNeeded(_ container: ModelContainer) {
         guard isRequested else { return }
@@ -29,6 +43,11 @@ enum DemoSeed {
 
         let family = Family(name: "Nguyen")
         family.volumeUnitRaw = VolumeUnit.oz.rawValue
+        for (i, label) in ["Spit-up", "Fussy", "Jaundice", "Swaddled", "Skin-to-skin"].enumerated() {
+            let tag = NoteTagPreset(label: label, sortOrder: i)
+            tag.family = family
+            context.insert(tag)
+        }
         let mia = Baby(name: "Mia", birthAt: birth, sortOrder: 0, accent: .gold)
         let leo = Baby(name: "Leo", birthAt: birth, sortOrder: 1, accent: .sage)
         mia.family = family

@@ -12,18 +12,20 @@ Updated 2026-09-05.
 | `CareStore` write layer | done |
 | Tonight screen — adaptive twins layout, timeline | done, runs on simulator |
 | Baby rename + colour picker | done |
+| Log sheets: feed, diaper, sleep, note | done |
 | Per-family volume unit, L/R breast feeds | done |
 | Optional kinds (pump, medication, weight) | model only — no UI yet |
 | User-defined note tags | model only — no UI yet |
 
-91 tests green. Field encryption applied. Verified running in Night and Day themes.
+95 tests green. Field encryption applied; device signing verified. Verified running in Night and Day themes.
 
 ## Next
 
-1. **Log sheets** — Feed / Diaper / Sleep / Note. Tapping an action currently opens
-   a placeholder. This is what makes the app usable.
-2. Start-shift and onboarding flows (currently placeholders).
-3. Edit and delete from the timeline.
+1. Start-shift and onboarding flows (currently placeholders) — the app cannot be
+   used from a cold start without them.
+2. Edit and delete from the timeline.
+3. Family settings: volume unit and the optional event kinds are both modelled but
+   have no UI, and note tags can only be seeded.
 4. History → trends → export.
 5. NFC.
 

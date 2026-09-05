@@ -173,6 +173,79 @@ final class CareStoreTests: XCTestCase {
         XCTAssertEqual(open.count, 1, "odd number of toggles leaves exactly one open")
     }
 
+    // MARK: - Manual sleep entry
+
+    /// The web version added 24 hours instead of refusing, so nudging "woke" back
+    /// past "asleep" silently recorded a 23-hour sleep.
+    func testRecordSleepRejectsAnEndBeforeItsStart() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        do {
+            try await store.recordSleep(
+                shiftID: shift, babyID: mia,
+                startAt: shiftStart.addingTimeInterval(3600),
+                endAt: shiftStart.addingTimeInterval(1800))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .endBeforeStart)
+        }
+    }
+
+    /// Correcting a mistimed toggle must edit the running session, never open a
+    /// second one alongside it.
+    func testRecordSleepCorrectsTheRunningSessionInsteadOfAddingOne() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.toggleSleep(
+            shiftID: shift, babyID: mia, at: shiftStart.addingTimeInterval(3600))
+
+        let corrected = shiftStart.addingTimeInterval(1800)
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia, startAt: corrected, endAt: nil)
+
+        let sessions = try ModelContext(container)
+            .fetch(FetchDescriptor<SleepSession>())
+            .filter { $0.babyIDRaw == mia }
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].startAt, corrected)
+        XCTAssertTrue(sessions[0].isOpen)
+    }
+
+    func testRecordSleepClosesTheRunningSessionWhenGivenAnEnd() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.toggleSleep(shiftID: shift, babyID: mia, at: shiftStart)
+
+        let end = shiftStart.addingTimeInterval(5400)
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia, startAt: shiftStart, endAt: end)
+
+        let stillOpen = try await store.openSleepSession(shiftID: shift, babyID: mia)
+        XCTAssertNil(stillOpen)
+        let sessions = try ModelContext(container).fetch(FetchDescriptor<SleepSession>())
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].endAt, end)
+    }
+
+    func testRecordSleepCreatesAClosedSessionWhenNoneIsRunning() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia,
+            startAt: shiftStart.addingTimeInterval(600),
+            endAt: shiftStart.addingTimeInterval(4200))
+
+        let sessions = try ModelContext(container).fetch(FetchDescriptor<SleepSession>())
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertFalse(sessions[0].isOpen)
+        XCTAssertEqual(sessions[0].babyIDRaw, mia, "attribution set via attach")
+    }
+
     // MARK: - Reconciliation
 
     /// Simulates what CloudKit can actually deliver: two devices each opening a

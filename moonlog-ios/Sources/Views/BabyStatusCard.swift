@@ -26,6 +26,7 @@ struct BabyStatusCard: View {
     var onDiaper: () -> Void
     var onToggleSleep: () -> Void
     var onEditBaby: () -> Void
+    var onAdjustSleep: () -> Void
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
@@ -67,7 +68,18 @@ struct BabyStatusCard: View {
         .accessibilityLabel("\(baby.name), day \(baby.dayOfLife). Edit name and colour.")
     }
 
+    // The button toggles instantly — that is the 3am path. This opens the sheet
+    // for a back-dated or corrected time, visibly rather than behind a long-press.
     private var status: some View {
+        Button(action: onAdjustSleep) {
+            statusContent
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibleStatus)
+        .accessibilityHint("Adjust the time")
+    }
+
+    private var statusContent: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: baby.isAsleep ? "moon.zzz.fill" : "sun.max.fill")
                 .font(.subheadline)
@@ -78,11 +90,13 @@ struct BabyStatusCard: View {
                     .font(.title3.monospacedDigit())
                     .foregroundStyle(palette.soft)
             }
+            Image(systemName: "slider.horizontal.3")
+                .font(.caption2)
+                .foregroundStyle(palette.faint)
             Spacer()
         }
         .foregroundStyle(stateColor)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibleStatus)
+        .contentShape(Rectangle())
     }
 
     private var accessibleStatus: String {

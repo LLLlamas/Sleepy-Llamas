@@ -14,9 +14,12 @@ struct MoonlogApp: App {
         return container
     }()
 
+    @MainActor
+    private static let store = CareStore(modelContainer: sharedContainer)
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView().environment(\.careStore, Self.store)
         }
         .modelContainer(Self.sharedContainer)
     }
@@ -34,4 +37,15 @@ extension EnvironmentValues {
 
     /// Convenience so views read roles rather than resolving a theme themselves.
     var palette: Palette { Palette.for(moonTheme) }
+}
+
+private struct CareStoreKey: EnvironmentKey {
+    static let defaultValue: CareStore? = nil
+}
+
+extension EnvironmentValues {
+    var careStore: CareStore? {
+        get { self[CareStoreKey.self] }
+        set { self[CareStoreKey.self] = newValue }
+    }
 }

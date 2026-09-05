@@ -159,6 +159,24 @@ actor CareStore {
         return .opened(session.id)
     }
 
+    /// Creates a session, or corrects the one already running. Never opens a second
+    /// — reopening is how the web version accumulated invisible sessions.
+    func recordSleep(shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date?) throws {
+        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
+
+        if let existing = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
+            existing.startAt = startAt
+            if let endAt { existing.close(at: endAt) }
+        } else {
+            let session = SleepSession(startAt: startAt, endAt: endAt)
+            session.attach(to: shift, baby: baby)
+            modelContext.insert(session)
+        }
+        try modelContext.save()
+    }
+
     func openSleepSession(shiftID: UUID, babyID: UUID) throws -> SleepSnapshot? {
         try storedOpenSleepSession(shiftID: shiftID, babyID: babyID)?.snapshot
     }

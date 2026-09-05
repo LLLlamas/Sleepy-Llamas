@@ -29,6 +29,7 @@ struct BabyDetailSheet: View {
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
                 }
+                .listRowBackground(palette.raised)
 
                 Section {
                     AccentPicker(selection: $accent, theme: theme)
@@ -39,6 +40,7 @@ struct BabyDetailSheet: View {
                          + "always shown too, so a colour is never the only way to "
                          + "tell them apart.")
                 }
+                .listRowBackground(palette.raised)
             }
             .scrollContentBackground(.hidden)
             .background(palette.bg)

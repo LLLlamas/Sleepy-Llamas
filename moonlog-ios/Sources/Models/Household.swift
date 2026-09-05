@@ -53,6 +53,9 @@ final class Family {
     @Relationship(deleteRule: .cascade, inverse: \TagBinding.family)
     var tagBindings: [TagBinding]? = []
 
+    @Relationship(deleteRule: .cascade, inverse: \NoteTagPreset.family)
+    var noteTags: [NoteTagPreset]? = []
+
     init(
         id: UUID = UUID(),
         name: String,

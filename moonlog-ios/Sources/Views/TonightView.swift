@@ -12,13 +12,23 @@ struct TonightView: View {
 
     @Environment(\.palette) private var palette
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.careStore) private var store
 
     @State private var sheet: LogSheet?
     @State private var editingBaby: Baby?
+    @State private var confirmation: String?
+    @State private var saveError: String?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            content(Tonight(family: family, shift: shift, now: context.date))
+            let data = Tonight(family: family, shift: shift, now: context.date)
+            content(data)
+                #if DEBUG
+                // Opens a sheet straight from a launch argument, so each one can be
+                // rendered and screenshotted without driving the UI. Same rationale
+                // as DemoSeed: a test affordance, never reachable in a real run.
+                .task { sheet = sheet ?? DemoSeed.requestedSheet(for: data.babies.first?.id) }
+                #endif
         }
     }
 
@@ -31,8 +41,9 @@ struct TonightView: View {
                         now: data.now,
                         onFeed: { sheet = .feed(babyID: presentation.id) },
                         onDiaper: { sheet = .diaper(babyID: presentation.id) },
-                        onToggleSleep: { sheet = .sleep(babyID: presentation.id) },
-                        onEditBaby: { editingBaby = data.model(for: presentation.id) }
+                        onToggleSleep: { toggleSleep(presentation) },
+                        onEditBaby: { editingBaby = data.model(for: presentation.id) },
+                        onAdjustSleep: { sheet = .sleep(babyID: presentation.id) }
                     )
                 }
 
@@ -47,8 +58,17 @@ struct TonightView: View {
             .padding(.bottom, 32)
         }
         .background(palette.bg)
+        .overlay(alignment: .top) { confirmationBanner }
+        .alert(
+            "Couldn't save",
+            isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
+        ) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
+        }
         .sheet(item: $sheet) { which in
-            Text("\(which.title) — coming next").presentationDetents([.medium])
+            logSheet(which, data: data)
         }
         .sheet(item: $editingBaby) { baby in
             BabyDetailSheet(name: baby.name, accent: baby.accent) { name, accent in
@@ -57,6 +77,113 @@ struct TonightView: View {
                 try? modelContext.save()
             }
             .presentationDetents([.medium, .large])
+        }
+    }
+}
+
+// MARK: - Logging
+
+private extension TonightView {
+
+    @ViewBuilder
+    func logSheet(_ which: LogSheet, data: Tonight) -> some View {
+        if let baby = data.babies.first(where: { $0.id == which.babyID }) {
+            switch which {
+            case .feed:
+                FeedSheet(baby: baby, shift: shift.window, unit: family.volumeUnit) { entry in
+                    write(baby, "Feed logged") { store in
+                        try await store.logEvent(
+                            kind: .feed, at: entry.at, shiftID: shift.id, babyID: baby.id
+                        ) { event in
+                            event.feedMethodRaw = entry.method.rawValue
+                            event.amountMl = entry.amountMl
+                            event.feedDurationSeconds = entry.bottleSeconds
+                            event.leftSeconds = entry.leftSeconds
+                            event.rightSeconds = entry.rightSeconds
+                        }
+                    }
+                }
+            case .diaper:
+                DiaperSheet(baby: baby, shift: shift.window) { entry in
+                    write(baby, "Diaper logged") { store in
+                        try await store.logEvent(
+                            kind: .diaper, at: entry.at, shiftID: shift.id, babyID: baby.id
+                        ) { event in
+                            event.diaperContentsRaw = entry.contents.rawValue
+                            event.stoolColorRaw = entry.stool?.rawValue
+                        }
+                    }
+                }
+            case .note:
+                NoteSheet(baby: baby, shift: shift.window, presetTags: presetTags) { entry in
+                    write(baby, "Note saved") { store in
+                        try await store.logEvent(
+                            kind: .note, at: entry.at, shiftID: shift.id, babyID: baby.id
+                        ) { event in
+                            event.text = entry.text.isEmpty ? nil : entry.text
+                            event.tagsRaw = entry.tags.isEmpty ? nil : entry.tags.joined(separator: ",")
+                            event.tempF = entry.tempF
+                        }
+                    }
+                }
+            case .sleep:
+                SleepSheet(
+                    baby: baby, shift: shift.window, openSince: baby.asleepSince
+                ) { entry in
+                    write(baby, entry.endAt == nil ? "Sleep updated" : "Sleep logged") { store in
+                        try await store.recordSleep(
+                            shiftID: shift.id, babyID: baby.id,
+                            startAt: entry.startAt, endAt: entry.endAt)
+                    }
+                }
+            }
+        }
+    }
+
+    var presetTags: [String] {
+        (family.noteTags ?? [])
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.label)
+    }
+
+    func toggleSleep(_ baby: BabyPresentation) {
+        write(baby, baby.isAsleep ? "\(baby.name) awake" : "\(baby.name) asleep") { store in
+            try await store.toggleSleep(shiftID: shift.id, babyID: baby.id, at: Date())
+        }
+    }
+
+    /// Every write reports which baby it landed on, so a mis-tap on the wrong twin
+    /// is caught now rather than in the morning handoff. Failures surface as an
+    /// alert — a care log that silently drops an entry is worse than one that stops.
+    func write(
+        _ baby: BabyPresentation,
+        _ success: String,
+        _ action: @escaping (CareStore) async throws -> Void
+    ) {
+        guard let store else { return }
+        Task {
+            do {
+                try await action(store)
+                confirmation = success.contains(baby.name) ? success : "\(success) · \(baby.name)"
+                try? await Task.sleep(for: .seconds(2))
+                confirmation = nil
+            } catch {
+                saveError = "\(error)"
+            }
+        }
+    }
+
+    @ViewBuilder
+    var confirmationBanner: some View {
+        if let confirmation {
+            Text(confirmation)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(palette.accentInk)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(palette.accent, in: Capsule())
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 }
