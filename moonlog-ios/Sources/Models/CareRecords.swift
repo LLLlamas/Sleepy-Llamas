@@ -144,7 +144,7 @@ final class LogEvent {
             feedDurationSeconds: feedDurationSeconds,
             leftSeconds: leftSeconds, rightSeconds: rightSeconds,
             diaperContents: diaperContents, stoolColor: stoolColor,
-            noteTags: tags, tempF: tempF,
+            text: text, noteTags: tags, tempF: tempF,
             pumpedMl: pumpedMl, medicationName: medicationName,
             doseText: doseText, weightGrams: weightGrams)
     }

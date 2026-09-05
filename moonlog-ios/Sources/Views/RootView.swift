@@ -47,37 +47,41 @@ struct RootView: View {
         }
     }
 
-    @ViewBuilder
+    /// The tabs are always present, including during onboarding. Seeing the shape
+    /// of the app while setting it up is reassuring, and it keeps Settings reachable
+    /// — Deep Night in particular, which someone may want before logging anything.
     private var content: some View {
-        if let family = families.first {
-            tabs(family)
-        } else {
-            OnboardingView { familyName, babyName, birthAt, unit in
-                run { store in
-                    let familyID = try await store.createFamily(name: familyName)
-                    try await store.setVolumeUnit(unit, familyID: familyID)
-                    _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
-                }
-            }
-        }
+        tabs(families.first)
     }
 
     /// Bottom tabs, following the retired PWA's shape: Tonight, Summary, Settings.
     /// Summary and Settings are reachable with no shift running, because that is a
     /// normal state and both still have something to say.
     @ViewBuilder
-    private func tabs(_ family: Family) -> some View {
-        let shift = openShift(for: family)
+    private func tabs(_ family: Family?) -> some View {
+        let shift = family.flatMap(openShift(for:))
         TabView(selection: $tab) {
             Group {
-                if let shift {
-                    TonightView(family: family, shift: shift)
+                if let family {
+                    if let shift {
+                        TonightView(family: family, shift: shift)
+                    } else {
+                        StartShiftView(familyName: family.name) { startedAt, caregiver in
+                            Haptics.commit()
+                            run {
+                                _ = try await $0.startShift(
+                                    familyID: family.id, startedAt: startedAt,
+                                    caregiver: caregiver)
+                            }
+                        }
+                    }
                 } else {
-                    StartShiftView(familyName: family.name) { startedAt, caregiver in
-                        Haptics.commit()
-                        run {
-                            _ = try await $0.startShift(
-                                familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+                    OnboardingView { familyName, babyName, birthAt, unit in
+                        run { store in
+                            let familyID = try await store.createFamily(name: familyName)
+                            try await store.setVolumeUnit(unit, familyID: familyID)
+                            _ = try await store.addBaby(
+                                to: familyID, name: babyName, birthAt: birthAt)
                         }
                     }
                 }
@@ -85,15 +89,28 @@ struct RootView: View {
             .tabItem { Label("Tonight", systemImage: "moon.stars.fill") }
             .tag("tonight")
 
-            SummaryView(family: family, shift: shift)
-                .tabItem { Label("Summary", systemImage: "list.bullet.rectangle") }
-                .tag("summary")
+            Group {
+                if let family {
+                    SummaryView(family: family, shift: shift)
+                } else {
+                    EmptyStatePlaceholder(
+                        emoji: "📋",
+                        title: "Nothing yet",
+                        message: "Set up a family first — the night's totals appear here.")
+                }
+            }
+            .tabItem { Label("Summary", systemImage: "list.bullet.rectangle") }
+            .tag("summary")
 
             SettingsView(family: family) { error = $0 }
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag("settings")
         }
-        .toolbarBackground(palette.bg, for: .tabBar)
+        // Softened during onboarding: the bar is visible so the app's shape is
+        // legible from the first screen, but muted because two of its three
+        // destinations have nothing in them yet.
+        .toolbarBackground(
+            palette.bg.opacity(families.isEmpty ? 0.55 : 1), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .sensoryFeedback(.selection, trigger: tab)
         #if DEBUG

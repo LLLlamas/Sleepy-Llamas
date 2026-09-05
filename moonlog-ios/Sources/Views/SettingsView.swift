@@ -3,7 +3,8 @@ import SwiftData
 import MoonlogCore
 
 struct SettingsView: View {
-    let family: Family
+    /// Nil before onboarding — Appearance and Data still apply.
+    let family: Family?
     let onError: (String) -> Void
 
     @AppStorage("moonlog.deepNight") private var deepNightEnabled = false
@@ -29,45 +30,49 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.raised)
 
-            Section("\(family.name)") {
-                Picker("Bottles in", selection: unitBinding) {
-                    ForEach(VolumeUnit.allCases, id: \.self) { Text($0.displayName).tag($0) }
+            if let family {
+                Section(family.name) {
+                    Picker("Bottle measurement", selection: unitBinding(family)) {
+                        ForEach(VolumeUnit.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    }
                 }
-            }
-            .listRowBackground(palette.raised)
+                .listRowBackground(palette.raised)
 
-            Section {
-                ForEach(EventKind.optional, id: \.self) { kind in
-                    Toggle(label(for: kind), isOn: optionalBinding(kind))
+                Section {
+                    ForEach(EventKind.optional, id: \.self) { kind in
+                        Toggle(label(for: kind), isOn: optionalBinding(kind, family))
+                    }
+                } header: {
+                    Text("Also log")
+                } footer: {
+                    Text("Off by default. Pumping is recorded for the shift rather than "
+                         + "for a baby.")
                 }
-            } header: {
-                Text("Also log")
-            } footer: {
-                Text("Off by default. Pumping is recorded for the shift rather than "
-                     + "for a baby.")
-            }
-            .listRowBackground(palette.raised)
+                .listRowBackground(palette.raised)
 
-            Section {
-                ForEach(sortedTags) { tag in
-                    Text(tag.label)
+                Section {
+                    let tags = sortedTags(family)
+                    ForEach(tags) { tag in
+                        Text(tag.label)
+                    }
+                    .onDelete { offsets in
+                        let ids = offsets.map { tags[$0].id }
+                        run { store in for id in ids { try await store.deleteNoteTag(id) } }
+                    }
+                    HStack {
+                        TextField("Add a tag", text: $newTag)
+                            .textInputAutocapitalization(.sentences)
+                            .onSubmit { addTag(family) }
+                        Button("Add") { addTag(family) }
+                            .disabled(newTag.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                } header: {
+                    Text("Note tags")
+                } footer: {
+                    Text("Shown as quick chips when writing a note.")
                 }
-                .onDelete { offsets in
-                    for tag in offsets.map({ sortedTags[$0] }) { run { try await $0.deleteNoteTag(tag.id) } }
-                }
-                HStack {
-                    TextField("Add a tag", text: $newTag)
-                        .textInputAutocapitalization(.sentences)
-                        .onSubmit(addTag)
-                    Button("Add", action: addTag)
-                        .disabled(newTag.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            } header: {
-                Text("Note tags")
-            } footer: {
-                Text("Shown as quick chips when writing a note.")
+                .listRowBackground(palette.raised)
             }
-            .listRowBackground(palette.raised)
 
             Section {
                 LabeledContent("Storage", value: storageLabel)
@@ -90,13 +95,13 @@ struct SettingsView: View {
 
     // MARK: - Bindings
 
-    private var unitBinding: Binding<VolumeUnit> {
+    private func unitBinding(_ family: Family) -> Binding<VolumeUnit> {
         Binding(
             get: { family.volumeUnit },
             set: { unit in run { try await $0.setVolumeUnit(unit, familyID: family.id) } })
     }
 
-    private func optionalBinding(_ kind: EventKind) -> Binding<Bool> {
+    private func optionalBinding(_ kind: EventKind, _ family: Family) -> Binding<Bool> {
         Binding(
             get: { family.enabledKinds.contains(kind) },
             set: { on in
@@ -106,7 +111,7 @@ struct SettingsView: View {
             })
     }
 
-    private var sortedTags: [NoteTagPreset] {
+    private func sortedTags(_ family: Family) -> [NoteTagPreset] {
         (family.noteTags ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
 
@@ -140,7 +145,7 @@ struct SettingsView: View {
 
     // MARK: - Writes
 
-    private func addTag() {
+    private func addTag(_ family: Family) {
         let label = newTag
         newTag = ""
         Haptics.tap()

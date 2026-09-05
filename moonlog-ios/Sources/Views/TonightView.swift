@@ -54,6 +54,7 @@ struct TonightView: View {
                         onFeed: { sheet = .feed(babyID: presentation.id) },
                         onDiaper: { sheet = .diaper(babyID: presentation.id) },
                         onToggleSleep: { toggleSleep(presentation) },
+                        onNote: { sheet = .note(babyID: presentation.id) },
                         onEditBaby: { editingBaby = data.model(for: presentation.id) },
                         onAdjustSleep: { sheet = .sleep(babyID: presentation.id) }
                     )

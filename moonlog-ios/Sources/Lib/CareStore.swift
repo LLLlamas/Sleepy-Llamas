@@ -11,12 +11,23 @@ actor CareStore {
 
     // MARK: - Households
 
+    /// The starting note tags, carried over from the retired PWA. They shipped
+    /// empty before, so the tag row never appeared and every user had to invent the
+    /// vocabulary. "Jaundice watch" is deliberate phrasing — an observation, not a
+    /// diagnosis, matching the app's scope.
+    static let defaultNoteTags = ["Spit-up", "Fussy", "Jaundice watch", "Pumped", "Temp"]
+
     func createFamily(
         name: String,
         timeZoneIdentifier: String = TimeZone.current.identifier
     ) throws -> UUID {
         let family = Family(name: name, timeZoneIdentifier: timeZoneIdentifier)
         modelContext.insert(family)
+        for (i, label) in Self.defaultNoteTags.enumerated() {
+            let tag = NoteTagPreset(label: label, sortOrder: i)
+            tag.family = family
+            modelContext.insert(tag)
+        }
         try modelContext.save()
         return family.id
     }

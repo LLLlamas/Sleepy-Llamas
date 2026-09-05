@@ -42,7 +42,7 @@ struct OnboardingView: View {
             Section("Family") {
                 TextField("Household name", text: $familyName)
                     .textInputAutocapitalization(.words)
-                Picker("Bottles in", selection: $unit) {
+                Picker("Bottle measurement", selection: $unit) {
                     ForEach(VolumeUnit.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
             }

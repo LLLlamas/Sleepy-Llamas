@@ -27,6 +27,7 @@ struct BabyStatusCard: View {
     var onFeed: () -> Void
     var onDiaper: () -> Void
     var onToggleSleep: () -> Void
+    var onNote: () -> Void
     var onEditBaby: () -> Void
     var onAdjustSleep: () -> Void
 

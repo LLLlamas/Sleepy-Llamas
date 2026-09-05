@@ -14,6 +14,8 @@ struct SummaryView: View {
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
+    @State private var copied = false
+
     var body: some View {
         Group {
             if let shift {
@@ -28,6 +30,49 @@ struct SummaryView: View {
             }
         }
         .background(palette.bg)
+        .toolbar {
+            if let shift {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: handoffText(shift: shift, now: Date())) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        UIPasteboard.general.string = handoffText(shift: shift, now: Date())
+                        Haptics.success()
+                        copied = true
+                    } label: {
+                        Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .task(id: copied) {
+                        guard copied else { return }
+                        try? await Task.sleep(for: .seconds(2))
+                        copied = false
+                    }
+                }
+            }
+        }
+    }
+
+    /// The night written out for the parents. Built from the same `Totals.compute`
+    /// the cards above show, so the document and the screen cannot disagree.
+    private func handoffText(shift: Shift, now: Date) -> String {
+        Handoff.text(
+            babies: family.activeBabies.map {
+                HandoffBaby(
+                    id: $0.id, name: $0.name,
+                    dayOfLife: DayOfLife.calendarDay(
+                        birthAt: $0.birthAt, forShift: shift.window,
+                        calendar: family.calendar))
+            },
+            shift: shift.window,
+            caregiver: shift.caregiver,
+            events: (shift.events ?? []).compactMap(\.snapshot),
+            sessions: (shift.sleepSessions ?? []).compactMap(\.snapshot),
+            unit: family.volumeUnit,
+            timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
+            asOf: now)
     }
 
     private func content(shift: Shift, now: Date) -> some View {

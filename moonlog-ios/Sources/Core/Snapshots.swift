@@ -108,6 +108,9 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
     public let stoolColor: StoolColor?
 
     // Note payload
+    /// The note body. Absent from the snapshot originally, which meant the handoff
+    /// could count notes but not say what they said.
+    public let text: String?
     public let noteTags: [String]
     public let tempF: Double?
 
@@ -129,6 +132,7 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
         rightSeconds: Int? = nil,
         diaperContents: DiaperContents? = nil,
         stoolColor: StoolColor? = nil,
+        text: String? = nil,
         noteTags: [String] = [],
         tempF: Double? = nil,
         pumpedMl: Double? = nil,
@@ -147,6 +151,7 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
         self.rightSeconds = rightSeconds
         self.diaperContents = diaperContents
         self.stoolColor = stoolColor
+        self.text = text
         self.noteTags = noteTags
         self.tempF = tempF
         self.pumpedMl = pumpedMl
