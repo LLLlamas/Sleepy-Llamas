@@ -1,6 +1,13 @@
 # Getting to TestFlight
 
-Status as of 2026-09-05. Signing and encryption are done; these are what remain.
+**A first build shipped to TestFlight on 2026-09-05** — version 0.1.0, build
+1788644622, signed `Apple Distribution: Lorenzo Llamas (GYFN949Q5E)` against the
+explicit `com.sleepyllamas.moonlog` App Store profile. The pipeline works end to
+end; everything below is about what the app still needs, not about shipping it.
+
+Note what that build can and cannot do: it is **local-only** (no CloudKit — see
+`docs/cloudkit.md`), and a logged entry **cannot be edited or deleted**. It is a
+look-and-feel build, not one to run a real shift on.
 
 ## Hard blockers — the upload is rejected without them
 

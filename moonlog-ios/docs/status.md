@@ -1,6 +1,7 @@
 # Status
 
-Updated 2026-09-05.
+Updated 2026-09-05. **First TestFlight build shipped** — 0.1.0 (1788644622),
+local-only, not yet safe for a real shift (no edit/delete of a logged entry).
 
 ## Built
 

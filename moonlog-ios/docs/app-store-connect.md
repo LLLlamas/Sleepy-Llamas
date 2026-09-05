@@ -57,6 +57,12 @@ open Moonlog.xcodeproj
 In Xcode: select **Any iOS Device** as the destination → **Product → Archive** →
 **Distribute App** → **App Store Connect** → **Upload**.
 
+> **If an archive does not appear in Organizer**, it was almost certainly built with
+> a custom `-archivePath`. Organizer only reads
+> `~/Library/Developer/Xcode/Archives/<YYYY-MM-DD>/`. Copy the `.xcarchive` into
+> today's folder there and reopen Organizer — it scans on load. Archiving from
+> Xcode's own Product → Archive always lands in the right place.
+
 Xcode creates the *distribution* certificate and profile itself at this point. Only
 a development certificate exists today; that is expected and nothing to fix in
 advance.
