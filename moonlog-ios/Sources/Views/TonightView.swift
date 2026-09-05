@@ -2,13 +2,10 @@ import SwiftUI
 import SwiftData
 import MoonlogCore
 
-/// The screen the whole app exists for: what happened, what is happening, and the
-/// three buttons you need at 3am.
+/// What happened, what is happening, and the three buttons you need at 3am.
 ///
-/// Layout is **adaptive**. One baby renders a single status block; two or more
-/// render a card each, both states visible at once with per-baby actions, over one
-/// shared timeline. There is deliberately no "active baby" selector — a mode you
-/// can set wrong is the main hazard twins introduce.
+/// Layout is adaptive: one baby renders a single block, two or more render a card
+/// each over one shared timeline. No active-baby selector — see `docs/design.md`.
 struct TonightView: View {
     let family: Family
     let shift: Shift
@@ -20,38 +17,30 @@ struct TonightView: View {
     @State private var editingBaby: Baby?
 
     var body: some View {
-        // Ticks every 30s, matching the web version's clock. Cheap, and it keeps
-        // the sleep timers and "x ago" labels honest without a manual Timer.
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            content(now: context.date)
+            content(Tonight(family: family, shift: shift, now: context.date))
         }
     }
 
-    private func content(now: Date) -> some View {
-        let babies = family.activeBabies
-
-        return ScrollView {
+    private func content(_ data: Tonight) -> some View {
+        ScrollView {
             VStack(spacing: 14) {
-                ForEach(babies) { baby in
+                ForEach(data.babies) { presentation in
                     BabyStatusCard(
-                        baby: presentation(for: baby, now: now),
-                        now: now,
-                        dueSoonHours: 3,
-                        onFeed: { sheet = .feed(babyID: baby.id) },
-                        onDiaper: { sheet = .diaper(babyID: baby.id) },
-                        onToggleSleep: { sheet = .sleep(babyID: baby.id) },
-                        onEditBaby: { editingBaby = baby }
+                        baby: presentation,
+                        now: data.now,
+                        onFeed: { sheet = .feed(babyID: presentation.id) },
+                        onDiaper: { sheet = .diaper(babyID: presentation.id) },
+                        onToggleSleep: { sheet = .sleep(babyID: presentation.id) },
+                        onEditBaby: { editingBaby = data.model(for: presentation.id) }
                     )
                 }
 
                 TimelineSection(
-                    entries: timelineEntries(now: now),
-                    timeZone: timeZone,
-                    babyNames: Dictionary(
-                        uniqueKeysWithValues: babies.map { ($0.id, $0.name) }),
-                    babyAccents: Dictionary(
-                        uniqueKeysWithValues: babies.map { ($0.id, $0.accent) })
-                )
+                    entries: data.timeline,
+                    timeZone: data.timeZone,
+                    names: data.names,
+                    accents: data.accents)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -59,110 +48,137 @@ struct TonightView: View {
         }
         .background(palette.bg)
         .sheet(item: $sheet) { which in
-            Text("\(which.title) — coming next")
-                .presentationDetents([.medium])
+            Text("\(which.title) — coming next").presentationDetents([.medium])
         }
         .sheet(item: $editingBaby) { baby in
-            BabyDetailSheet(
-                babyID: baby.id,
-                name: baby.name,
-                accent: baby.accent
-            ) { newName, newAccent in
-                // Written directly on the main context rather than through
-                // CareStore: this is a view-scoped edit of an object the view
-                // already holds, and routing it through the actor would mean
-                // re-fetching by id for no benefit.
-                baby.name = newName
-                baby.accentRaw = newAccent.rawValue
+            BabyDetailSheet(name: baby.name, accent: baby.accent) { name, accent in
+                baby.name = name
+                baby.accentRaw = accent.rawValue
                 try? modelContext.save()
             }
             .presentationDetents([.medium, .large])
         }
     }
+}
 
-    // MARK: - Derivation
+// MARK: - Derived state
 
-    private var timeZone: TimeZone {
-        TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
-    }
+/// Everything the screen needs, built in a **single pass** over the shift's records.
+///
+/// The obvious shape — asking each baby to filter the shift's events — is O(babies ×
+/// events) and re-runs on every 30s tick. Bucketing once by baby id makes it
+/// O(events + sessions + babies), with the one unavoidable sort for the timeline.
+private struct Tonight {
+    let now: Date
+    let timeZone: TimeZone
+    let babies: [BabyPresentation]
+    let timeline: [TimelineEntry]
+    let names: [UUID: String]
+    let accents: [UUID: BabyAccent]
+    private let models: [UUID: Baby]
 
-    private func presentation(for baby: Baby, now: Date) -> BabyPresentation {
-        let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
-        let open = SleepMath.openSession(in: sessions, forBaby: baby.id)
+    func model(for id: UUID) -> Baby? { models[id] }
 
-        let events = (shift.events ?? []).filter { $0.babyIDRaw == baby.id }
-        let lastFeed = events.filter { $0.kind == .feed }.map(\.at).max()
-        let lastDiaper = events.filter { $0.kind == .diaper }.map(\.at).max()
+    init(family: Family, shift: Shift, now: Date) {
+        self.now = now
+        self.timeZone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
 
-        // Explicitly ignore a future-dated feed when deciding "overdue". The web
-        // version let a mis-tapped PM entry produce a negative age, which silently
-        // suppressed this warning for the rest of the night.
-        let feedIsDue: Bool = {
-            guard let last = lastFeed else { return false }
-            let elapsed = now.timeIntervalSince(last)
-            guard elapsed >= 0 else { return false }
-            return elapsed >= 3 * 3600
-        }()
+        let roster = family.activeBabies
+        var models: [UUID: Baby] = [:]
+        var names: [UUID: String] = [:]
+        var accents: [UUID: BabyAccent] = [:]
+        var lastFeed: [UUID: Date] = [:]
+        var lastDiaper: [UUID: Date] = [:]
+        var openSleep: [UUID: SleepSnapshot] = [:]
+        var timeline: [TimelineEntry] = []
 
-        return BabyPresentation(
-            id: baby.id,
-            name: baby.name,
-            accent: baby.accent,
-            dayOfLife: DayOfLife.calendarDay(
-                birthAt: baby.birthAt, forShift: shift.window, calendar: family.calendar),
-            isAsleep: open != nil,
-            asleepSince: open?.startAt,
-            lastFeedAt: lastFeed,
-            lastDiaperAt: lastDiaper,
-            feedIsDue: feedIsDue
-        )
-    }
-
-    private func timelineEntries(now: Date) -> [TimelineEntry] {
-        var entries: [TimelineEntry] = (shift.events ?? []).map { event in
-            TimelineEntry(
-                id: event.id,
-                at: event.at,
-                babyID: event.babyIDRaw,
-                icon: event.kind.icon,
-                title: event.timelineTitle,
-                detail: event.timelineDetail)
+        models.reserveCapacity(roster.count)
+        for baby in roster {
+            models[baby.id] = baby
+            names[baby.id] = baby.name
+            accents[baby.id] = baby.accent
         }
 
-        for session in shift.sleepSessions ?? [] {
-            let ended = session.endAt
-            entries.append(
+        let events = shift.events ?? []
+        let sessions = shift.sleepSessions ?? []
+        timeline.reserveCapacity(events.count + sessions.count)
+
+        for event in events {
+            timeline.append(
                 TimelineEntry(
-                    id: session.id,
-                    at: session.startAt,
-                    babyID: session.babyIDRaw,
-                    icon: "moon.zzz.fill",
-                    title: "Asleep",
-                    detail: ended.map {
-                        Fmt.duration($0.timeIntervalSince(session.startAt))
-                    } ?? "still asleep"))
+                    id: event.id, at: event.at, babyID: event.babyIDRaw,
+                    icon: event.kind.icon, title: event.timelineTitle,
+                    detail: event.timelineDetail))
+
+            guard let babyID = event.babyIDRaw else { continue }
+            switch event.kind {
+            case .feed:
+                if event.at > lastFeed[babyID] ?? .distantPast { lastFeed[babyID] = event.at }
+            case .diaper:
+                if event.at > lastDiaper[babyID] ?? .distantPast { lastDiaper[babyID] = event.at }
+            case .note:
+                break
+            }
         }
 
-        return entries.sorted { $0.at > $1.at }
+        for session in sessions {
+            timeline.append(
+                TimelineEntry(
+                    id: session.id, at: session.startAt, babyID: session.babyIDRaw,
+                    icon: "moon.zzz.fill", title: "Asleep",
+                    detail: session.endAt.map { Fmt.duration($0.timeIntervalSince(session.startAt)) }
+                        ?? "still asleep"))
+
+            guard session.isOpen, let snapshot = session.snapshot else { continue }
+            // Earliest start wins, so a duplicate delivered by sync resolves the
+            // same way on every device. See `SleepReconciler`.
+            if snapshot.startAt < openSleep[snapshot.babyID]?.startAt ?? .distantFuture {
+                openSleep[snapshot.babyID] = snapshot
+            }
+        }
+
+        timeline.sort { $0.at > $1.at }
+        self.timeline = timeline
+        self.names = names
+        self.accents = accents
+        self.models = models
+
+        let calendar = family.calendar
+        self.babies = roster.map { baby in
+            let feedAt = lastFeed[baby.id]
+            return BabyPresentation(
+                id: baby.id,
+                name: baby.name,
+                accent: baby.accent,
+                dayOfLife: DayOfLife.calendarDay(
+                    birthAt: baby.birthAt, forShift: shift.window, calendar: calendar),
+                asleepSince: openSleep[baby.id]?.startAt,
+                lastFeedAt: feedAt,
+                lastDiaperAt: lastDiaper[baby.id],
+                // A future-dated entry must not suppress the warning, which is
+                // what a negative elapsed time did in the web version.
+                feedIsDue: feedAt.map {
+                    let elapsed = now.timeIntervalSince($0)
+                    return elapsed >= 0 && elapsed >= Self.feedDueAfter
+                } ?? false)
+        }
     }
+
+    private static let feedDueAfter: TimeInterval = 3 * 3600
 }
 
 // MARK: - Sheet routing
 
 enum LogSheet: Identifiable, Equatable {
-    case feed(babyID: UUID)
-    case diaper(babyID: UUID)
-    case sleep(babyID: UUID)
-    case note(babyID: UUID)
+    case feed(babyID: UUID), diaper(babyID: UUID), sleep(babyID: UUID), note(babyID: UUID)
 
-    var id: String {
+    var babyID: UUID {
         switch self {
-        case .feed(let b): return "feed-\(b)"
-        case .diaper(let b): return "diaper-\(b)"
-        case .sleep(let b): return "sleep-\(b)"
-        case .note(let b): return "note-\(b)"
+        case .feed(let id), .diaper(let id), .sleep(let id), .note(let id): return id
         }
     }
+
+    var id: String { "\(title)-\(babyID)" }
 
     var title: String {
         switch self {
@@ -174,7 +190,7 @@ enum LogSheet: Identifiable, Equatable {
     }
 }
 
-// MARK: - Display helpers
+// MARK: - Display
 
 extension EventKind {
     var icon: String {
@@ -200,9 +216,7 @@ extension LogEvent {
         case .feed:
             var parts: [String] = []
             if let ml = amountMl { parts.append(Fmt.amount(ml: ml, unit: .ml)) }
-            if let seconds = feedDurationSeconds, seconds > 0 {
-                parts.append(Fmt.duration(TimeInterval(seconds)))
-            }
+            if let s = feedDurationSeconds, s > 0 { parts.append(Fmt.duration(TimeInterval(s))) }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .diaper:
             return stoolColor?.rawValue.capitalized

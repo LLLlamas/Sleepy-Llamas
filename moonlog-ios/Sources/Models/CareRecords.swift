@@ -2,11 +2,8 @@ import Foundation
 import SwiftData
 import MoonlogCore
 
-/// One caregiver session, covering **all** of a family's babies.
-///
-/// Start and end are values the doula sets or confirms — they are not inferred
-/// from the clock. A shift ends by leaving the baby with the parents, so ending
-/// one does not open another; between shifts there is simply no open shift.
+/// One caregiver session, covering all of a family's babies. Start and end are set
+/// or confirmed by the doula, never inferred from the clock.
 @Model
 final class Shift {
     var id: UUID = UUID()
@@ -14,20 +11,15 @@ final class Shift {
     var endedAt: Date? = nil
     var caregiver: String? = nil
 
-    /// Denormalised so the "is there an open shift" query is a Bool comparison.
-    /// Predicates over optional `Date` comparisons have a poor track record, and
-    /// this is the query that decides whether the app can log at all.
-    /// Invariant: `isOpen == (endedAt == nil)`, asserted in tests.
+    /// Denormalised so the query deciding whether the app can log at all is a Bool
+    /// comparison, not an optional-Date one. Invariant: `isOpen == (endedAt == nil)`.
     var isOpen: Bool = true
 
-    /// The zone in force for this shift, copied from the family at creation so a
-    /// family that relocates cannot corrupt older shifts.
+    /// Copied from the family at creation, so relocating cannot corrupt old shifts.
     var timeZoneIdentifier: String = TimeZone.current.identifier
 
     var family: Family? = nil
-    /// Denormalised for the same reasons as `LogEvent.babyIDRaw`: predicates over a
-    /// relationship force a join, and this is the query that decides whether the
-    /// app can log at all. Set via `attach(to:)`.
+    /// Denormalised: predicates over a relationship force a join. Set via `attach(to:)`.
     var familyIDRaw: UUID? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \LogEvent.shift)
@@ -51,8 +43,7 @@ final class Shift {
         self.timeZoneIdentifier = timeZoneIdentifier
     }
 
-    /// The value type the domain layer works on. Everything in `MoonlogCore`
-    /// operates on these rather than on `@Model` classes.
+    /// `MoonlogCore` works on value types, never on `@Model` classes.
     func attach(to family: Family) {
         self.family = family
         self.familyIDRaw = family.id
@@ -62,32 +53,22 @@ final class Shift {
         ShiftWindow(startedAt: startedAt, endedAt: endedAt)
     }
 
-    /// Keeps the denormalised flag honest. Never set `endedAt` directly.
+    /// Never set `endedAt` directly — this keeps `isOpen` honest.
     func close(at date: Date) {
         endedAt = date
         isOpen = false
     }
 }
 
-/// Feed, diaper and note in one flat model, discriminated by `kindRaw`.
-///
-/// Flat rather than three models because the merged reverse-chronological timeline
-/// is the app's primary read, and `FetchDescriptor.fetchLimit` is per-model-type —
-/// three models could not be paged at the store level, so showing the newest 50
-/// rows would mean loading every event of all three kinds.
-///
-/// Flat rather than `@Model` inheritance because that needs iOS 26 and has
-/// reported crashes at the inheritance + optional-relationships intersection,
-/// which CloudKit mandates.
+/// Feed, diaper and note in one flat model, discriminated by `kindRaw`. Flat rather
+/// than three models or a class hierarchy — reasoning in `docs/decisions.md`.
 @Model
 final class LogEvent {
     var id: UUID = UUID()
 
-    /// A raw `String`, never an enum. `#Predicate` cannot compare enum-typed
-    /// properties: a captured enum throws `unsupportedPredicate`, a case literal
-    /// will not compile, and reaching through `.rawValue` inside the macro
-    /// **hard-crashes uncatchably**. Compare this column directly, with the raw
-    /// value captured outside the predicate.
+    /// Raw `String`, never an enum. `#Predicate` cannot compare enums, and reaching
+    /// through `.rawValue` inside the macro hard-crashes uncatchably. Compare this
+    /// column directly, with the raw value captured outside the predicate.
     var kindRaw: String = EventKind.note.rawValue
 
     var at: Date = Date.distantPast
@@ -96,8 +77,7 @@ final class LogEvent {
     // Feed payload
     var feedMethodRaw: String? = nil
     var amountMl: Double? = nil
-    /// Seconds, not the PWA's minutes, so durations aggregate without
-    /// round-then-sum drift.
+    /// Seconds, so durations aggregate without round-then-sum drift.
     var feedDurationSeconds: Int? = nil
 
     // Diaper payload
@@ -108,21 +88,16 @@ final class LogEvent {
     var text: String? = nil
     var tempF: Double? = nil
 
-    /// Where this came from — manual entry or an NFC tag — so a mis-scan is
-    /// traceable after the fact.
+    /// Manual or NFC, so a mis-scan is traceable.
     var sourceRaw: String = EventSource.manual.rawValue
     var sourceTagToken: String? = nil
 
     var shift: Shift? = nil
     var baby: Baby? = nil
 
-    /// Denormalised parent ids. Two reasons, both real:
-    /// 1. Predicates over a relationship force a join and are a common source of
-    ///    `unsupportedPredicate`. A `UUID?` comparison is trivially supported.
-    /// 2. Under CloudKit a relationship can be transiently `nil` on a device that
-    ///    has the child record but not yet the link — and if a baby is ever
-    ///    deleted, `.nullify` would otherwise lose attribution permanently.
-    /// Invariant: `babyIDRaw == baby?.id`, asserted in tests.
+    /// Denormalised parent ids: predicates avoid a join, and attribution survives
+    /// both a transiently-nil relationship during sync and a `.nullify` delete.
+    /// Invariant: `babyIDRaw == baby?.id`. See `docs/architecture.md`.
     var babyIDRaw: UUID? = nil
     var shiftIDRaw: UUID? = nil
 
@@ -140,15 +115,6 @@ final class LogEvent {
         self.sourceRaw = source.rawValue
     }
 
-    /// The only supported way to attach an event, so the relationship and its
-    /// denormalised id can never disagree. Invariant asserted in tests.
-    func attach(to shift: Shift, baby: Baby) {
-        self.shift = shift
-        self.shiftIDRaw = shift.id
-        self.baby = baby
-        self.babyIDRaw = baby.id
-    }
-
     var kind: EventKind { EventKind(rawValue: kindRaw) ?? .note }
     var source: EventSource { EventSource(rawValue: sourceRaw) ?? .manual }
     var feedMethod: FeedMethod? { feedMethodRaw.flatMap(FeedMethod.init(rawValue:)) }
@@ -158,20 +124,18 @@ final class LogEvent {
     var stoolColor: StoolColor? { stoolColorRaw.flatMap(StoolColor.init(rawValue:)) }
 }
 
-/// Sleep is a session, not a pair of events — cleaner totals and a direct answer
-/// to "is she asleep right now", which with twins is a **per-baby** question.
+/// A session, not a pair of events — cleaner totals, and "is she asleep" is a
+/// per-baby question once there are twins.
 @Model
 final class SleepSession {
     var id: UUID = UUID()
     var startAt: Date = Date.distantPast
 
-    /// `nil` means still asleep. That is a legitimate end state for a shift: the
-    /// doula left while the baby was sleeping. Totals clip to the shift window
-    /// rather than closing the session, so the record stays honest without the
-    /// duration growing forever.
+    /// `nil` means still asleep — a legitimate end state for a shift. Totals clip to
+    /// the shift window rather than closing it.
     var endAt: Date? = nil
 
-    /// Invariant: `isOpen == (endAt == nil)`. See `Shift.isOpen`.
+    /// Invariant: `isOpen == (endAt == nil)`.
     var isOpen: Bool = true
 
     var baby: Baby? = nil
@@ -184,14 +148,6 @@ final class SleepSession {
         self.startAt = startAt
         self.endAt = endAt
         self.isOpen = endAt == nil
-    }
-
-    /// See `LogEvent.attach(to:baby:)`.
-    func attach(to shift: Shift, baby: Baby) {
-        self.shift = shift
-        self.shiftIDRaw = shift.id
-        self.baby = baby
-        self.babyIDRaw = baby.id
     }
 
     var snapshot: SleepSnapshot? {
@@ -210,9 +166,8 @@ final class SleepSession {
 final class TagBinding {
     var id: UUID = UUID()
 
-    /// Either the tag's hardware UID as hex (the v1 scheme — works with any tag,
-    /// needs no writing and no associated domain) or an app-minted token written
-    /// into the tag's URL. Kept generic so both schemes can coexist.
+    /// Hardware UID hex (v1) or an app-minted token written into the tag's URL.
+    /// Generic so both schemes can coexist.
     var tagToken: String = ""
 
     var label: String = ""
@@ -236,3 +191,26 @@ final class TagBinding {
 
     var action: TagAction { TagAction(rawValue: actionRaw) ?? .logDiaper }
 }
+
+/// A record owned by a shift and attributed to a baby.
+///
+/// `attach` is the only supported way to wire one up, so a relationship and its
+/// denormalised id can never disagree. See `docs/architecture.md`.
+protocol BabyRecord: AnyObject {
+    var shift: Shift? { get set }
+    var baby: Baby? { get set }
+    var shiftIDRaw: UUID? { get set }
+    var babyIDRaw: UUID? { get set }
+}
+
+extension BabyRecord {
+    func attach(to shift: Shift, baby: Baby) {
+        self.shift = shift
+        self.shiftIDRaw = shift.id
+        self.baby = baby
+        self.babyIDRaw = baby.id
+    }
+}
+
+extension LogEvent: BabyRecord {}
+extension SleepSession: BabyRecord {}

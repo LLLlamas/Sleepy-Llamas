@@ -1,16 +1,8 @@
 import Foundation
 
-/// The single source of "now" and of calendar arithmetic for the domain layer.
-///
-/// Nothing in `MoonlogCore` may touch `Date.now` or `Calendar.current` directly.
-/// Two reasons, both learned from the web version:
-///
-/// 1. `now` is injectable, so a test can pin an instant and walk minute-by-minute
-///    across a DST transition. The PWA's time bugs were untestable largely because
-///    `new Date()` was called inline everywhere.
-/// 2. The calendar carries the **family's home** time zone, not the device's. A
-///    doula whose phone is in another zone must not retroactively rebucket months
-///    of a client's charts.
+/// The single source of "now" and of calendar arithmetic. Nothing in `MoonlogCore`
+/// touches `Date.now` or `Calendar.current` directly: `now` is injectable so DST can
+/// be tested, and the calendar carries the family's home zone, not the device's.
 public struct MoonClock: Sendable {
     public let calendar: Calendar
     private let nowProvider: @Sendable () -> Date
@@ -20,9 +12,8 @@ public struct MoonClock: Sendable {
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         var calendar = Calendar(identifier: .gregorian)
-        // Falling back to GMT rather than `.current` is deliberate. An unrecognised
-        // identifier is a data problem; silently adopting the device zone would
-        // hide it and make the charts quietly wrong instead of visibly wrong.
+        // GMT, not `.current` — an unrecognised identifier is a data problem, and
+        // adopting the device zone would hide it.
         calendar.timeZone = TimeZone(identifier: timeZoneIdentifier) ?? .gmt
         self.calendar = calendar
         self.nowProvider = now
@@ -32,21 +23,14 @@ public struct MoonClock: Sendable {
 
     public var timeZone: TimeZone { calendar.timeZone }
 
-    /// Start of the calendar day containing `date`, in this clock's zone.
-    ///
-    /// Use this instead of zeroing out hour/minute components. On a DST
-    /// transition day local midnight is not always "the instant minus the
-    /// wall-clock time", which is precisely the bug in the web version's
-    /// `setHours(0, 0, 0, 0)` day-difference math.
+    /// Start of the calendar day, in this clock's zone. Use instead of zeroing
+    /// hour/minute — on a transition day those are not equivalent.
     public func startOfDay(for date: Date) -> Date {
         calendar.startOfDay(for: date)
     }
 
-    /// Whole calendar days from `start`'s day to `end`'s day.
-    ///
-    /// Both endpoints are anchored to `startOfDay` first — that anchoring is what
-    /// makes the result immune to 23- and 25-hour days. Never compute this by
-    /// dividing a time interval by 86,400.
+    /// Whole calendar days between two dates. Anchoring both endpoints to
+    /// `startOfDay` is what makes this immune to 23- and 25-hour days.
     public func calendarDays(from start: Date, to end: Date) -> Int {
         let a = startOfDay(for: start)
         let b = startOfDay(for: end)

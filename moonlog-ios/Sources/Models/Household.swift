@@ -29,9 +29,8 @@ final class Family {
     var name: String = ""
     var createdAt: Date = Date.distantPast
 
-    /// IANA identifier for the **home's** time zone, not the device's. Day
-    /// bucketing and day-of-life are computed here, so a doula working in another
-    /// zone cannot retroactively reshuffle months of a client's charts.
+    /// The **home's** zone, not the device's — otherwise a doula working elsewhere
+    /// retroactively reshuffles months of a client's charts.
     var timeZoneIdentifier: String = TimeZone.current.identifier
 
     var isArchived: Bool = false
@@ -57,8 +56,7 @@ final class Family {
         self.timeZoneIdentifier = timeZoneIdentifier
     }
 
-    /// Wraps the optional-relationship requirement so call sites stay readable and
-    /// twin order stays stable. Card order is muscle memory at 3am.
+    /// Stable order: card position is muscle memory at 3am.
     var activeBabies: [Baby] {
         (babies ?? [])
             .filter { !$0.isArchived }
@@ -78,23 +76,20 @@ final class Baby {
     var name: String = ""
     var birthAt: Date = Date.distantPast
 
-    /// Display order among siblings. Fixed, so Baby A is always the top card.
+    /// Fixed, so the top card never moves.
     var sortOrder: Int = 0
 
-    /// `BabyAccent.rawValue`. Colour is only ever the third identifying signal —
-    /// name and stable position come first — because mis-logging to the wrong twin
-    /// is the failure mode multi-baby support introduces.
+    /// `BabyAccent.rawValue`. Colour is only ever the third identifying signal,
+    /// behind name and stable position. See `docs/design.md`.
     var accentRaw: String = BabyAccent.gold.rawValue
 
-    /// Babies are archived, never deleted. `.deny` would have been the natural
-    /// guard but CloudKit rejects it, so this is enforced in the store layer.
+    /// Archived, never deleted — `.deny` is unavailable, so `CareStore` enforces it.
     var isArchived: Bool = false
 
     var family: Family? = nil
 
-    // `.nullify`, not `.cascade`: deleting a baby must never destroy the shift's
-    // logged history. Attribution survives anyway via `LogEvent.babyIDRaw`, which
-    // is exactly why that denormalised column exists.
+    // `.nullify`, not `.cascade` — deleting a baby must not destroy logged history.
+    // Attribution survives via `babyIDRaw`.
     @Relationship(deleteRule: .nullify, inverse: \LogEvent.baby)
     var events: [LogEvent]? = []
 

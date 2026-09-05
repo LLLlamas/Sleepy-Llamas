@@ -2,16 +2,10 @@ import Foundation
 import SwiftData
 import MoonlogCore
 
-/// Owns every write to the care records.
-///
-/// It exists because several invariants cannot be expressed in the schema:
-/// CloudKit forbids unique constraints and the `.deny` delete rule, so "one open
-/// sleep session per baby" and "never hard-delete a baby that has records" have to
-/// be enforced here instead. Funnelling writes through one type is what makes that
-/// possible — a stray `context.insert` elsewhere would bypass all of it.
-///
-/// `@ModelActor` keeps the work off the main thread; imports and trend queries can
-/// be long.
+/// The only writer. CloudKit forbids unique constraints and `.deny`, so invariants
+/// like "one open sleep session per baby" and "never hard-delete a baby" live here
+/// instead of in the schema — a stray `context.insert` elsewhere bypasses them all.
+/// See `docs/architecture.md`.
 @ModelActor
 actor CareStore {
 
@@ -37,8 +31,7 @@ actor CareStore {
         let baby = Baby(
             name: name,
             birthAt: birthAt,
-            // Append to the end so an existing twin's card never moves. Position is
-            // muscle memory at 3am.
+            // Appended, so an existing twin's card never moves.
             sortOrder: (existing.map(\.sortOrder).max() ?? -1) + 1,
             accent: BabyAccent.forIndex(existing.count)
         )
@@ -48,8 +41,8 @@ actor CareStore {
         return baby.id
     }
 
-    /// Rename or recolour a baby. Accent is the user's choice — the auto-assigned
-    /// default only exists so twins are distinct before anyone picks.
+    /// Accent is the user's choice; the auto-assigned default only makes twins
+    /// distinct before anyone picks.
     func updateBaby(_ babyID: UUID, name: String? = nil, accent: BabyAccent? = nil) throws {
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
         if let name {
@@ -61,13 +54,8 @@ actor CareStore {
         try modelContext.save()
     }
 
-    /// Archives rather than deletes.
-    ///
-    /// `.deny` would have been the natural guard against removing a baby that still
-    /// has records, but CloudKit rejects that rule. A hard delete would nullify the
-    /// relationship on every event, and although `babyIDRaw` preserves attribution
-    /// the baby's *name* would be gone from every past handoff. So there is no
-    /// public delete at all.
+    /// Archives rather than deletes: a hard delete would strip the baby's name from
+    /// every past handoff. There is deliberately no public delete.
     func archiveBaby(_ babyID: UUID) throws {
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
         baby.isArchived = true
@@ -76,11 +64,9 @@ actor CareStore {
 
     // MARK: - Shift lifecycle
 
-    /// Starts a shift for a family. `startedAt` is a value the doula sets or
-    /// confirms, so it is passed in rather than read off the clock.
-    ///
-    /// Refuses if one is already open: two open shifts is the web version's bug
-    /// where the second becomes invisible in every screen and its logs unreachable.
+    /// `startedAt` is set or confirmed by the doula, never read off the clock.
+    /// Refuses if one is already open — a second open shift becomes invisible in
+    /// every screen and its logs unreachable.
     func startShift(
         familyID: UUID,
         startedAt: Date,
@@ -101,15 +87,9 @@ actor CareStore {
         return shift.id
     }
 
-    /// Ends a shift. It does **not** open a replacement.
-    ///
-    /// The doula finishes by leaving the baby with the parents, so between shifts
-    /// there is genuinely no active shift. The web version auto-started a fresh one,
-    /// which is where its orphaned-sleep bug came from.
-    ///
-    /// An in-progress sleep is deliberately left open — "asleep since 5:40, still
-    /// asleep when I left" is the honest record for the parents, and totals clip to
-    /// the shift window rather than letting it accrue forever.
+    /// Ends a shift without opening a replacement — the doula is leaving the baby
+    /// with the parents. An in-progress sleep is deliberately left open; totals clip
+    /// to the shift window instead. See `docs/architecture.md`.
     func endShift(_ shiftID: UUID, endedAt: Date) throws {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
         guard shift.isOpen else { throw CareStoreError.shiftAlreadyClosed }
@@ -118,18 +98,12 @@ actor CareStore {
         try modelContext.save()
     }
 
-    /// Filters in the predicate rather than in memory. An earlier version fetched
-    /// open shifts with a limit and filtered afterwards, which could silently miss
-    /// one — exactly the class of quietly-wrong answer this rewrite exists to stop.
-    ///
-    /// Returns a value type, not the `@Model`. `@Model` classes are not `Sendable`,
-    /// so handing one across the actor boundary would be a data race waiting to
-    /// happen; everything outside this actor works on snapshots.
+    /// Filtered in the predicate, not in memory — filtering a limited fetch can
+    /// silently miss one. Returns a value type: `@Model` is not `Sendable`.
     func openShift(familyID: UUID) throws -> ShiftSummary? {
-        let descriptor = FetchDescriptor<Shift>(
+        return try one(FetchDescriptor<Shift>(
             predicate: #Predicate { $0.isOpen && $0.familyIDRaw == familyID },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)])
-        return try modelContext.fetch(descriptor).first.map(ShiftSummary.init)
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)])).map(ShiftSummary.init)
     }
 
     // MARK: - Logging
@@ -147,8 +121,6 @@ actor CareStore {
 
         let event = LogEvent(kind: kind, at: at, source: source)
         configure(event)
-        // The single attach point, so the relationship and its denormalised id
-        // can never disagree.
         event.attach(to: shift, baby: baby)
         modelContext.insert(event)
         try modelContext.save()
@@ -164,11 +136,8 @@ actor CareStore {
 
     // MARK: - Sleep
 
-    /// Toggles sleep for one baby, atomically with respect to this actor.
-    ///
-    /// The web version read the open session and wrote outside a transaction, from
-    /// two undisabled controls, so a double-tap could open two sessions. Here the
-    /// actor serialises it and the reconciler mops up anything CloudKit delivers.
+    /// Serialised by the actor, so a double-tap cannot open two sessions; the
+    /// reconciler mops up anything sync delivers.
     @discardableResult
     func toggleSleep(shiftID: UUID, babyID: UUID, at date: Date) throws -> SleepToggle {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
@@ -195,17 +164,13 @@ actor CareStore {
     }
 
     private func storedOpenSleepSession(shiftID: UUID, babyID: UUID) throws -> SleepSession? {
-        let descriptor = FetchDescriptor<SleepSession>(
+        return try one(FetchDescriptor<SleepSession>(
             predicate: #Predicate { $0.isOpen && $0.babyIDRaw == babyID && $0.shiftIDRaw == shiftID },
-            sortBy: [SortDescriptor(\.startAt)])
-        return try modelContext.fetch(descriptor).first
+            sortBy: [SortDescriptor(\.startAt)]))
     }
 
-    /// Repairs duplicate or overlapping sessions using the deterministic reconciler.
-    ///
-    /// Required rather than defensive: CloudKit cannot enforce uniqueness, so two
-    /// devices can both open a session for the same baby and the store accepts
-    /// both. The UI would show one while the other accrued invisibly.
+    /// Required, not defensive: CloudKit cannot enforce uniqueness, so two devices
+    /// can both open a session for one baby and the store accepts both.
     func reconcileSleep(shiftID: UUID, babyID: UUID) throws {
         let descriptor = FetchDescriptor<SleepSession>(
             predicate: #Predicate { $0.babyIDRaw == babyID && $0.shiftIDRaw == shiftID })
@@ -235,16 +200,24 @@ actor CareStore {
 
     // MARK: - Lookups
 
+    // Three near-identical bodies rather than one generic: #Predicate needs a
+    // concrete key path, so a generic over `PersistentModel` will not compile.
     private func family(_ id: UUID) throws -> Family? {
-        try modelContext.fetch(FetchDescriptor<Family>(predicate: #Predicate { $0.id == id })).first
+        try one(FetchDescriptor<Family>(predicate: #Predicate { $0.id == id }))
     }
 
     private func baby(_ id: UUID) throws -> Baby? {
-        try modelContext.fetch(FetchDescriptor<Baby>(predicate: #Predicate { $0.id == id })).first
+        try one(FetchDescriptor<Baby>(predicate: #Predicate { $0.id == id }))
     }
 
     private func shift(_ id: UUID) throws -> Shift? {
-        try modelContext.fetch(FetchDescriptor<Shift>(predicate: #Predicate { $0.id == id })).first
+        try one(FetchDescriptor<Shift>(predicate: #Predicate { $0.id == id }))
+    }
+
+    private func one<T: PersistentModel>(_ descriptor: FetchDescriptor<T>) throws -> T? {
+        var descriptor = descriptor
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first
     }
 }
 

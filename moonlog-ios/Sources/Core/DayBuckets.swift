@@ -2,11 +2,8 @@ import Foundation
 
 public enum DayBuckets {
 
-    /// Day intervals covering `range`, in `calendar`'s zone.
-    ///
-    /// Lengths are genuinely 23, 24 or 25 hours as the calendar dictates — never
-    /// assume 86,400. `dateInterval(of:for:)` does that work; the loop only has to
-    /// advance safely.
+    /// Day intervals covering `range`. Lengths are genuinely 23/24/24.5/25 hours as
+    /// the zone dictates — never assume 86,400.
     public static func days(covering range: DateInterval, calendar: Calendar) -> [DateInterval] {
         guard range.duration >= 0 else { return [] }
         var result: [DateInterval] = []
@@ -26,11 +23,8 @@ public enum DayBuckets {
         return result
     }
 
-    /// Half-open containment: `start <= date < end`.
-    ///
-    /// `DateInterval.contains` is **closed** at both ends, so an event logged at
-    /// exactly midnight would fall into two adjacent day buckets and be counted
-    /// twice. Point events must use this instead.
+    /// Half-open: `DateInterval.contains` is closed at both ends, so a midnight
+    /// event would land in two adjacent buckets.
     public static func day(_ day: DateInterval, contains date: Date) -> Bool {
         date >= day.start && date < day.end
     }
@@ -42,15 +36,9 @@ public enum DayBuckets {
         events.filter { self.day(day, contains: $0.at) }
     }
 
-    /// Seconds of sleep a session contributes to one day.
-    ///
-    /// **Clipped, not assigned.** A 22:00–06:00 stretch gives two hours to one day
-    /// and six to the next. Attributing the whole session to the day it started in
-    /// is the most common trend bug in this category, and it makes a night-shift
-    /// app look like the baby sleeps entirely on one calendar day.
-    ///
-    /// `shift` still bounds the session first, so an open session in a closed shift
-    /// cannot leak past the shift's end into later days.
+    /// **Clipped, not assigned** — a 22:00–06:00 stretch gives two hours to one day
+    /// and six to the next. The shift bounds it first, so an open session cannot
+    /// leak past the shift's end.
     public static func sleepSeconds(
         of session: SleepSnapshot,
         in day: DateInterval,

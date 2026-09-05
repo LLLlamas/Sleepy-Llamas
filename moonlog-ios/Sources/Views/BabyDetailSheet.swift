@@ -2,13 +2,7 @@ import SwiftUI
 import MoonlogCore
 
 /// Name and accent colour for one baby.
-///
-/// Reached by tapping the card header rather than by a long-press: a hidden
-/// gesture is the wrong way to expose the only route to editing, and the web
-/// version's undiscoverable long-press for manual sleep entry is the cautionary
-/// example.
 struct BabyDetailSheet: View {
-    let babyID: UUID
     @State private var name: String
     @State private var accent: BabyAccent
     let onSave: (String, BabyAccent) -> Void
@@ -17,13 +11,7 @@ struct BabyDetailSheet: View {
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
-    init(
-        babyID: UUID,
-        name: String,
-        accent: BabyAccent,
-        onSave: @escaping (String, BabyAccent) -> Void
-    ) {
-        self.babyID = babyID
+    init(name: String, accent: BabyAccent, onSave: @escaping (String, BabyAccent) -> Void) {
         self._name = State(initialValue: name)
         self._accent = State(initialValue: accent)
         self.onSave = onSave
@@ -73,8 +61,8 @@ struct BabyDetailSheet: View {
     }
 }
 
-/// Swatch grid. Every swatch is labelled, and the selected one carries a checkmark
-/// as well as a ring — so the current choice is legible without relying on colour.
+/// Labelled swatches; the selection carries a checkmark as well as a ring, so it
+/// is never communicated by colour alone.
 struct AccentPicker: View {
     @Binding var selection: BabyAccent
     let theme: MoonTheme

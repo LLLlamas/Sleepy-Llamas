@@ -1,7 +1,7 @@
 import Foundation
 
-/// The numbers that appear on the Summary screen and in the handoff given to the
-/// parents. Durations are held in **seconds** and rounded only at display.
+/// The numbers on the Summary screen and in the parents' handoff. Durations are in
+/// seconds, rounded only at display.
 public struct ShiftTotals: Sendable, Equatable {
     public var feeds: Int = 0
     public var feedMl: Double = 0
@@ -10,19 +10,16 @@ public struct ShiftTotals: Sendable, Equatable {
     public var diapers: Int = 0
     public var wet: Int = 0
     public var dirty: Int = 0
-    /// Distinct stool colours seen, in the order they first appeared. Whether
-    /// meconium has cleared is a clinical marker, so first-seen order is the
-    /// meaningful ordering.
+    /// Distinct colours in first-seen order — meconium clearing is the marker.
     public var stoolProgression: [StoolColor] = []
 
     public var sleepSeconds: TimeInterval = 0
-    /// Sessions that actually contributed time to this shift. The web version
-    /// counted every session handed to it, including ones clipped away to nothing.
+    /// Only sessions that actually contributed time.
     public var stretches: Int = 0
     public var longestStretchSeconds: TimeInterval = 0
 
     public var notes: Int = 0
-    /// Any temperature at or above this is flagged. Matches the PWA's threshold.
+    /// Flagged at or above.
     public static let feverThresholdF: Double = 100.4
     public var highestTempF: Double?
 
@@ -34,11 +31,7 @@ public struct ShiftTotals: Sendable, Equatable {
 
 public enum Totals {
 
-    /// Totals for one baby across one shift.
-    ///
-    /// Everything is clipped to the shift window, so a back-dated entry or a sleep
-    /// session left open at the end contributes only the part that belongs to this
-    /// shift — see `SleepMath.interval(of:clippedTo:asOf:)`.
+    /// Totals for one baby across one shift, everything clipped to the shift window.
     public static func compute(
         events: [EventSnapshot],
         sessions: [SleepSnapshot],
@@ -49,8 +42,7 @@ public enum Totals {
         var totals = ShiftTotals()
         guard let window = shift.interval(asOf: now) else { return totals }
 
-        // Sorted so `stoolProgression` records genuine first-appearance order
-        // rather than whatever order the store handed back.
+        // Sorted so `stoolProgression` reflects genuine first appearance.
         let relevant = events
             .filter { $0.babyID == babyID && window.contains($0.at) }
             .sorted { $0.at < $1.at }

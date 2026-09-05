@@ -19,9 +19,7 @@ enum ModelContainerFactory {
         ])
     }
 
-    /// How the store actually opened. Surfaced in Settings so a misconfiguration is
-    /// visible rather than silent — the Cookbook's equivalent failure presents as
-    /// "no recipes yet" with new records vanishing on relaunch.
+    /// Surfaced in Settings, so a misconfiguration is visible rather than silent.
     enum Mode: Equatable {
         case syncing
         case localOnly(reason: String)
@@ -30,26 +28,13 @@ enum ModelContainerFactory {
 
     private(set) static var mode: Mode = .localOnly(reason: "not yet opened")
 
-    /// Whether this build carries the iCloud container entitlement.
+    /// **Load-bearing.** Requesting a CloudKit store without the entitlement does
+    /// not throw — `ModelContainer` init succeeds and CloudKit then traps on a
+    /// background queue, killing the app with no catchable error.
     ///
-    /// This gate is **load-bearing, not belt-and-braces.** Asking SwiftData for a
-    /// CloudKit-backed store without the entitlement does not throw: the
-    /// `ModelContainer` initialiser returns *successfully* and CloudKit then traps
-    /// asynchronously on a background queue inside
-    /// `PFCloudKitContainerProvider containerWithIdentifier:`. A do/catch around
-    /// the initialiser cannot see it, so the app dies a moment after launch with a
-    /// SIGTRAP and no catchable error. Verified by crashing in exactly that way.
-    ///
-    /// It is a compile-time flag rather than a runtime probe because the entitlement
-    /// APIs (`SecTaskCopyValueForEntitlement`) are not public on iOS, and the
-    /// available proxies — `ubiquityIdentityToken` — key off the iCloud *Documents*
-    /// entitlement, so they would report false for a CloudKit-only build and
-    /// silently disable sync forever.
-    ///
-    /// **Flip `MOONLOG_CLOUDKIT` in `project.yml` at the same time as adding the
-    /// iCloud capability in Xcode.** Turning on one without the other either
-    /// crashes at launch (flag on, capability off) or silently never syncs
-    /// (capability on, flag off).
+    /// A compile flag, not a runtime probe: the entitlement APIs are not public on
+    /// iOS. Flip `MOONLOG_CLOUDKIT` in `project.yml` at the same time as adding the
+    /// capability in Xcode, never one without the other. See `docs/cloudkit.md`.
     static var hasCloudKitEntitlement: Bool {
         #if MOONLOG_CLOUDKIT
         return true
@@ -58,13 +43,8 @@ enum ModelContainerFactory {
         #endif
     }
 
-    /// Opens the store, degrading rather than crashing.
-    ///
-    /// The ladder matters. A launch crash mid-shift is itself a data-loss event, and
-    /// `ModelContainer` can fail outright when the user's iCloud storage is full —
-    /// so a CloudKit failure must not take the app down. But it must also not fall
-    /// straight to in-memory, which loses the night's logs silently. Local on-disk
-    /// keeps every record and costs only sync.
+    /// Degrades rather than crashes, and degrades to **local on-disk** rather than
+    /// in-memory — a CloudKit problem should cost sync, never the night's logs.
     @MainActor
     static func make(syncEnabled: Bool = true) -> ModelContainer {
         let schema = self.schema
@@ -87,7 +67,7 @@ enum ModelContainerFactory {
             mode = .syncing
             return container
         } catch {
-            // Still worth catching: iCloud storage being full is reported here.
+            // iCloud storage being full is reported here.
             logger.error("CloudKit store unavailable, using local only: \(error)")
             mode = .localOnly(reason: "\(error)")
             return openLocal(schema: schema)
@@ -100,13 +80,11 @@ enum ModelContainerFactory {
         do {
             return try ModelContainer(for: schema, configurations: local)
         } catch {
-            // Last resort so the app still launches and the failure is visible in
-            // the UI rather than as a crash on a customer's phone at 3am.
+            // Last resort: launching with visible breakage beats crashing at 3am.
             logger.fault("Local store failed to open, falling back to memory: \(error)")
             mode = .inMemory(reason: "\(error)")
             let memory = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-            // Safe to force-try: the schema is fully defaulted, so in-memory
-            // always opens.
+            // Force-try is safe: the schema is fully defaulted, so in-memory opens.
             return try! ModelContainer(for: schema, configurations: memory)
         }
     }

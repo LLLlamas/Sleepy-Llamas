@@ -10,21 +10,19 @@ struct TimelineEntry: Identifiable, Equatable {
     let detail: String?
 }
 
-/// One merged, reverse-chronological list for the whole household.
-///
-/// Shared rather than per-baby even with twins: at 3am the question is usually
-/// "what just happened", not "what happened to Mia". Each row carries the baby's
-/// name so a shared list never becomes ambiguous.
+/// One merged, reverse-chronological list for the household. Shared rather than
+/// per-baby because at 3am the question is "what just happened"; each row carries
+/// the baby's name so it never becomes ambiguous.
 struct TimelineSection: View {
     let entries: [TimelineEntry]
     let timeZone: TimeZone
-    let babyNames: [UUID: String]
-    let babyAccents: [UUID: BabyAccent]
+    let names: [UUID: String]
+    let accents: [UUID: BabyAccent]
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
-    private var showsBabyNames: Bool { babyNames.count > 1 }
+    private var showsNames: Bool { names.count > 1 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -77,7 +75,7 @@ struct TimelineSection: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    if showsBabyNames, let id = entry.babyID, let name = babyNames[id] {
+                    if showsNames, let id = entry.babyID, let name = names[id] {
                         Text(name)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(accentColor(for: entry))
@@ -105,7 +103,7 @@ struct TimelineSection: View {
     }
 
     private func accentColor(for entry: TimelineEntry) -> Color {
-        guard let id = entry.babyID, let accent = babyAccents[id] else { return palette.faint }
-        return showsBabyNames ? accent.color(for: theme) : palette.faint
+        guard let id = entry.babyID, let accent = accents[id] else { return palette.faint }
+        return showsNames ? accent.color(for: theme) : palette.faint
     }
 }

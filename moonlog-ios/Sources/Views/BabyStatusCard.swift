@@ -1,16 +1,26 @@
 import SwiftUI
 import MoonlogCore
 
-/// One baby's live state plus their actions.
-///
-/// With twins these stack, so both babies' state is visible at once and each has
-/// its own buttons — there is no "active baby" mode to set wrong, which is the
-/// failure this layout exists to prevent. With one baby it renders as the single
-/// full-width status block.
+/// Already-computed state for one card. Keeps the view free of domain logic and
+/// previewable without a store.
+struct BabyPresentation: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let accent: BabyAccent
+    let dayOfLife: Int
+    let asleepSince: Date?
+    let lastFeedAt: Date?
+    let lastDiaperAt: Date?
+    let feedIsDue: Bool
+
+    var isAsleep: Bool { asleepSince != nil }
+}
+
+/// One baby's live state plus their actions. With twins these stack, so both
+/// states are visible at once and neither set of buttons can act on the wrong baby.
 struct BabyStatusCard: View {
     let baby: BabyPresentation
     let now: Date
-    let dueSoonHours: Double
 
     var onFeed: () -> Void
     var onDiaper: () -> Void
@@ -20,141 +30,105 @@ struct BabyStatusCard: View {
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
+    private var accentColor: Color { baby.accent.color(for: theme) }
+    private var stateColor: Color { baby.isAsleep ? palette.sleep : palette.awake }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            statusLine
+            status
+            lastSeen
             actions
         }
         .padding(16)
-        .background(palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(palette.line, lineWidth: 1)
-        )
+        .background(palette.raised, in: card)
+        .overlay(card.stroke(palette.line, lineWidth: 1))
     }
 
-    // MARK: - Header
+    private var card: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+    }
 
+    // A visible chevron, not a long-press — see `docs/design.md`.
     private var header: some View {
         Button(action: onEditBaby) {
-            headerContent
+            HStack(spacing: 10) {
+                Circle().fill(accentColor).frame(width: 10, height: 10)
+                Text(baby.name).font(.headline).foregroundStyle(palette.ink)
+                Spacer()
+                Text("Day \(baby.dayOfLife)").font(.subheadline).foregroundStyle(palette.faint)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(palette.faint)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(baby.name), day \(baby.dayOfLife). Edit name and colour.")
     }
 
-    private var headerContent: some View {
-        HStack(spacing: 10) {
-            // Accent is the THIRD identifying signal, never the only one — the name
-            // is always present and card order is fixed. Hue discrimination is poor
-            // in a dark room and absent for colourblind users.
-            Circle()
-                .fill(baby.accent.color(for: theme))
-                .frame(width: 10, height: 10)
-
-            Text(baby.name)
-                .font(.headline)
-                .foregroundStyle(palette.ink)
-
-            Spacer()
-
-            Text("Day \(baby.dayOfLife)")
-                .font(.subheadline)
-                .foregroundStyle(palette.faint)
-
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(palette.faint)
-        }
-        .contentShape(Rectangle())
-    }
-
-    // MARK: - Status
-
-    private var statusLine: some View {
+    private var status: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: baby.isAsleep ? "moon.zzz.fill" : "sun.max.fill")
                 .font(.subheadline)
-                .foregroundStyle(baby.isAsleep ? palette.sleep : palette.awake)
-
-            Text(baby.isAsleep ? "Asleep" : "Awake")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(baby.isAsleep ? palette.sleep : palette.awake)
-
+            Text(baby.isAsleep ? "Asleep" : "Awake").font(.title3.weight(.semibold))
             if let since = baby.asleepSince {
+                // Monospaced so the number doesn't jitter as digit widths change.
                 Text(Fmt.duration(max(0, now.timeIntervalSince(since))))
-                    // Monospaced digits so the number does not jitter as digit
-                    // widths change — this is re-read all night.
                     .font(.title3.monospacedDigit())
                     .foregroundStyle(palette.soft)
             }
-
             Spacer()
         }
+        .foregroundStyle(stateColor)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            baby.isAsleep
-                ? "\(baby.name) asleep\(baby.asleepSince.map { " for " + Fmt.duration(max(0, now.timeIntervalSince($0))) } ?? "")"
-                : "\(baby.name) awake")
+        .accessibilityLabel(accessibleStatus)
     }
 
-    // MARK: - Last events
+    private var accessibleStatus: String {
+        guard let since = baby.asleepSince else { return "\(baby.name) awake" }
+        return "\(baby.name) asleep for \(Fmt.duration(max(0, now.timeIntervalSince(since))))"
+    }
 
-    private var lastRow: some View {
+    private var lastSeen: some View {
         HStack(spacing: 14) {
-            lastChip(
-                icon: "drop.fill",
-                label: baby.lastFeedAt.map { Fmt.ago($0, now: now) } ?? "no feed yet",
-                warn: baby.feedIsDue)
-            lastChip(
-                icon: "square.on.square",
-                label: baby.lastDiaperAt.map { Fmt.ago($0, now: now) } ?? "no change yet",
-                warn: false)
+            chip("drop.fill", baby.lastFeedAt, empty: "no feed yet", warn: baby.feedIsDue)
+            chip("square.on.square", baby.lastDiaperAt, empty: "no change yet", warn: false)
             Spacer()
         }
     }
 
-    private func lastChip(icon: String, label: String, warn: Bool) -> some View {
+    private func chip(_ icon: String, _ at: Date?, empty: String, warn: Bool) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.caption2)
-            Text(label).font(.caption.monospacedDigit())
+            Text(at.map { Fmt.ago($0, now: now) } ?? empty).font(.caption.monospacedDigit())
         }
         .foregroundStyle(warn ? palette.warn : palette.faint)
     }
 
-    // MARK: - Actions
-
     private var actions: some View {
-        VStack(spacing: 10) {
-            lastRow
-            HStack(spacing: 8) {
-                actionButton("Feed", systemImage: "drop.fill", action: onFeed)
-                actionButton("Diaper", systemImage: "square.on.square", action: onDiaper)
-                actionButton(
-                    baby.isAsleep ? "Wake" : "Sleep",
-                    systemImage: baby.isAsleep ? "sun.max.fill" : "moon.zzz.fill",
-                    tint: baby.isAsleep ? palette.awake : palette.sleep,
-                    action: onToggleSleep)
-            }
+        HStack(spacing: 8) {
+            action("Feed", "drop.fill", onFeed)
+            action("Diaper", "square.on.square", onDiaper)
+            // Tinted by the state the button moves *to*, matching its label —
+            // "Wake" is gold, "Sleep" is sage, whichever state you are in now.
+            action(
+                baby.isAsleep ? "Wake" : "Sleep",
+                baby.isAsleep ? "sun.max.fill" : "moon.zzz.fill",
+                onToggleSleep, tint: baby.isAsleep ? palette.awake : palette.sleep)
         }
     }
 
-    private func actionButton(
-        _ title: String,
-        systemImage: String,
-        tint: Color? = nil,
-        action: @escaping () -> Void
+    private func action(
+        _ title: String, _ icon: String, _ run: @escaping () -> Void, tint: Color? = nil
     ) -> some View {
-        Button(action: action) {
+        Button(action: run) {
             VStack(spacing: 4) {
-                Image(systemName: systemImage).font(.body)
+                Image(systemName: icon).font(.body)
                 Text(title).font(.caption.weight(.medium))
             }
             .frame(maxWidth: .infinity)
-            // 56pt floor, carried over from the web version's --tap token. One
-            // hand, in the dark, holding a baby.
-            .frame(height: 56)
+            .frame(height: 56)   // --tap floor: one hand, in the dark
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? palette.ink)
@@ -162,20 +136,4 @@ struct BabyStatusCard: View {
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityLabel("\(title) for \(baby.name)")
     }
-}
-
-/// What the card needs, already computed. Keeps the view free of domain logic and
-/// makes it previewable without a store.
-struct BabyPresentation: Identifiable, Equatable {
-    let id: UUID
-    let name: String
-    let accent: BabyAccent
-    let dayOfLife: Int
-    let isAsleep: Bool
-    let asleepSince: Date?
-    let lastFeedAt: Date?
-    let lastDiaperAt: Date?
-    /// Whether the feed is overdue. Computed upstream so a future-dated entry
-    /// cannot silently suppress the warning the way it does in the web version.
-    let feedIsDue: Bool
 }

@@ -1,18 +1,14 @@
 import Foundation
 
-/// Value-type views of the persisted records.
-///
-/// Every calculation in `MoonlogCore` works on these, never on `@Model` classes.
-/// Two payoffs: the tests run without a `ModelContainer`, and being `Sendable`
-/// value types they can cross actor boundaries when trends are computed off the
-/// main thread.
+// Value-type views of the persisted records. Everything in `MoonlogCore` works on
+// these: the tests need no `ModelContainer`, and being `Sendable` they cross actor
+// boundaries safely.
 
 public struct SleepSnapshot: Sendable, Hashable, Identifiable {
     public let id: UUID
     public let babyID: UUID
     public let startAt: Date
-    /// `nil` means the session was still open. That is a legitimate, meaningful
-    /// state at the end of a shift — the doula left while the baby was asleep.
+    /// `nil` means still open — legitimate at the end of a shift.
     public let endAt: Date?
 
     public init(id: UUID = UUID(), babyID: UUID, startAt: Date, endAt: Date? = nil) {
@@ -25,10 +21,7 @@ public struct SleepSnapshot: Sendable, Hashable, Identifiable {
     public var isOpen: Bool { endAt == nil }
 }
 
-/// The window a shift covers.
-///
-/// `startedAt` and `endedAt` are values the doula sets or confirms — they are not
-/// inferred from the clock. `endedAt == nil` means the shift is still running.
+/// The window a shift covers. Set or confirmed by the doula, never inferred.
 public struct ShiftWindow: Sendable, Hashable {
     public let startedAt: Date
     public let endedAt: Date?
@@ -40,9 +33,8 @@ public struct ShiftWindow: Sendable, Hashable {
 
     public var isOpen: Bool { endedAt == nil }
 
-    /// The accounting window. A closed shift stops at its end; an open one runs to
-    /// `now`. Returns `nil` for a zero- or negative-length window, which callers
-    /// treat as "nothing to count" rather than crashing.
+    /// A closed shift stops at its end; an open one runs to `now`. `nil` for a
+    /// zero-length window — callers count nothing rather than crashing.
     public func interval(asOf now: Date) -> DateInterval? {
         let end = endedAt ?? now
         guard end > startedAt else { return nil }
@@ -52,12 +44,8 @@ public struct ShiftWindow: Sendable, Hashable {
 
 // MARK: - Domain enums
 //
-// Raw values are WIRE FORMAT: they become CloudKit field values, and a CloudKit
-// schema is additive-only once promoted to production — a raw value can never be
-// renamed after that. Add cases freely; never mutate an existing one.
-//
-// (They happen to match the retired PWA's strings, which is where they came from.
-// That no longer matters, but there is no reason to churn them either.)
+// Raw values are WIRE FORMAT: they become CloudKit fields, and a promoted schema is
+// additive-only. Add cases freely; never rename an existing value.
 //
 // Each has an `unknown` case that is never written but is always readable, so an
 // older build receiving a record from a newer one degrades gracefully instead of
@@ -86,9 +74,8 @@ public enum DiaperContents: String, Sendable, CaseIterable {
     public var countsAsDirty: Bool { self == .dirty || self == .both }
 }
 
-/// Ordered by the clinical progression a newborn is expected to follow. Whether
-/// meconium has cleared is a real marker the doula reports, so the order matters
-/// and is not just a display convenience.
+/// Ordered by clinical progression — whether meconium has cleared is a marker the
+/// doula reports, so the order is meaningful, not decorative.
 public enum StoolColor: String, Sendable, CaseIterable {
     case meconium, transitional, green, brown, yellow
 }
@@ -142,8 +129,8 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
     }
 }
 
-/// How an event came to be recorded. A tag scan never writes silently — it opens a
-/// prefilled confirm sheet — but recording the source makes a mis-scan traceable.
+/// A tag scan never writes silently, but recording the source makes a mis-scan
+/// traceable.
 public enum EventSource: String, Sendable, CaseIterable {
     case manual
     case nfcTag = "nfc-tag"

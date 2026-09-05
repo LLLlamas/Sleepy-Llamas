@@ -2,17 +2,8 @@ import Foundation
 
 public enum DayOfLife {
 
-    /// Calendar day of life, clinical convention: **the birth day is Day 1**, and
-    /// the number rolls over at midnight.
-    ///
-    /// This differs from the web version, which counts completed 24-hour blocks and
-    /// so reports "Day 0" for a baby ten hours old and rolls over at the birth
-    /// *minute*. Neither matches how a pediatrician counts, and the minute-rollover
-    /// means the same handoff text reports a different Day N depending on when it
-    /// is copied.
-    ///
-    /// Both endpoints are anchored to `startOfDay` before differencing, which is
-    /// what makes this immune to 23- and 25-hour days.
+    /// Clinical convention: the birth day is Day 1, rolling at midnight — not
+    /// completed 24-hour blocks. See `docs/decisions.md`.
     public static func calendarDay(birthAt: Date, asOf: Date, calendar: Calendar) -> Int {
         let birthDay = calendar.startOfDay(for: birthAt)
         let day = calendar.startOfDay(for: asOf)
@@ -22,11 +13,8 @@ public enum DayOfLife {
         return max(1, elapsed + 1)
     }
 
-    /// Day of life for a shift, pinned to the shift's start.
-    ///
-    /// Because the doula sets the shift hours, the number shown must stay stable
-    /// for the whole shift. Computing it against `now` is why the web version's
-    /// header can change mid-shift and why its handoff is self-inconsistent.
+    /// Pinned to the shift's start, so the number cannot change mid-shift and make
+    /// a handoff self-inconsistent.
     public static func calendarDay(
         birthAt: Date,
         forShift shift: ShiftWindow,
@@ -35,8 +23,7 @@ public enum DayOfLife {
         calendarDay(birthAt: birthAt, asOf: shift.startedAt, calendar: calendar)
     }
 
-    /// Absolute hours since birth. What actually matters in the first 48 hours, and
-    /// DST-immune by construction since both endpoints are absolute instants.
+    /// Absolute hours — what matters in the first 48, and DST-immune by construction.
     public static func hours(birthAt: Date, asOf: Date) -> Double {
         max(0, asOf.timeIntervalSince(birthAt)) / 3600
     }

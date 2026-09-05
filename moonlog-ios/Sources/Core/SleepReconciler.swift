@@ -11,24 +11,16 @@ public struct ReconcileResult: Sendable, Equatable {
 
 public enum SleepReconciler {
 
-    /// Repairs a baby's sleep sessions into a consistent, non-overlapping sequence.
+    /// Repairs a baby's sessions into a non-overlapping sequence. Required, not
+    /// defensive: sync can deliver two open sessions for one baby.
     ///
-    /// This is not defensive padding — it is required. CloudKit cannot enforce
-    /// uniqueness, so two devices can both open a session for the same baby, and
-    /// the store will accept both. The UI would then show one while the other
-    /// accrued invisibly.
+    /// Order-independent — two devices reaching different answers would fight — so
+    /// everything is sorted first with a total tie-break on id.
     ///
-    /// The output must not depend on arrival order: two devices reconciling the
-    /// same set must reach the same answer, or they will fight. Everything is
-    /// therefore sorted first, with a total tie-break on id.
-    ///
-    /// Rules, in order:
-    /// - Sessions starting within `mergeWindow` of each other are the same tap
-    ///   double-registered. Collapse into the earlier; the result stays open if
-    ///   either was open.
-    /// - A session still open when a later one begins was never closed. Close it
-    ///   where the next begins, rather than letting two run at once.
-    /// - A session overlapping the next is truncated to the next one's start.
+    /// - Starts within `mergeWindow` are one double-registered tap; collapse into
+    ///   the earlier, staying open if either was.
+    /// - A session still open when a later one begins is closed at that start.
+    /// - An overlapping session is truncated to the next one's start.
     public static func reconcile(
         _ sessions: [SleepSnapshot],
         forBaby babyID: UUID,
@@ -53,8 +45,7 @@ public enum SleepReconciler {
             }
 
             if session.startAt.timeIntervalSince(previous.startAt) <= mergeWindow {
-                // Same tap registered twice. Keep the earlier identity so the merge
-                // is stable across devices; stay open if either side was open.
+                // Keep the earlier identity so the merge is stable across devices.
                 let end: Date?
                 if previous.endAt == nil || session.endAt == nil {
                     end = nil
