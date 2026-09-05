@@ -70,7 +70,21 @@ public struct Palette: Sendable {
 
     public let backdrop: Color
 
+    /// Built once each. Previously reconstructed on every view update, and five
+    /// times per `RootView` body — each one ~20 hex scans through a fresh `Scanner`.
     public static func `for`(_ theme: MoonTheme) -> Palette {
+        switch theme {
+        case .night: return cachedNight
+        case .deepNight: return cachedDeepNight
+        case .day: return cachedDay
+        }
+    }
+
+    private static let cachedNight = build(.night)
+    private static let cachedDeepNight = build(.deepNight)
+    private static let cachedDay = build(.day)
+
+    private static func build(_ theme: MoonTheme) -> Palette {
         switch theme {
         case .night:
             return Palette(

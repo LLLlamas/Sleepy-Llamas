@@ -31,16 +31,18 @@ struct TonightView: View {
     @State private var confirmEndShift = false
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let data = Tonight(family: family, shift: shift, now: context.date)
-            content(data)
-                #if DEBUG
-                // Opens a sheet straight from a launch argument, so each one can be
-                // rendered and screenshotted without driving the UI. Same rationale
-                // as DemoSeed: a test affordance, never reachable in a real run.
-                .task { sheet = sheet ?? DemoSeed.requestedSheet(for: data.babies.first?.id) }
-                #endif
-        }
+        // Deliberately NOT wrapped in a periodic TimelineView. Nothing on this
+        // screen except the two labels inside each card depends on the clock, and
+        // ticking the whole view rebuilt every timeline row — every formatted time,
+        // every string — 2,880 times a night for values that change ~40 times.
+        // The cards own their own tick; everything else re-renders on writes.
+        let data = Tonight(family: family, shift: shift, now: Date())
+        content(data)
+            #if DEBUG
+            // A test affordance, never reachable in a real run — same rationale as
+            // DemoSeed.
+            .task { sheet = sheet ?? DemoSeed.requestedSheet(for: data.babies.first?.id) }
+            #endif
     }
 
     private func content(_ data: Tonight) -> some View {
@@ -49,7 +51,6 @@ struct TonightView: View {
                 ForEach(data.babies) { presentation in
                     BabyStatusCard(
                         baby: presentation,
-                        now: data.now,
                         isBusy: busy.contains(presentation.id),
                         onFeed: { sheet = .feed(babyID: presentation.id) },
                         onDiaper: { sheet = .diaper(babyID: presentation.id) },
@@ -436,8 +437,7 @@ private struct Tonight {
 
         let calendar = family.calendar
         self.babies = roster.map { baby in
-            let feedAt = lastFeed[baby.id]
-            return BabyPresentation(
+            BabyPresentation(
                 id: baby.id,
                 name: baby.name,
                 accent: baby.accent,
@@ -446,19 +446,11 @@ private struct Tonight {
                 // Through Core, which breaks an equal-start tie on id so every
                 // device resolves a synced duplicate the same way.
                 asleepSince: SleepMath.openSession(in: openSnapshots, forBaby: baby.id)?.startAt,
-                lastFeedAt: feedAt,
-                lastDiaperAt: lastDiaper[baby.id],
-                // A future-dated feed (only reachable via sync from a device with a
-                // skewed clock) must not suppress the warning. The previous guard
-                // was a no-op — `elapsed >= 0` is subsumed by `elapsed >= 10800` —
-                // so it silently reproduced the web version's bug. Treat a future
-                // stamp as overdue rather than as "just fed".
-                feedIsDue: feedAt.map { now.timeIntervalSince($0) < 0
-                    || now.timeIntervalSince($0) >= Self.feedDueAfter } ?? false)
+                lastFeedAt: lastFeed[baby.id],
+                lastDiaperAt: lastDiaper[baby.id])
         }
     }
 
-    private static let feedDueAfter: TimeInterval = 3 * 3600
 }
 
 // MARK: - Sheet routing

@@ -13,7 +13,14 @@ struct RootView: View {
     @Environment(\.colorScheme) private var systemScheme
     @Environment(\.careStore) private var store
 
-    @Query(sort: \Family.createdAt) private var families: [Family]
+    @Query(filter: #Predicate<Family> { !$0.isArchived }, sort: \Family.createdAt)
+    private var families: [Family]
+
+    /// Only the open shifts, which is at most one per family — not every shift the
+    /// family has ever had. The previous version walked `family.shifts` and sorted
+    /// it on every body pass, so the work grew by one element per night, forever.
+    @Query(filter: #Predicate<Shift> { $0.isOpen }, sort: \Shift.startedAt, order: .reverse)
+    private var openShifts: [Shift]
 
     @State private var error: String?
     @State private var tab = "tonight"
@@ -23,6 +30,8 @@ struct RootView: View {
         return systemScheme == .dark ? .night : .day
     }
 
+    // `Palette.for` is cached per theme, so this is a lookup rather than the five
+    // full palette constructions per body it used to be.
     private var palette: Palette { Palette.for(theme) }
 
     var body: some View {
@@ -120,10 +129,7 @@ struct RootView: View {
 
     /// Between visits there is genuinely no open shift — a normal state.
     private func openShift(for family: Family) -> Shift? {
-        (family.shifts ?? [])
-            .filter(\.isOpen)
-            .sorted { $0.startedAt > $1.startedAt }
-            .first
+        openShifts.first { $0.familyIDRaw == family.id }
     }
 
     private func run(_ action: @escaping (CareStore) async throws -> Void) {

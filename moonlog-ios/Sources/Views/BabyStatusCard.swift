@@ -11,16 +11,26 @@ struct BabyPresentation: Identifiable, Equatable {
     let asleepSince: Date?
     let lastFeedAt: Date?
     let lastDiaperAt: Date?
-    let feedIsDue: Bool
 
     var isAsleep: Bool { asleepSince != nil }
+
+    /// Whether the feed is overdue as of `now`. Computed here rather than baked in,
+    /// so the value can refresh on the clock without invalidating the whole screen.
+    ///
+    /// A future-dated feed (reachable only via sync from a device with a skewed
+    /// clock) counts as overdue rather than as "just fed" — treating it as recent is
+    /// what silently suppressed this warning in the web version.
+    func feedIsDue(now: Date, after interval: TimeInterval = 3 * 3600) -> Bool {
+        guard let lastFeedAt else { return false }
+        let elapsed = now.timeIntervalSince(lastFeedAt)
+        return elapsed < 0 || elapsed >= interval
+    }
 }
 
 /// One baby's live state plus their actions. With twins these stack, so both
 /// states are visible at once and neither set of buttons can act on the wrong baby.
 struct BabyStatusCard: View {
     let baby: BabyPresentation
-    let now: Date
 
     /// A write is in flight for this baby; actions are inert until it lands.
     var isBusy: Bool
@@ -40,8 +50,15 @@ struct BabyStatusCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            status
-            lastSeen
+            // Only these two labels depend on the clock. Ticking here rather than
+            // around the whole screen means the timeline — every row, every
+            // formatted time — re-renders on writes, not every 30 seconds.
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                VStack(alignment: .leading, spacing: 12) {
+                    status(now: context.date)
+                    lastSeen(now: context.date)
+                }
+            }
             actions
         }
         .padding(16)
@@ -50,7 +67,7 @@ struct BabyStatusCard: View {
     }
 
     private var card: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
+        RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous)
     }
 
     // A visible chevron, not a long-press — see `docs/design.md`.
@@ -73,23 +90,23 @@ struct BabyStatusCard: View {
 
     // The button toggles instantly — that is the 3am path. This opens the sheet
     // for a back-dated or corrected time, visibly rather than behind a long-press.
-    private var status: some View {
+    private func status(now: Date) -> some View {
         Button(action: { Haptics.tap(); onAdjustSleep() }) {
-            statusContent
+            statusContent(now: now)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(accessibleStatus)
+        .accessibilityLabel(accessibleStatus(now: now))
         .accessibilityHint("Adjust the time")
     }
 
-    private var statusContent: some View {
+    private func statusContent(now: Date) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: baby.isAsleep ? "moon.zzz.fill" : "sun.max.fill")
                 .font(.subheadline)
             Text(baby.isAsleep ? "Asleep" : "Awake").font(.title3.weight(.semibold))
             if let since = baby.asleepSince {
                 // Monospaced so the number doesn't jitter as digit widths change.
-                Text(Fmt.duration(max(0, now.timeIntervalSince(since))))
+                Text(Fmt.ago(since, now: now))
                     .font(.title3.monospacedDigit())
                     .foregroundStyle(palette.soft)
             }
@@ -102,20 +119,24 @@ struct BabyStatusCard: View {
         .contentShape(Rectangle())
     }
 
-    private var accessibleStatus: String {
+    private func accessibleStatus(now: Date) -> String {
         guard let since = baby.asleepSince else { return "\(baby.name) awake" }
-        return "\(baby.name) asleep for \(Fmt.duration(max(0, now.timeIntervalSince(since))))"
+        return "\(baby.name) asleep for \(Fmt.ago(since, now: now))"
     }
 
-    private var lastSeen: some View {
+    private func lastSeen(now: Date) -> some View {
         HStack(spacing: 14) {
-            chip("drop.fill", baby.lastFeedAt, empty: "no feed yet", warn: baby.feedIsDue)
-            chip("square.on.square", baby.lastDiaperAt, empty: "no change yet", warn: false)
+            chip("drop.fill", baby.lastFeedAt, now: now,
+                 empty: "no feed yet", warn: baby.feedIsDue(now: now))
+            chip("square.on.square", baby.lastDiaperAt, now: now,
+                 empty: "no change yet", warn: false)
             Spacer()
         }
     }
 
-    private func chip(_ icon: String, _ at: Date?, empty: String, warn: Bool) -> some View {
+    private func chip(
+        _ icon: String, _ at: Date?, now: Date, empty: String, warn: Bool
+    ) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.caption2)
             Text(at.map { Fmt.ago($0, now: now) } ?? empty).font(.caption.monospacedDigit())
@@ -149,12 +170,12 @@ struct BabyStatusCard: View {
                 Text(title).font(.caption.weight(.medium))
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 56)   // --tap floor: one hand, in the dark
+            .frame(height: MoonLayout.tapTarget)
         }
         .buttonStyle(.plain)
         .foregroundStyle((tint ?? palette.ink).opacity(isBusy ? 0.4 : 1))
-        .background(palette.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(palette.chip, in: RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
         .accessibilityLabel("\(title) for \(baby.name)")
     }
 }

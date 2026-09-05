@@ -37,8 +37,8 @@ struct TimelineSection: View {
             if entries.isEmpty {
                 empty
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                LazyVStack(spacing: 0) {
+                    ForEach(entries) { entry in
                         if let edit = entry.edit {
                             Button {
                                 Haptics.tap()
@@ -50,15 +50,17 @@ struct TimelineSection: View {
                         } else {
                             row(entry)
                         }
-                        if index < entries.count - 1 {
+                        // Drawn per row rather than by index, so `enumerated()` is
+                        // not materialised into a fresh array on every pass.
+                        if entry.id != entries.last?.id {
                             Divider().overlay(palette.line).padding(.leading, 46)
                         }
                     }
                 }
                 .background(
-                    palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    palette.raised, in: RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous)
                         .stroke(palette.line, lineWidth: 1))
             }
         }
@@ -76,7 +78,7 @@ struct TimelineSection: View {
             Spacer()
         }
         .padding(.vertical, 28)
-        .background(palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(palette.raised, in: RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous))
     }
 
     private func row(_ entry: TimelineEntry) -> some View {
@@ -117,7 +119,7 @@ struct TimelineSection: View {
             }
         }
         .padding(.horizontal, 14)
-        .frame(minHeight: 56)
+        .frame(minHeight: MoonLayout.tapTarget)
         .contentShape(Rectangle())
     }
 
