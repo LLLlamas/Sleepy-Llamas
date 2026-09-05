@@ -16,6 +16,7 @@ struct RootView: View {
     @Query(sort: \Family.createdAt) private var families: [Family]
 
     @State private var error: String?
+    @State private var tab = "tonight"
 
     private var theme: MoonTheme {
         if deepNightEnabled { return .deepNight }
@@ -49,16 +50,7 @@ struct RootView: View {
     @ViewBuilder
     private var content: some View {
         if let family = families.first {
-            if let shift = openShift(for: family) {
-                TonightView(family: family, shift: shift)
-            } else {
-                StartShiftView(familyName: family.name) { startedAt, caregiver in
-                    run {
-                        _ = try await $0.startShift(
-                            familyID: family.id, startedAt: startedAt, caregiver: caregiver)
-                    }
-                }
-            }
+            tabs(family)
         } else {
             OnboardingView { familyName, babyName, birthAt, unit in
                 run { store in
@@ -68,6 +60,45 @@ struct RootView: View {
                 }
             }
         }
+    }
+
+    /// Bottom tabs, following the retired PWA's shape: Tonight, Summary, Settings.
+    /// Summary and Settings are reachable with no shift running, because that is a
+    /// normal state and both still have something to say.
+    @ViewBuilder
+    private func tabs(_ family: Family) -> some View {
+        let shift = openShift(for: family)
+        TabView(selection: $tab) {
+            Group {
+                if let shift {
+                    TonightView(family: family, shift: shift)
+                } else {
+                    StartShiftView(familyName: family.name) { startedAt, caregiver in
+                        Haptics.commit()
+                        run {
+                            _ = try await $0.startShift(
+                                familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+                        }
+                    }
+                }
+            }
+            .tabItem { Label("Tonight", systemImage: "moon.stars.fill") }
+            .tag("tonight")
+
+            SummaryView(family: family, shift: shift)
+                .tabItem { Label("Summary", systemImage: "list.bullet.rectangle") }
+                .tag("summary")
+
+            SettingsView(family: family) { error = $0 }
+                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tag("settings")
+        }
+        .toolbarBackground(palette.bg, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .sensoryFeedback(.selection, trigger: tab)
+        #if DEBUG
+        .task { tab = DemoSeed.requestedTab ?? tab }
+        #endif
     }
 
     /// Between visits there is genuinely no open shift — a normal state.

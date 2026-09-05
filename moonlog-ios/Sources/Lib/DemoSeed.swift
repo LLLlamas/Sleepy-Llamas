@@ -15,6 +15,12 @@ enum DemoSeed {
         UserDefaults.standard.bool(forKey: "moonlogSeedDemo")
     }
 
+    /// `-moonlogTab summary|settings` — selects that tab on launch, so each screen
+    /// can be rendered and screenshotted without driving the UI.
+    static var requestedTab: String? {
+        UserDefaults.standard.string(forKey: "moonlogTab")
+    }
+
     /// `-moonlogOpenSheet feed|diaper|sleep|note` — opens that sheet on appear.
     static func requestedSheet(for babyID: UUID?) -> LogSheet? {
         guard let babyID,

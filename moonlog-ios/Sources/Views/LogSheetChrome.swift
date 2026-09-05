@@ -90,6 +90,7 @@ struct LogSheetChrome<Content: View>: View {
                     Button("Save") {
                         guard !isSaving else { return }
                         isSaving = true
+                        Haptics.commit()
                         onSave()
                         dismiss()
                     }
@@ -172,5 +173,31 @@ extension View {
                      + "the record. Logging stops until you start the next shift.")
             }
         }
+    }
+}
+
+/// Shared empty state. Used wherever a screen has nothing to show yet — which is a
+/// normal condition here, not an error: between visits there is no open shift.
+struct EmptyStatePlaceholder: View {
+    let emoji: String
+    let title: String
+    let message: String
+
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(emoji).font(.system(size: 40))
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(palette.ink)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(palette.faint)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(32)
+        .background(palette.bg)
     }
 }

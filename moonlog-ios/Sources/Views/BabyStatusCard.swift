@@ -54,7 +54,7 @@ struct BabyStatusCard: View {
 
     // A visible chevron, not a long-press — see `docs/design.md`.
     private var header: some View {
-        Button(action: onEditBaby) {
+        Button(action: { Haptics.tap(); onEditBaby() }) {
             HStack(spacing: 10) {
                 Circle().fill(accentColor).frame(width: 10, height: 10)
                 Text(baby.name).font(.headline).foregroundStyle(palette.ink)
@@ -73,7 +73,7 @@ struct BabyStatusCard: View {
     // The button toggles instantly — that is the 3am path. This opens the sheet
     // for a back-dated or corrected time, visibly rather than behind a long-press.
     private var status: some View {
-        Button(action: onAdjustSleep) {
+        Button(action: { Haptics.tap(); onAdjustSleep() }) {
             statusContent
         }
         .buttonStyle(.plain)
@@ -138,7 +138,11 @@ struct BabyStatusCard: View {
     private func action(
         _ title: String, _ icon: String, _ run: @escaping () -> Void, tint: Color? = nil
     ) -> some View {
-        Button(action: { guard !isBusy else { return }; run() }) {
+        Button(action: {
+            guard !isBusy else { return }
+            Haptics.tap()
+            run()
+        }) {
             VStack(spacing: 4) {
                 Image(systemName: icon).font(.body)
                 Text(title).font(.caption.weight(.medium))

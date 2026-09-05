@@ -134,6 +134,21 @@ final class LogEvent {
     }
     var stoolColor: StoolColor? { stoolColorRaw.flatMap(StoolColor.init(rawValue:)) }
 
+    /// The value type `MoonlogCore` works on. Its absence is why `Totals.compute`
+    /// had no reachable call path from the app.
+    var snapshot: EventSnapshot? {
+        guard let babyID = babyIDRaw ?? (kind == .pump ? UUID() : nil) else { return nil }
+        return EventSnapshot(
+            id: id, babyID: babyID, kind: kind, at: at,
+            feedMethod: feedMethod, amountMl: amountMl,
+            feedDurationSeconds: feedDurationSeconds,
+            leftSeconds: leftSeconds, rightSeconds: rightSeconds,
+            diaperContents: diaperContents, stoolColor: stoolColor,
+            noteTags: tags, tempF: tempF,
+            pumpedMl: pumpedMl, medicationName: medicationName,
+            doseText: doseText, weightGrams: weightGrams)
+    }
+
     var tags: [String] {
         (tagsRaw ?? "").split(separator: ",").map(String.init).filter { !$0.isEmpty }
     }

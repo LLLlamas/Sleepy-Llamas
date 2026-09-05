@@ -47,6 +47,36 @@ actor CareStore {
         try modelContext.save()
     }
 
+    func setOptionalKinds(_ kinds: [EventKind], familyID: UUID) throws {
+        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        family.setOptionalKinds(kinds)
+        try modelContext.save()
+    }
+
+    /// Note tags are user-defined. Until this existed they could only be created by
+    /// the DEBUG demo seed, so the tag row never appeared in a real install.
+    func addNoteTag(_ label: String, familyID: UUID) throws {
+        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
+        let existing = family.noteTags ?? []
+        guard !existing.contains(where: { $0.label.caseInsensitiveCompare(trimmed) == .orderedSame })
+        else { return }
+        let tag = NoteTagPreset(
+            label: trimmed, sortOrder: (existing.map(\.sortOrder).max() ?? -1) + 1)
+        tag.family = family
+        modelContext.insert(tag)
+        try modelContext.save()
+    }
+
+    func deleteNoteTag(_ id: UUID) throws {
+        guard let tag = try one(
+            FetchDescriptor<NoteTagPreset>(predicate: #Predicate { $0.id == id }))
+        else { return }
+        modelContext.delete(tag)
+        try modelContext.save()
+    }
+
     /// Accent is the user's choice; the auto-assigned default only makes twins
     /// distinct before anyone picks.
     func updateBaby(_ babyID: UUID, name: String? = nil, accent: BabyAccent? = nil) throws {

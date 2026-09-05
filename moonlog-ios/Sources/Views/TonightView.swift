@@ -67,7 +67,8 @@ struct TonightView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            .padding(.bottom, 32)
+            // Clears the floating tab bar, which overlays the scroll content.
+            .padding(.bottom, 88)
         }
         .background(palette.bg)
         .toolbar {
@@ -234,6 +235,7 @@ private extension TonightView {
             defer { busy.remove(baby.id) }
             do {
                 try await action(store)
+                Haptics.success()
                 confirmationToken &+= 1
                 let token = confirmationToken
                 confirmation = success.contains(baby.name) ? success : "\(success) · \(baby.name)"
@@ -241,6 +243,7 @@ private extension TonightView {
                 // Only clear if no newer confirmation replaced this one.
                 if confirmationToken == token { confirmation = nil }
             } catch {
+                Haptics.warn()
                 saveError = "\(error)"
             }
         }
@@ -255,7 +258,8 @@ private extension TonightView {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(palette.accent, in: Capsule())
-                .padding(.top, 8)
+                .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
+                .padding(.top, 12)
                 .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
