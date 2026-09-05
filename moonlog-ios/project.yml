@@ -1,0 +1,128 @@
+name: Moonlog
+options:
+  bundleIdPrefix: com.sleepyllamas
+  deploymentTarget:
+    # iOS 18, not 26. Everything v1 needs is here — SwiftData, #Index
+    # (iOS 18+), CloudKit mirroring, Core NFC, Live Activities — and it
+    # keeps older devices in play. The only thing gated higher is AlarmKit
+    # (iOS 26) for feed-due alarms, which is the last feature in the order
+    # and will be wrapped in @available.
+    #
+    # iOS 18 also matters for the PWA import: swift-foundation's rewrite
+    # (shipped with iOS 18) routes JSONDecoder's .iso8601 through
+    # ISO8601FormatStyle, which parses the fractional-second timestamps the
+    # PWA emits. On iOS 17 that throws and would need a custom strategy.
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "0.1.0"
+    # Must be a Unix timestamp at archive time — App Store Connect rejects
+    # anything lower than the last shipped build. `xcodegen generate` resets
+    # this to the placeholder, so after regenerating run:
+    #   agvtool new-version -all $(date -u +%s)
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: GYFN949Q5E
+
+targets:
+  # ---------------------------------------------------------------------
+  # Pure domain logic. No SwiftData, no SwiftUI, no Date.now.
+  #
+  # This is a separate target on purpose: it cannot import the app, so it
+  # physically cannot reach a @Model type. Every calculation that broke in
+  # the web version — day bucketing, day-of-life, totals, sleep-session
+  # reconciliation — lives here, operating on value types, and is tested
+  # without a ModelContainer or a host app.
+  # ---------------------------------------------------------------------
+  MoonlogCore:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Sources/Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sleepyllamas.moonlog.core
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+
+  Moonlog:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/App
+      - path: Sources/Views
+      - path: Sources/Theme
+      # Sources/Models, Sources/Lib and Sources/Shared are added as they land —
+      # XcodeGen errors on a source path that doesn't exist yet.
+    dependencies:
+      - target: MoonlogCore
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sleepyllamas.moonlog
+        PRODUCT_NAME: Moonlog
+        # iPhone only — this is a one-handed, in-the-dark, phone-in-pocket app.
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Moonlog
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Portrait only. The layout is thumb-zone driven and there is no
+        # landscape design; letting it rotate at 3am only causes reflow.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+  # Fast, host-free tests for the logic that matters most. No app launch,
+  # no ModelContainer — these run in milliseconds so the DST fixtures can
+  # be exhaustive.
+  MoonlogCoreTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/MoonlogCoreTests
+    dependencies:
+      - target: MoonlogCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sleepyllamas.moonlog.core.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+
+  # Persistence-layer tests: relationship wiring, delete behavior, the
+  # CloudKit schema-compatibility assertion, and that #Predicate shapes
+  # actually compile and return rows. Needs the app as host.
+  MoonlogTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/MoonlogTests
+    dependencies:
+      - target: Moonlog
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sleepyllamas.moonlog.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+        # XcodeGen derives TEST_HOST from the target name; set it explicitly
+        # so the test action can find the host binary.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Moonlog.app/Moonlog
+        BUNDLE_LOADER: $(TEST_HOST)
+
+# Explicit scheme so `xcodebuild test` works locally — the auto-generated
+# scheme has no test action.
+schemes:
+  Moonlog:
+    build:
+      targets:
+        Moonlog: all
+    test:
+      targets:
+        - MoonlogCoreTests
+        - MoonlogTests
