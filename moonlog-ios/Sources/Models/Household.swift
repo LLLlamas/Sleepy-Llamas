@@ -18,8 +18,8 @@ import MoonlogCore
 //   accepted, though CloudKit does not guarantee it lands atomically on other
 //   devices, so the UI must tolerate a transiently `nil` parent.
 // * No `@Attribute(.unique)` and no `#Unique` — CloudKit cannot enforce either.
-//   Identity is an app-minted UUID plus `legacyID` for imports, deduplicated
-//   explicitly at write time.
+//   Identity is an app-minted UUID, deduplicated explicitly at write time where
+//   it matters.
 
 /// A client household. Every query and every export is scoped to one, so one
 /// family's data can never appear in another's report.
@@ -89,10 +89,6 @@ final class Baby {
     /// Babies are archived, never deleted. `.deny` would have been the natural
     /// guard but CloudKit rejects it, so this is enforced in the store layer.
     var isArchived: Bool = false
-
-    /// Provenance from the PWA import. Not a UUID — the web app falls back to
-    /// `'id-' + base36` when `crypto.randomUUID` is unavailable.
-    var legacyID: String? = nil
 
     var family: Family? = nil
 

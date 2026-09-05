@@ -24,8 +24,6 @@ final class Shift {
     /// family that relocates cannot corrupt older shifts.
     var timeZoneIdentifier: String = TimeZone.current.identifier
 
-    var legacyID: String? = nil
-
     var family: Family? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \LogEvent.shift)
@@ -85,7 +83,6 @@ final class LogEvent {
 
     var at: Date = Date.distantPast
     var createdAt: Date = Date.distantPast
-    var legacyID: String? = nil
 
     // Feed payload
     var feedMethodRaw: String? = nil
@@ -167,8 +164,6 @@ final class SleepSession {
 
     /// Invariant: `isOpen == (endAt == nil)`. See `Shift.isOpen`.
     var isOpen: Bool = true
-
-    var legacyID: String? = nil
 
     var baby: Baby? = nil
     var shift: Shift? = nil

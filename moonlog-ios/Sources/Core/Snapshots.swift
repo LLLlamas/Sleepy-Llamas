@@ -52,9 +52,12 @@ public struct ShiftWindow: Sendable, Hashable {
 
 // MARK: - Domain enums
 //
-// Raw values are WIRE FORMAT. They match the PWA's strings exactly so an import
-// round-trips, and they become CloudKit field values that can never be renamed
-// once the schema is promoted. Add cases; never mutate an existing raw value.
+// Raw values are WIRE FORMAT: they become CloudKit field values, and a CloudKit
+// schema is additive-only once promoted to production — a raw value can never be
+// renamed after that. Add cases freely; never mutate an existing one.
+//
+// (They happen to match the retired PWA's strings, which is where they came from.
+// That no longer matters, but there is no reason to churn them either.)
 //
 // Each has an `unknown` case that is never written but is always readable, so an
 // older build receiving a record from a newer one degrades gracefully instead of
@@ -144,7 +147,6 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
 public enum EventSource: String, Sendable, CaseIterable {
     case manual
     case nfcTag = "nfc-tag"
-    case imported
 }
 
 public enum TagAction: String, Sendable, CaseIterable {
