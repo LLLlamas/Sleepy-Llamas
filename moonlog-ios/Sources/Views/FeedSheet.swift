@@ -5,14 +5,38 @@ struct FeedSheet: View {
     let baby: BabyPresentation
     let shift: ShiftWindow
     let unit: VolumeUnit
+    let editing: FeedEntry?
     let onSave: (FeedEntry) -> Void
+    var onDelete: (() -> Void)?
 
-    @State private var at = Date()
-    @State private var method: FeedMethod = .breast
-    @State private var leftMinutes = 0
-    @State private var rightMinutes = 0
-    @State private var amountMl: Double = 0
-    @State private var bottleMinutes = 0
+    @State private var at: Date
+    @State private var method: FeedMethod
+    @State private var leftMinutes: Int
+    @State private var rightMinutes: Int
+    @State private var amountMl: Double
+    @State private var bottleMinutes: Int
+
+    init(
+        baby: BabyPresentation,
+        shift: ShiftWindow,
+        unit: VolumeUnit,
+        editing: FeedEntry? = nil,
+        onDelete: (() -> Void)? = nil,
+        onSave: @escaping (FeedEntry) -> Void
+    ) {
+        self.baby = baby
+        self.shift = shift
+        self.unit = unit
+        self.editing = editing
+        self.onDelete = onDelete
+        self.onSave = onSave
+        _at = State(initialValue: editing?.at ?? Date())
+        _method = State(initialValue: editing?.method ?? .breast)
+        _leftMinutes = State(initialValue: (editing?.leftSeconds ?? 0) / 60)
+        _rightMinutes = State(initialValue: (editing?.rightSeconds ?? 0) / 60)
+        _amountMl = State(initialValue: editing?.amountMl ?? 0)
+        _bottleMinutes = State(initialValue: (editing?.bottleSeconds ?? 0) / 60)
+    }
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
@@ -24,13 +48,14 @@ struct FeedSheet: View {
 
     var body: some View {
         LogSheetChrome(
-            title: "Feed",
+            title: editing == nil ? "Feed" : "Edit feed",
             babyName: baby.name,
             accent: baby.accent.color(for: theme),
             at: $at,
             shift: shift,
             saveEnabled: hasContent,
-            onSave: save
+            onSave: save,
+            onDelete: onDelete
         ) {
             Section("How") {
                 Picker("Method", selection: $method) {

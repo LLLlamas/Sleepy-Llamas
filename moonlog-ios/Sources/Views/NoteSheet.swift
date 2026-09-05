@@ -5,13 +5,36 @@ struct NoteSheet: View {
     let baby: BabyPresentation
     let shift: ShiftWindow
     let presetTags: [String]
+    let editing: NoteEntry?
     let onSave: (NoteEntry) -> Void
+    var onDelete: (() -> Void)?
 
-    @State private var at = Date()
-    @State private var text = ""
-    @State private var selected: Set<String> = []
-    @State private var recordTemp = false
-    @State private var tempF: Double = 98.6
+    @State private var at: Date
+    @State private var text: String
+    @State private var selected: Set<String>
+    @State private var recordTemp: Bool
+    @State private var tempF: Double
+
+    init(
+        baby: BabyPresentation,
+        shift: ShiftWindow,
+        presetTags: [String],
+        editing: NoteEntry? = nil,
+        onDelete: (() -> Void)? = nil,
+        onSave: @escaping (NoteEntry) -> Void
+    ) {
+        self.baby = baby
+        self.shift = shift
+        self.presetTags = presetTags
+        self.editing = editing
+        self.onDelete = onDelete
+        self.onSave = onSave
+        _at = State(initialValue: editing?.at ?? Date())
+        _text = State(initialValue: editing?.text ?? "")
+        _selected = State(initialValue: Set(editing?.tags ?? []))
+        _recordTemp = State(initialValue: editing?.tempF != nil)
+        _tempF = State(initialValue: editing?.tempF ?? 98.6)
+    }
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
@@ -25,7 +48,7 @@ struct NoteSheet: View {
 
     var body: some View {
         LogSheetChrome(
-            title: "Note",
+            title: editing == nil ? "Note" : "Edit note",
             babyName: baby.name,
             accent: baby.accent.color(for: theme),
             at: $at,
@@ -38,7 +61,8 @@ struct NoteSheet: View {
                         text: text.trimmingCharacters(in: .whitespacesAndNewlines),
                         tags: Array(selected).sorted(),
                         tempF: recordTemp ? tempF : nil))
-            }
+            },
+            onDelete: onDelete
         ) {
             if !presetTags.isEmpty {
                 Section("Tags") {

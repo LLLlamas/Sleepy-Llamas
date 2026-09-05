@@ -8,6 +8,8 @@ struct TimelineEntry: Identifiable, Equatable {
     let icon: String
     let title: String
     let detail: String?
+    /// Which sheet corrects this row. Nil for a row that cannot be edited.
+    let edit: LogSheet?
 }
 
 /// One merged, reverse-chronological list for the household. Shared rather than
@@ -18,6 +20,7 @@ struct TimelineSection: View {
     let timeZone: TimeZone
     let names: [UUID: String]
     let accents: [UUID: BabyAccent]
+    var onEdit: (LogSheet) -> Void = { _ in }
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
@@ -36,7 +39,17 @@ struct TimelineSection: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        row(entry)
+                        if let edit = entry.edit {
+                            Button {
+                                Haptics.tap()
+                                onEdit(edit)
+                            } label: {
+                                row(entry)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            row(entry)
+                        }
                         if index < entries.count - 1 {
                             Divider().overlay(palette.line).padding(.leading, 46)
                         }
@@ -96,6 +109,12 @@ struct TimelineSection: View {
             Text(Fmt.clock(entry.at, timeZone: timeZone))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(palette.soft)
+
+            if entry.edit != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(palette.faint.opacity(0.6))
+            }
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 56)

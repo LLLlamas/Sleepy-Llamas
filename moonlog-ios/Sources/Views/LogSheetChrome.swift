@@ -17,6 +17,9 @@ struct LogSheetChrome<Content: View>: View {
     let shift: ShiftWindow
     let saveEnabled: Bool
     let onSave: () -> Void
+    /// Non-nil puts a Delete row at the bottom, behind a confirmation. Only set
+    /// when editing an existing record.
+    var onDelete: (() -> Void)?
     @ViewBuilder let content: () -> Content
 
     @Environment(\.dismiss) private var dismiss
@@ -25,6 +28,7 @@ struct LogSheetChrome<Content: View>: View {
     /// The Save button stays hit-testable during the dismiss animation, and the
     /// write is async, so without this a second tap writes a second record.
     @State private var isSaving = false
+    @State private var confirmingDelete = false
 
     /// A minute of slack, so setting "now" by hand is never rejected by a race.
     private var isFuture: Bool { at > Date().addingTimeInterval(60) }
@@ -74,6 +78,32 @@ struct LogSheetChrome<Content: View>: View {
                 // grey and read as a different app from the cards behind.
                 content()
                     .listRowBackground(palette.raised)
+
+                if let onDelete {
+                    Section {
+                        Button(role: .destructive) {
+                            Haptics.warn()
+                            confirmingDelete = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .listRowBackground(palette.raised)
+                    .confirmationDialog(
+                        "Delete this entry?", isPresented: $confirmingDelete,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Delete", role: .destructive) {
+                            Haptics.commit()
+                            onDelete()
+                            dismiss()
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("It disappears from the timeline and from the night's totals.")
+                    }
+                }
             }
             // `scrollContentBackground` clears the Form's own fill; the rows still
             // default to the system grouped colour, so they need the palette too or

@@ -173,6 +173,117 @@ final class CareStoreTests: XCTestCase {
         XCTAssertEqual(open.count, 1, "odd number of toggles leaves exactly one open")
     }
 
+    // MARK: - Correcting a logged entry
+
+    func testUpdatingAnEventChangesItsTimeAndPayload() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let id = try await store.logEvent(
+            kind: .feed, at: shiftStart.addingTimeInterval(600), shiftID: shift, babyID: mia
+        ) { $0.amountMl = 40 }
+
+        let corrected = shiftStart.addingTimeInterval(900)
+        try await store.updateEvent(id, at: corrected) { $0.amountMl = 120 }
+
+        let event = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<LogEvent>()).first)
+        XCTAssertEqual(event.at, corrected)
+        XCTAssertEqual(event.amountMl, 120, "a 4oz typed as 40 must be fixable")
+    }
+
+    /// The confirmation names the baby precisely so a wrong-twin tap is noticed.
+    /// This is the path that acts on it.
+    func testReassigningAnEventToTheOtherTwin() async throws {
+        let (family, mia, leo) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let id = try await store.logEvent(
+            kind: .feed, at: shiftStart, shiftID: shift, babyID: mia)
+
+        try await store.reassignEvent(id, toBaby: leo)
+
+        let event = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<LogEvent>()).first)
+        XCTAssertEqual(event.babyIDRaw, leo)
+        XCTAssertEqual(event.baby?.id, leo, "relationship and denormalised id stay in step")
+    }
+
+    func testDeletingAnEventRemovesItFromTheRecord() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let id = try await store.logEvent(
+            kind: .diaper, at: shiftStart, shiftID: shift, babyID: mia)
+
+        try await store.deleteEvent(id)
+        XCTAssertTrue(try ModelContext(container).fetch(FetchDescriptor<LogEvent>()).isEmpty)
+    }
+
+    func testUpdatingAMissingEventThrows() async throws {
+        do {
+            try await store.updateEvent(UUID(), at: shiftStart) { _ in }
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .eventNotFound)
+        }
+    }
+
+    /// Unlike `recordSleep`, editing by id must never insert — that is what made
+    /// the correction path duplicate sessions in the first place.
+    func testUpdatingASleepSessionByIdNeverInserts() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.toggleSleep(shiftID: shift, babyID: mia, at: shiftStart)
+        try await store.toggleSleep(
+            shiftID: shift, babyID: mia, at: shiftStart.addingTimeInterval(3600))
+
+        let existing = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<SleepSession>()).first)
+        try await store.updateSleepSession(
+            existing.id,
+            startAt: shiftStart.addingTimeInterval(300),
+            endAt: shiftStart.addingTimeInterval(3300))
+
+        let all = try ModelContext(container).fetch(FetchDescriptor<SleepSession>())
+        XCTAssertEqual(all.count, 1)
+        XCTAssertEqual(all[0].startAt, shiftStart.addingTimeInterval(300))
+    }
+
+    func testUpdatingASleepSessionRejectsAnEndBeforeItsStart() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia, startAt: shiftStart,
+            endAt: shiftStart.addingTimeInterval(1800))
+        let existing = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<SleepSession>()).first)
+
+        do {
+            try await store.updateSleepSession(
+                existing.id, startAt: shiftStart.addingTimeInterval(1800), endAt: shiftStart)
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .endBeforeStart)
+        }
+    }
+
+    func testDeletingASleepSessionRemovesItFromTotals() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia, startAt: shiftStart,
+            endAt: shiftStart.addingTimeInterval(1800))
+        let existing = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<SleepSession>()).first)
+
+        try await store.deleteSleepSession(existing.id)
+        XCTAssertTrue(try ModelContext(container).fetch(FetchDescriptor<SleepSession>()).isEmpty)
+    }
+
     // MARK: - Manual sleep entry
 
     /// The web version added 24 hours instead of refusing, so nudging "woke" back

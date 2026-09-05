@@ -63,7 +63,8 @@ struct TonightView: View {
                     entries: data.timeline,
                     timeZone: data.timeZone,
                     names: data.names,
-                    accents: data.accents)
+                    accents: data.accents,
+                    onEdit: { sheet = $0 })
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -194,11 +195,92 @@ private extension TonightView {
                             startAt: entry.startAt, endAt: entry.endAt)
                     }
                 }
+
+            case .editEvent(let id, _):
+                editEventSheet(id: id, baby: baby)
+
+            case .editSleep(let id, _):
+                editSleepSheet(id: id, baby: baby)
             }
         } else {
             // The baby vanished between tapping and presenting — archived, or a
             // relationship transiently nil during sync. Presenting nothing would
             // leave an empty sheet with no way out.
+            Color.clear.onAppear { sheet = nil }
+        }
+    }
+
+    /// Correcting a logged event. The same sheets serve create and edit, seeded
+    /// from the stored record — a mis-logged feed was previously permanent.
+    @ViewBuilder
+    func editEventSheet(id: UUID, baby: BabyPresentation) -> some View {
+        if let event = (shift.events ?? []).first(where: { $0.id == id }) {
+            let delete: () -> Void = {
+                write(baby, "Entry deleted") { try await $0.deleteEvent(id) }
+            }
+            switch event.kind {
+            case .feed:
+                FeedSheet(
+                    baby: baby, shift: shift.window, unit: family.volumeUnit,
+                    editing: event.feedEntry, onDelete: delete
+                ) { entry in
+                    write(baby, "Feed updated") { store in
+                        try await store.updateEvent(id, at: entry.at) { e in
+                            e.feedMethodRaw = entry.method.rawValue
+                            e.amountMl = entry.amountMl
+                            e.feedDurationSeconds = entry.bottleSeconds
+                            e.leftSeconds = entry.leftSeconds
+                            e.rightSeconds = entry.rightSeconds
+                        }
+                    }
+                }
+            case .diaper:
+                DiaperSheet(
+                    baby: baby, shift: shift.window,
+                    editing: event.diaperEntry, onDelete: delete
+                ) { entry in
+                    write(baby, "Diaper updated") { store in
+                        try await store.updateEvent(id, at: entry.at) { e in
+                            e.diaperContentsRaw = entry.contents.rawValue
+                            e.stoolColorRaw = entry.stool?.rawValue
+                        }
+                    }
+                }
+            default:
+                NoteSheet(
+                    baby: baby, shift: shift.window, presetTags: presetTags,
+                    editing: event.noteEntry, onDelete: delete
+                ) { entry in
+                    write(baby, "Note updated") { store in
+                        try await store.updateEvent(id, at: entry.at) { e in
+                            e.text = entry.text.isEmpty ? nil : entry.text
+                            e.tagsRaw = entry.tags.isEmpty ? nil : entry.tags.joined(separator: ",")
+                            e.tempF = entry.tempF
+                        }
+                    }
+                }
+            }
+        } else {
+            Color.clear.onAppear { sheet = nil }
+        }
+    }
+
+    @ViewBuilder
+    func editSleepSheet(id: UUID, baby: BabyPresentation) -> some View {
+        if let session = (shift.sleepSessions ?? []).first(where: { $0.id == id }) {
+            SleepSheet(
+                baby: baby, shift: shift.window, openSince: nil,
+                editing: SleepEntry(startAt: session.startAt, endAt: session.endAt),
+                onDelete: {
+                    write(baby, "Sleep deleted") { try await $0.deleteSleepSession(id) }
+                }
+            ) { entry in
+                write(baby, "Sleep updated") { store in
+                    try await store.updateSleepSession(
+                        id, startAt: entry.startAt, endAt: entry.endAt)
+                }
+            }
+        } else {
             Color.clear.onAppear { sheet = nil }
         }
     }
@@ -313,7 +395,8 @@ private struct Tonight {
                 TimelineEntry(
                     id: event.id, at: event.at, babyID: event.babyIDRaw,
                     icon: event.kind.icon, title: event.timelineTitle(unit: unit),
-                    detail: event.timelineDetail(unit: unit)))
+                    detail: event.timelineDetail(unit: unit),
+                    edit: event.babyIDRaw.map { .editEvent(id: event.id, babyID: $0) }))
 
             guard let babyID = event.babyIDRaw else { continue }
             switch event.kind {
@@ -332,7 +415,8 @@ private struct Tonight {
                     id: session.id, at: session.startAt, babyID: session.babyIDRaw,
                     icon: "moon.zzz.fill", title: "Asleep",
                     detail: session.endAt.map { Fmt.duration($0.timeIntervalSince(session.startAt)) }
-                        ?? "still asleep"))
+                        ?? "still asleep",
+                    edit: session.babyIDRaw.map { .editSleep(id: session.id, babyID: $0) }))
 
             guard session.isOpen, let snapshot = session.snapshot else { continue }
             // Earliest start wins, so a duplicate delivered by sync resolves the
@@ -377,21 +461,34 @@ private struct Tonight {
 
 enum LogSheet: Identifiable, Equatable {
     case feed(babyID: UUID), diaper(babyID: UUID), sleep(babyID: UUID), note(babyID: UUID)
+    /// Correcting an existing record. Carries the record id as well as the baby.
+    case editEvent(id: UUID, babyID: UUID)
+    case editSleep(id: UUID, babyID: UUID)
 
     var babyID: UUID {
         switch self {
         case .feed(let id), .diaper(let id), .sleep(let id), .note(let id): return id
+        case .editEvent(_, let babyID), .editSleep(_, let babyID): return babyID
         }
     }
 
-    var id: String { "\(title)-\(babyID)" }
+    /// Distinct per record, so tapping a different row re-presents rather than
+    /// reusing the previous sheet's state.
+    var id: String {
+        switch self {
+        case .editEvent(let id, _): return "event-\(id)"
+        case .editSleep(let id, _): return "sleep-\(id)"
+        default: return "\(title)-\(babyID)"
+        }
+    }
 
     var title: String {
         switch self {
         case .feed: return "Feed"
         case .diaper: return "Diaper"
-        case .sleep: return "Sleep"
+        case .sleep, .editSleep: return "Sleep"
         case .note: return "Note"
+        case .editEvent: return "Edit"
         }
     }
 }
@@ -412,6 +509,21 @@ extension EventKind {
 }
 
 extension LogEvent {
+    var feedEntry: FeedEntry {
+        FeedEntry(
+            at: at, method: feedMethod ?? .breast, amountMl: amountMl,
+            bottleSeconds: feedDurationSeconds,
+            leftSeconds: leftSeconds, rightSeconds: rightSeconds)
+    }
+
+    var diaperEntry: DiaperEntry {
+        DiaperEntry(at: at, contents: diaperContents ?? .wet, stool: stoolColor)
+    }
+
+    var noteEntry: NoteEntry {
+        NoteEntry(at: at, text: text ?? "", tags: tags, tempF: tempF)
+    }
+
     func timelineTitle(unit: VolumeUnit) -> String {
         switch kind {
         case .feed: return feedMethod.map(Fmt.feedMethod) ?? "Feed"

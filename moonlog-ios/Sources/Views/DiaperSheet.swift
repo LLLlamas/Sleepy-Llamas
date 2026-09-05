@@ -4,24 +4,44 @@ import MoonlogCore
 struct DiaperSheet: View {
     let baby: BabyPresentation
     let shift: ShiftWindow
+    let editing: DiaperEntry?
     let onSave: (DiaperEntry) -> Void
+    var onDelete: (() -> Void)?
 
-    @State private var at = Date()
-    @State private var contents: DiaperContents = .wet
+    @State private var at: Date
+    @State private var contents: DiaperContents
     @State private var stool: StoolColor?
+
+    init(
+        baby: BabyPresentation,
+        shift: ShiftWindow,
+        editing: DiaperEntry? = nil,
+        onDelete: (() -> Void)? = nil,
+        onSave: @escaping (DiaperEntry) -> Void
+    ) {
+        self.baby = baby
+        self.shift = shift
+        self.editing = editing
+        self.onDelete = onDelete
+        self.onSave = onSave
+        _at = State(initialValue: editing?.at ?? Date())
+        _contents = State(initialValue: editing?.contents ?? .wet)
+        _stool = State(initialValue: editing?.stool)
+    }
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
     var body: some View {
         LogSheetChrome(
-            title: "Diaper",
+            title: editing == nil ? "Diaper" : "Edit diaper",
             babyName: baby.name,
             accent: baby.accent.color(for: theme),
             at: $at,
             shift: shift,
             saveEnabled: true,
-            onSave: { onSave(DiaperEntry(at: at, contents: contents, stool: stool)) }
+            onSave: { onSave(DiaperEntry(at: at, contents: contents, stool: stool)) },
+            onDelete: onDelete
         ) {
             Section("What") {
                 Picker("Contents", selection: $contents) {

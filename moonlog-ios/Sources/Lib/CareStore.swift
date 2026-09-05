@@ -163,6 +163,34 @@ actor CareStore {
         return event.id
     }
 
+    /// Applies a patch to an existing event. Payload fields are set wholesale by
+    /// the caller's closure, so clearing a value means assigning nil — the sheets
+    /// rebuild the whole payload rather than diffing it.
+    func updateEvent(
+        _ eventID: UUID,
+        at: Date,
+        configure: (LogEvent) -> Void
+    ) throws {
+        guard let event = try one(
+            FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == eventID }))
+        else { throw CareStoreError.eventNotFound }
+        event.at = at
+        configure(event)
+        try modelContext.save()
+    }
+
+    /// Moves an event to a different baby. The whole reason the confirmation names
+    /// the baby is so a wrong-twin tap is caught — this is how it gets fixed.
+    func reassignEvent(_ eventID: UUID, toBaby babyID: UUID) throws {
+        guard let event = try one(
+            FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == eventID }))
+        else { throw CareStoreError.eventNotFound }
+        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        event.baby = baby
+        event.babyIDRaw = baby.id
+        try modelContext.save()
+    }
+
     func deleteEvent(_ eventID: UUID) throws {
         let descriptor = FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == eventID })
         guard let event = try modelContext.fetch(descriptor).first else { return }
@@ -217,6 +245,25 @@ actor CareStore {
         }
         try modelContext.save()
         try reconcileSleep(shiftID: shiftID, babyID: babyID)
+    }
+
+    /// Corrects a specific session by id — the path the timeline uses. Unlike
+    /// `recordSleep` this never inserts, so editing cannot duplicate.
+    func updateSleepSession(_ id: UUID, startAt: Date, endAt: Date?) throws {
+        guard let session = try one(
+            FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
+        else { return }
+        if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
+        session.startAt = startAt
+        if let endAt {
+            session.close(at: endAt)
+        } else {
+            session.endAt = nil
+            session.isOpen = true
+        }
+        try modelContext.save()
+        try reconcileSleep(
+            shiftID: session.shiftIDRaw ?? UUID(), babyID: session.babyIDRaw ?? UUID())
     }
 
     /// Removes a sleep session outright. A closed session is otherwise unreachable.
@@ -320,4 +367,5 @@ enum CareStoreError: Error, Equatable {
     case shiftAlreadyClosed
     case endBeforeStart
     case emptyName
+    case eventNotFound
 }

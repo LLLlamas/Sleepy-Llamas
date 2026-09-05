@@ -9,6 +9,7 @@ struct SleepSheet: View {
     /// opening a second one.
     let openSince: Date?
     let onSave: (SleepEntry) -> Void
+    var onDelete: (() -> Void)?
 
     @State private var startAt: Date
     @State private var endAt: Date
@@ -21,16 +22,19 @@ struct SleepSheet: View {
         baby: BabyPresentation,
         shift: ShiftWindow,
         openSince: Date?,
+        editing: SleepEntry? = nil,
+        onDelete: (() -> Void)? = nil,
         onSave: @escaping (SleepEntry) -> Void
     ) {
         self.baby = baby
         self.shift = shift
         self.openSince = openSince
+        self.onDelete = onDelete
         self.onSave = onSave
         let now = Date()
-        _startAt = State(initialValue: openSince ?? now.addingTimeInterval(-30 * 60))
-        _endAt = State(initialValue: now)
-        _stillAsleep = State(initialValue: openSince != nil)
+        _startAt = State(initialValue: editing?.startAt ?? openSince ?? now.addingTimeInterval(-30 * 60))
+        _endAt = State(initialValue: editing?.endAt ?? now)
+        _stillAsleep = State(initialValue: editing.map { $0.endAt == nil } ?? (openSince != nil))
     }
 
     /// End must be strictly after start. The web version added 24 hours instead of
@@ -59,7 +63,8 @@ struct SleepSheet: View {
             saveEnabled: !endIsBeforeStart && !endIsInFuture,
             onSave: {
                 onSave(SleepEntry(startAt: startAt, endAt: stillAsleep ? nil : endAt))
-            }
+            },
+            onDelete: onDelete
         ) {
             Section("Woke") {
                 Toggle("Still asleep", isOn: $stillAsleep.animation())
