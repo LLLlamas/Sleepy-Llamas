@@ -78,6 +78,13 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
         ENABLE_USER_SCRIPT_SANDBOXING: YES
+        # CloudKit sync is OFF until the iCloud capability actually exists.
+        # Requesting a CloudKit-backed store without the entitlement does not
+        # throw — ModelContainer init succeeds and CloudKit then traps on a
+        # background queue, killing the app a moment after launch with no
+        # catchable error. Add "MOONLOG_CLOUDKIT" here at the same time as
+        # enabling the capability in Xcode, and not before.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
 
   # Fast, host-free tests for the logic that matters most. No app launch,
   # no ModelContainer — these run in milliseconds so the DST fixtures can

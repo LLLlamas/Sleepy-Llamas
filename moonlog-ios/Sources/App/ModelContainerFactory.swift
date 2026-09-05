@@ -30,6 +30,34 @@ enum ModelContainerFactory {
 
     private(set) static var mode: Mode = .localOnly(reason: "not yet opened")
 
+    /// Whether this build carries the iCloud container entitlement.
+    ///
+    /// This gate is **load-bearing, not belt-and-braces.** Asking SwiftData for a
+    /// CloudKit-backed store without the entitlement does not throw: the
+    /// `ModelContainer` initialiser returns *successfully* and CloudKit then traps
+    /// asynchronously on a background queue inside
+    /// `PFCloudKitContainerProvider containerWithIdentifier:`. A do/catch around
+    /// the initialiser cannot see it, so the app dies a moment after launch with a
+    /// SIGTRAP and no catchable error. Verified by crashing in exactly that way.
+    ///
+    /// It is a compile-time flag rather than a runtime probe because the entitlement
+    /// APIs (`SecTaskCopyValueForEntitlement`) are not public on iOS, and the
+    /// available proxies — `ubiquityIdentityToken` — key off the iCloud *Documents*
+    /// entitlement, so they would report false for a CloudKit-only build and
+    /// silently disable sync forever.
+    ///
+    /// **Flip `MOONLOG_CLOUDKIT` in `project.yml` at the same time as adding the
+    /// iCloud capability in Xcode.** Turning on one without the other either
+    /// crashes at launch (flag on, capability off) or silently never syncs
+    /// (capability on, flag off).
+    static var hasCloudKitEntitlement: Bool {
+        #if MOONLOG_CLOUDKIT
+        return true
+        #else
+        return false
+        #endif
+    }
+
     /// Opens the store, degrading rather than crashing.
     ///
     /// The ladder matters. A launch crash mid-shift is itself a data-loss event, and
@@ -41,25 +69,33 @@ enum ModelContainerFactory {
     static func make(syncEnabled: Bool = true) -> ModelContainer {
         let schema = self.schema
 
-        if syncEnabled {
+        guard syncEnabled, hasCloudKitEntitlement else {
+            let why = syncEnabled
+                ? "no iCloud entitlement in this build"
+                : "sync disabled in settings"
+            logger.notice("Opening local store: \(why)")
+            mode = .localOnly(reason: why)
+            return openLocal(schema: schema)
+        }
+
+        do {
             let config = ModelConfiguration(
                 schema: schema,
                 cloudKitDatabase: .private(cloudKitContainerID)
             )
-            do {
-                let container = try ModelContainer(for: schema, configurations: config)
-                mode = .syncing
-                return container
-            } catch {
-                // Expected until the iCloud capability and container exist; also
-                // hit when iCloud storage is full.
-                logger.error("CloudKit store unavailable, using local only: \(error)")
-                mode = .localOnly(reason: "\(error)")
-            }
-        } else {
-            mode = .localOnly(reason: "sync disabled in settings")
+            let container = try ModelContainer(for: schema, configurations: config)
+            mode = .syncing
+            return container
+        } catch {
+            // Still worth catching: iCloud storage being full is reported here.
+            logger.error("CloudKit store unavailable, using local only: \(error)")
+            mode = .localOnly(reason: "\(error)")
+            return openLocal(schema: schema)
         }
+    }
 
+    @MainActor
+    private static func openLocal(schema: Schema) -> ModelContainer {
         let local = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
         do {
             return try ModelContainer(for: schema, configurations: local)

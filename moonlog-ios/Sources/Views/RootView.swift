@@ -1,50 +1,106 @@
 import SwiftUI
+import SwiftData
 import MoonlogCore
 
-/// Scaffold placeholder. Replaced by the Tonight screen once `MoonlogCore` and the
-/// SwiftData layer land — this exists so the project builds and runs, and so the
-/// palette wiring is verifiable on device from the first commit.
 struct RootView: View {
-    @Environment(\.moonTheme) private var theme
-    @Environment(\.palette) private var palette
+    /// Theme follows the system light/dark appearance, with Deep Night as an
+    /// explicit override. Deliberately *not* switched automatically by shift hours:
+    /// changing the screen under a tired user at 3am is when predictability matters
+    /// most.
+    @AppStorage("moonlog.deepNight") private var deepNightEnabled = false
 
-    private let clock = MoonClock(timeZoneIdentifier: TimeZone.current.identifier)
+    /// Read here, in a View. An `App` struct does not receive a live system
+    /// `colorScheme`, and — more importantly — deriving the theme from this value
+    /// and then applying `.preferredColorScheme` from that same derivation is
+    /// circular: the forced scheme becomes the value we read next, so the theme
+    /// latches on whatever it resolved first and never changes again. That is why
+    /// `preferredColorScheme` below is only applied for the explicit Deep Night
+    /// override, never for the system-following case.
+    @Environment(\.colorScheme) private var systemScheme
+    @Environment(\.modelContext) private var modelContext
+
+    @Query(sort: \Family.createdAt) private var families: [Family]
+
+    private var theme: MoonTheme {
+        if deepNightEnabled { return .deepNight }
+        return systemScheme == .dark ? .night : .day
+    }
+
+    private var palette: Palette { Palette.for(theme) }
 
     var body: some View {
-        ZStack {
-            palette.bg.ignoresSafeArea()
-
-            VStack(spacing: 12) {
-                Text("🌙")
-                    .font(.system(size: 44))
-
-                Text("Moonlog")
-                    .font(.largeTitle.weight(.semibold))
-                    .foregroundStyle(palette.ink)
-
-                Text(clock.now, format: .dateTime.hour().minute())
-                    // Monospaced digits so a running timer doesn't jitter as
-                    // digit widths change — a number that gets re-read all night.
-                    .font(.title2.monospacedDigit())
-                    .foregroundStyle(palette.accent)
-
-                Text(theme.displayName)
-                    .font(.footnote)
-                    .foregroundStyle(palette.faint)
-            }
+        NavigationStack {
+            content
+                .background(palette.bg)
+                .navigationTitle("Moonlog")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(palette.bg, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
         }
-        .preferredColorScheme(theme.colorScheme)
+        .tint(palette.accent)
+        .environment(\.moonTheme, theme)
+        // Only forced for the explicit override. Applying it in the
+        // system-following case would create the latch described above.
+        .preferredColorScheme(deepNightEnabled ? .dark : nil)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let family = families.first {
+            if let shift = openShift(for: family) {
+                TonightView(family: family, shift: shift)
+            } else {
+                StartShiftPlaceholder(familyName: family.name)
+            }
+        } else {
+            EmptyStatePlaceholder(
+                emoji: "🌙",
+                title: "No family yet",
+                message: "Onboarding lands next.")
+        }
+    }
+
+    /// The doula sets shift times explicitly, so between visits there is genuinely
+    /// no open shift — that is a normal state, not an error.
+    private func openShift(for family: Family) -> Shift? {
+        (family.shifts ?? [])
+            .filter(\.isOpen)
+            .sorted { $0.startedAt > $1.startedAt }
+            .first
     }
 }
 
-#Preview("Night") {
-    RootView().environment(\.moonTheme, .night)
+struct StartShiftPlaceholder: View {
+    let familyName: String
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        EmptyStatePlaceholder(
+            emoji: "🌙",
+            title: "No shift running",
+            message: "\(familyName) · start a shift to begin logging.")
+    }
 }
 
-#Preview("Deep Night") {
-    RootView().environment(\.moonTheme, .deepNight)
-}
+struct EmptyStatePlaceholder: View {
+    let emoji: String
+    let title: String
+    let message: String
+    @Environment(\.palette) private var palette
 
-#Preview("Day") {
-    RootView().environment(\.moonTheme, .day)
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(emoji).font(.system(size: 40))
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(palette.ink)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(palette.faint)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(32)
+        .background(palette.bg)
+    }
 }

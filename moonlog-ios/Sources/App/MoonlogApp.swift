@@ -1,24 +1,24 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct MoonlogApp: App {
-    /// Theme follows the system light/dark appearance, with Deep Night as an
-    /// explicit override. Deliberately *not* switched automatically by shift
-    /// hours: changing the screen under a tired user at 3am is exactly when
-    /// predictability matters most.
-    @AppStorage("moonlog.deepNight") private var deepNightEnabled = false
-    @Environment(\.colorScheme) private var systemScheme
+    /// Built once, on the main actor. The factory degrades to a local store rather
+    /// than crashing, so a CloudKit problem never costs the night's logs.
+    @MainActor
+    private static let sharedContainer: ModelContainer = {
+        let container = ModelContainerFactory.make()
+        #if DEBUG
+        DemoSeed.seedIfNeeded(container)
+        #endif
+        return container
+    }()
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(\.moonTheme, resolvedTheme)
         }
-    }
-
-    private var resolvedTheme: MoonTheme {
-        if deepNightEnabled { return .deepNight }
-        return systemScheme == .dark ? .night : .day
+        .modelContainer(Self.sharedContainer)
     }
 }
 
