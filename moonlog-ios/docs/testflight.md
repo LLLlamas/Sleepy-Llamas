@@ -40,12 +40,13 @@ end shift. Add-baby and end-shift live in the Tonight toolbar.
 
 ```bash
 cd moonlog-ios
-xcodegen generate
-agvtool new-version -all $(date -u +%s)   # MUST be a timestamp; xcodegen resets it
+./scripts/stamp-build.sh    # stamps the build number AND regenerates the project
+open Moonlog.xcodeproj
 ```
 
-Then archive in Xcode (Product → Archive) and upload. Xcode creates the
-distribution certificate and profile on first archive.
+Then Product → Archive → Distribute App → App Store Connect → Upload. Xcode creates
+the distribution certificate and profile on first archive.
 
-`CURRENT_PROJECT_VERSION` must be a Unix timestamp — every shipped Cookbook build
-uses that scheme, so App Store Connect rejects anything lower.
+The build number is a Unix timestamp so it always increases, which App Store Connect
+requires. **Do not use `agvtool`** — see `scripts/stamp-build.sh` for why it does not
+work on this project.

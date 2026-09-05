@@ -50,8 +50,7 @@ step 2 has nothing to select.
 
 ```bash
 cd moonlog-ios
-xcodegen generate
-agvtool new-version -all $(date -u +%s)   # MUST be a timestamp; xcodegen resets it
+./scripts/stamp-build.sh    # stamps the build number AND regenerates the project
 open Moonlog.xcodeproj
 ```
 
@@ -80,8 +79,11 @@ declared `NO` in the build.
 ## Gotchas worth knowing
 
 - **Build numbers must always increase.** `CURRENT_PROJECT_VERSION` is a Unix
-  timestamp for exactly this reason, and `xcodegen generate` resets it to a
-  placeholder — so run `agvtool` *after* generating, every time.
+  timestamp for exactly this reason. Use `./scripts/stamp-build.sh`, which stamps
+  `project.yml` and regenerates in the right order. **`agvtool` does not work here**
+  — it writes into the generated `.xcodeproj` (discarded on the next regenerate) and
+  fails with `Cannot find "Moonlog.xcodeproj/../YES"` because our Info.plist is
+  generated rather than a file on disk.
 - **A build cannot be deleted, only expired.** An accidental upload burns that
   timestamp; the next one is simply higher, so it does not matter much.
 - **Do not enable iCloud on the App ID yet.** The app requests CloudKit only when

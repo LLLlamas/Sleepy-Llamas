@@ -37,9 +37,16 @@ xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
   -destination "generic/platform=iOS" -allowProvisioningUpdates build
 ```
 
-Before archiving: `agvtool new-version -all $(date -u +%s)`. `CURRENT_PROJECT_VERSION`
-must be a Unix timestamp or App Store Connect rejects the build, and `xcodegen
-generate` resets it to a placeholder.
+Before archiving, stamp the build number:
+
+```bash
+./scripts/stamp-build.sh     # stamps project.yml, then regenerates
+```
+
+**Do not use `agvtool`.** It writes into the generated `.xcodeproj`, so the next
+`xcodegen generate` discards it — and because our Info.plist is generated, it also
+fails with `Cannot find "Moonlog.xcodeproj/../YES"`. The script stamps `project.yml`,
+which is the source of truth and is committed.
 
 ## Architecture rules
 
