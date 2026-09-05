@@ -25,6 +25,10 @@ final class Shift {
     var timeZoneIdentifier: String = TimeZone.current.identifier
 
     var family: Family? = nil
+    /// Denormalised for the same reasons as `LogEvent.babyIDRaw`: predicates over a
+    /// relationship force a join, and this is the query that decides whether the
+    /// app can log at all. Set via `attach(to:)`.
+    var familyIDRaw: UUID? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \LogEvent.shift)
     var events: [LogEvent]? = []
@@ -49,6 +53,11 @@ final class Shift {
 
     /// The value type the domain layer works on. Everything in `MoonlogCore`
     /// operates on these rather than on `@Model` classes.
+    func attach(to family: Family) {
+        self.family = family
+        self.familyIDRaw = family.id
+    }
+
     var window: ShiftWindow {
         ShiftWindow(startedAt: startedAt, endedAt: endedAt)
     }
