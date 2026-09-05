@@ -9,7 +9,7 @@ final class Shift {
     var id: UUID = UUID()
     var startedAt: Date = Date.distantPast
     var endedAt: Date? = nil
-    var caregiver: String? = nil
+    @Attribute(.allowsCloudEncryption) var caregiver: String? = nil
 
     /// Denormalised so the query deciding whether the app can log at all is a Bool
     /// comparison, not an optional-Date one. Invariant: `isOpen == (endedAt == nil)`.
@@ -88,16 +88,16 @@ final class LogEvent {
     var stoolColorRaw: String? = nil
 
     // Note payload
-    var text: String? = nil
-    var tempF: Double? = nil
+    @Attribute(.allowsCloudEncryption) var text: String? = nil
+    @Attribute(.allowsCloudEncryption) var tempF: Double? = nil
     /// Joined raw tag values — see `Family.optionalKindsRaw` for why not `[String]`.
     var tagsRaw: String? = nil
 
     // Optional kinds. `pump` carries no baby; it is about the mother.
     var pumpedMl: Double? = nil
-    var medicationName: String? = nil
-    var doseText: String? = nil
-    var weightGrams: Double? = nil
+    @Attribute(.allowsCloudEncryption) var medicationName: String? = nil
+    @Attribute(.allowsCloudEncryption) var doseText: String? = nil
+    @Attribute(.allowsCloudEncryption) var weightGrams: Double? = nil
 
     /// Manual or NFC, so a mis-scan is traceable.
     var sourceRaw: String = EventSource.manual.rawValue

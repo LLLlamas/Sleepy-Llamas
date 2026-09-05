@@ -26,7 +26,7 @@ import MoonlogCore
 @Model
 final class Family {
     var id: UUID = UUID()
-    var name: String = ""
+    @Attribute(.allowsCloudEncryption) var name: String = ""
     var createdAt: Date = Date.distantPast
 
     /// The **home's** zone, not the device's — otherwise a doula working elsewhere
@@ -93,8 +93,8 @@ final class Family {
 @Model
 final class Baby {
     var id: UUID = UUID()
-    var name: String = ""
-    var birthAt: Date = Date.distantPast
+    @Attribute(.allowsCloudEncryption) var name: String = ""
+    @Attribute(.allowsCloudEncryption) var birthAt: Date = Date.distantPast
 
     /// Fixed, so the top card never moves.
     var sortOrder: Int = 0

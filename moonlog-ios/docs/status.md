@@ -16,7 +16,7 @@ Updated 2026-09-05.
 | Optional kinds (pump, medication, weight) | model only — no UI yet |
 | User-defined note tags | model only — no UI yet |
 
-89 tests green. Verified running in Night and Day themes.
+91 tests green. Field encryption applied. Verified running in Night and Day themes.
 
 ## Next
 
@@ -31,8 +31,7 @@ Updated 2026-09-05.
 
 | What | When | Why |
 |---|---|---|
-| **Decide field encryption** | before first TestFlight | Irreversible. An existing CloudKit field can never be converted to encrypted. Recommendation in `docs/cloudkit.md`. |
-| Confirm Xcode signing resolves | before first device run | `DEVELOPMENT_TEAM` is set and the membership exists; just needs one look for a red badge. |
+| **Sign in to Xcode with your Apple ID** | before any device build | **Blocking.** `security find-identity` reports zero signing identities and there are no provisioning profiles — Xcode has no account on this machine. Xcode → Settings → Accounts → **+** → Apple ID. Automatic signing does the rest. |
 | iCloud capability + container + Background Modes → Remote notifications | before sync works | Xcode UI and the developer portal. Flip `MOONLOG_CLOUDKIT` at the same time. |
 | NFC Tag Reading on the App ID | before NFC | Developer portal. |
 | `git push -u origin moonlog-ios` | whenever | Outward-facing, so it is the user's call. Nothing has left the machine. A local archive to TestFlight does not need it. |

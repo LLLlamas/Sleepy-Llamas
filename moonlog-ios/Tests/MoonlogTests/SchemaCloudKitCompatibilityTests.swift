@@ -66,6 +66,44 @@ final class SchemaCloudKitCompatibilityTests: XCTestCase {
         }
     }
 
+    /// Encryption is **irreversible** once the schema reaches production: a field
+    /// must be introduced encrypted, and an existing one can never be converted. So
+    /// the exact set is pinned here — adding a sensitive field without encrypting it
+    /// is a mistake you cannot undo later, and this test is the only thing that will
+    /// say so.
+    func testEncryptedFieldsAreExactlyTheIntendedSet() {
+        var encrypted: Set<String> = []
+        for entity in entities {
+            for attribute in entity.attributes
+            where attribute.options.contains(where: { "\($0)".contains("allowsCloudEncryption") }) {
+                encrypted.insert("\(entity.name).\(attribute.name)")
+            }
+        }
+        XCTAssertEqual(
+            encrypted,
+            ["Family.name", "Baby.name", "Baby.birthAt", "Shift.caregiver",
+             "LogEvent.text", "LogEvent.tempF", "LogEvent.medicationName",
+             "LogEvent.doseText", "LogEvent.weightGrams"])
+    }
+
+    /// Encrypted fields cannot be indexed and cannot be queried server-side, so
+    /// nothing the app filters or sorts on may be encrypted.
+    func testNothingWeQueryOnIsEncrypted() {
+        let queried: Set<String> = [
+            "id", "kindRaw", "at", "startAt", "startedAt", "endAt", "endedAt",
+            "isOpen", "babyIDRaw", "shiftIDRaw", "familyIDRaw", "sortOrder",
+            "isArchived", "createdAt",
+        ]
+        for entity in entities {
+            for attribute in entity.attributes
+            where attribute.options.contains(where: { "\($0)".contains("allowsCloudEncryption") }) {
+                XCTAssertFalse(
+                    queried.contains(attribute.name),
+                    "\(entity.name).\(attribute.name) is queried and must not be encrypted")
+            }
+        }
+    }
+
     /// "The following relationships are configured with unsupported delete rules."
     /// `.deny` is rejected; `.cascade` is accepted — verified directly, and note
     /// this contradicts the comment in The-Llamas-Cookbook, which says cascade is

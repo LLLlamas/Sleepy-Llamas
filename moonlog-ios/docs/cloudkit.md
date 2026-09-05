@@ -54,11 +54,16 @@ later as a store that silently refuses to open. It has been mutation-verified.
 
 ## Irreversible, decide before the first TestFlight build
 
-- **Field-level encryption.** An encrypted field must be *newly introduced* — an
-  existing field can never be converted — and encrypted fields cannot be indexed.
-  Recommendation: encrypt `Baby.name`, `Family.name`, `Shift.caregiver`,
-  `LogEvent.text`, `LogEvent.tempF`. Leave timestamps, enums and ids in the clear so
-  trends stay queryable.
+- ~~**Field-level encryption**~~ — **applied 2026-09-05.** Encrypted:
+  `Family.name`, `Baby.name`, `Baby.birthAt`, `Shift.caregiver`, `LogEvent.text`,
+  `LogEvent.tempF`, `LogEvent.medicationName`, `LogEvent.doseText`,
+  `LogEvent.weightGrams`. Everything else — timestamps, enums, ids, flags — stays in
+  the clear so predicates and future trend queries keep working.
+
+  An encrypted field must be *newly introduced*; an existing one can never be
+  converted, and encrypted fields cannot be indexed. `SchemaCloudKitCompatibilityTests`
+  therefore pins the exact set and asserts that nothing queried is encrypted. Both
+  were mutation-verified.
 - **The schema is additive-only in production.** No renames, no deletions, no type
   changes. Adopt `@Attribute(originalName:)` if a Swift property ever needs renaming.
 
