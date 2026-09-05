@@ -53,10 +53,11 @@ targets:
     platform: iOS
     sources:
       - path: Sources/App
+      - path: Sources/Models
       - path: Sources/Views
       - path: Sources/Theme
-      # Sources/Models, Sources/Lib and Sources/Shared are added as they land —
-      # XcodeGen errors on a source path that doesn't exist yet.
+      # Sources/Lib and Sources/Shared are added as they land — XcodeGen errors
+      # on a source path that doesn't exist yet.
     dependencies:
       - target: MoonlogCore
         embed: true

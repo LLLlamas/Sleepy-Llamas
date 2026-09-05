@@ -138,3 +138,17 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
         self.tempF = tempF
     }
 }
+
+/// How an event came to be recorded. A tag scan never writes silently — it opens a
+/// prefilled confirm sheet — but recording the source makes a mis-scan traceable.
+public enum EventSource: String, Sendable, CaseIterable {
+    case manual
+    case nfcTag = "nfc-tag"
+    case imported
+}
+
+public enum TagAction: String, Sendable, CaseIterable {
+    case toggleSleep = "toggle-sleep"
+    case logFeed = "log-feed"
+    case logDiaper = "log-diaper"
+}
