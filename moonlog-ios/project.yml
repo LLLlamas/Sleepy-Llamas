@@ -23,7 +23,7 @@ settings:
     # anything lower than the last shipped build. `xcodegen generate` resets
     # this to the placeholder, so after regenerating run:
     #   agvtool new-version -all $(date -u +%s)
-    CURRENT_PROJECT_VERSION: "1788644207"
+    CURRENT_PROJECT_VERSION: "1788644302"
     DEVELOPMENT_TEAM: GYFN949Q5E
 
 targets:
