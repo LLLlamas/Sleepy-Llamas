@@ -1,7 +1,8 @@
 # Creating the App Store Connect record
 
-The one remaining blocker on a TestFlight upload, and the only one that cannot be
-done from the command line. About ten minutes.
+**Done — 2026-09-05.** The explicit App ID is registered, the app record exists, and
+build 1788644622 was uploaded through it. Kept as a record of what was set up and
+the traps involved, not as work outstanding.
 
 Facts you will need:
 
@@ -14,12 +15,12 @@ Facts you will need:
 
 ---
 
-## Step 1 — Register the explicit App ID
+## Step 1 — Register the explicit App ID ✅
 
-**Do this first.** Signing currently resolves through a *wildcard* profile
-(`iOS Team Provisioning Profile: *`), which means no explicit App ID exists yet —
-and App Store Connect's Bundle ID dropdown only lists explicit ones. Skip this and
-step 2 has nothing to select.
+The easily-missed prerequisite. Signing originally resolved through a *wildcard*
+profile (`iOS Team Provisioning Profile: *`), meaning no explicit App ID existed —
+and App Store Connect's Bundle ID dropdown only lists explicit ones. The explicit
+`iOS Team Store Provisioning Profile: com.sleepyllamas.moonlog` is now installed.
 
 1. [developer.apple.com/account](https://developer.apple.com/account) →
    **Certificates, Identifiers & Profiles** → **Identifiers** → **+**
@@ -31,7 +32,7 @@ step 2 has nothing to select.
    crashes the app at launch.
 6. Continue → Register
 
-## Step 2 — Create the app record
+## Step 2 — Create the app record ✅
 
 1. [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → **Apps** → **+**
    → **New App**
@@ -46,13 +47,15 @@ step 2 has nothing to select.
 7. **User Access:** Full Access
 8. Create
 
-## Step 3 — Archive and upload
+## Step 3 — Archive and upload ✅
 
 ```bash
 cd moonlog-ios
-./scripts/stamp-build.sh    # stamps the build number AND regenerates the project
-open Moonlog.xcodeproj
+./scripts/archive.sh    # stamps, archives, and refuses a build with debug code in it
 ```
+
+Use `archive.sh`, not `stamp-build.sh` alone — only that path runs the debug-marker
+guard, which exists because a debug build did ship once.
 
 In Xcode: select **Any iOS Device** as the destination → **Product → Archive** →
 **Distribute App** → **App Store Connect** → **Upload**.
@@ -63,11 +66,13 @@ In Xcode: select **Any iOS Device** as the destination → **Product → Archive
 > today's folder there and reopen Organizer — it scans on load. Archiving from
 > Xcode's own Product → Archive always lands in the right place.
 
-Xcode creates the *distribution* certificate and profile itself at this point. Only
-a development certificate exists today; that is expected and nothing to fix in
-advance.
+Xcode handles distribution signing itself here. Worth knowing: `security
+find-identity` shows **only** an Apple Development certificate, yet the exported IPA
+is signed `Apple Distribution`. Xcode is using cloud-managed signing — the private
+key is not in the local keychain. That is expected and not a problem, but it means
+signing is tied to the Xcode account session rather than to anything on disk.
 
-## Step 4 — TestFlight
+## Step 4 — TestFlight ✅
 
 1. App Store Connect → your app → **TestFlight**
 2. The build appears after processing (a few minutes; you get an email)

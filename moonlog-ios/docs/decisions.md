@@ -26,7 +26,7 @@ deploy, so this had to happen before the first TestFlight build or not at all.
 **2026-09-05**
 
 Added to `EventKind` but **off by default**, enabled per family via
-`Family.optionalKinds`. The three core kinds stay in the thumb row; nobody pays for
+`Family.enabledKinds` / `setOptionalKinds(_:)`. The three core kinds stay in the thumb row; nobody pays for
 a feature they do not use.
 
 `pump` is about the mother, so it carries **no baby** — `attachesToBaby` is false

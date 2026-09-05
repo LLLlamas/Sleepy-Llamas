@@ -65,7 +65,9 @@ which is the source of truth and is committed.
 - **The actor never returns `@Model` objects.** They are not `Sendable`. Return
   `ShiftSummary`, `SleepSnapshot` and friends.
 - **Never set `endAt`/`endedAt` directly** — use `close(at:)`, which keeps the
-  denormalised `isOpen` flag honest.
+  denormalised `isOpen` flag honest. One deliberate exception: the reconciler in
+  `CareStore` re-opens a session by clearing both fields together, since there is
+  no `reopen()`.
 - **Never attach an event by hand** — use `attach(to:baby:)`, the single place that
   keeps a relationship and its denormalised id in step.
 - **Calendar arithmetic for calendar quantities, `TimeInterval` for physical
@@ -89,3 +91,5 @@ which is the source of truth and is committed.
 | `docs/testing.md` | Invariants, DST fixtures, mutation testing |
 | `docs/decisions.md` | Decision log with rationale |
 | `docs/status.md` | What is built, what is next, what needs the user |
+| `docs/testflight.md` | Release readiness and what shipped |
+| `docs/app-store-connect.md` | The one-off App Store Connect setup (done) |

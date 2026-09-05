@@ -33,8 +33,9 @@ a tired user at exactly the moment predictability matters most.
 
 ## Type
 
-**SF for the interface. Fraunces only for the wordmark and the exported keepsake
-handoff. Inter dropped.**
+**SF for the interface.** Inter is dropped. Fraunces is *intended* for the wordmark
+and the exported keepsake handoff — neither exists yet, and no font file is bundled,
+so today the app is SF throughout.
 
 A departure from the PWA, made deliberately. SF is engineered for glanceability at
 small sizes in low light and provides `.monospacedDigit()` — which matters more than
@@ -42,7 +43,8 @@ it sounds, because a running sleep timer in a proportional face jitters as digit
 widths change, and that is a number re-read all night. Every timer, clock time and
 elapsed label uses monospaced digits.
 
-Minimum tap target is 56pt, carried over from the PWA's `--tap`.
+Minimum tap target is 56pt, carried over from the PWA's `--tap`. One exception:
+the note-tag chips are 44pt (Apple's floor) so a row of them fits without wrapping.
 
 ## Multiple babies
 
@@ -59,8 +61,9 @@ prevent.
 The user picks each baby's accent from five options. Colour is the **third**
 identifying signal, behind:
 
-1. **The name**, always visible — on the card, on every timeline row, in the log
-   sheet, and in the post-save confirmation.
+1. **The name**, always visible — on the card, in the log sheet, and in the
+   post-save confirmation. Timeline rows show it whenever the family has more than
+   one baby; with a single baby it is redundant and suppressed.
 2. **Stable position**, fixed by `sortOrder`, so the top card never moves. Muscle
    memory beats reading at 3am.
 

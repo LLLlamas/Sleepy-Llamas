@@ -3,13 +3,14 @@
 ## Layers
 
 ```
-MoonlogCore  (framework)   pure logic — no SwiftData, no SwiftUI, no Date.now
-     ▲
+MoonlogCore  Sources/Core/    pure logic — no SwiftData, no SwiftUI, no Date.now
+     ▲                          (a separate framework target)
      │
-Models       Sources/Models/    @Model types. CloudKit-shaped by construction.
-CareStore    Sources/Lib/       @ModelActor. The only writer.
-Views        Sources/Views/     SwiftUI. Reads via @Query, writes via CareStore.
-Theme        Sources/Theme/     Palette, accents.
+App          Sources/App/     Entry point + ModelContainerFactory (the CloudKit gate)
+Models       Sources/Models/  @Model types. CloudKit-shaped by construction.
+CareStore    Sources/Lib/     @ModelActor. The only writer. Plus Haptics, Formatters.
+Views        Sources/Views/   SwiftUI. Reads via @Query, writes via CareStore.
+Theme        Sources/Theme/   Palette, accents.
 ```
 
 **Why `MoonlogCore` is a separate target, not a folder.** A framework cannot import
@@ -49,7 +50,9 @@ one added or dropped fails a test rather than silently stopping syncing.
   system.
 - **Event kinds beyond the core three are opt-in per family**
   (`Family.enabledKinds`). `pump` is about the mother and carries **no baby** —
-  `EventKind.attachesToBaby` is false and totals count it for the shift.
+  `EventKind.attachesToBaby` is false and totals count it for the shift. The writer
+  does not enforce this yet: `CareStore.logEvent` takes a non-optional `babyID`, so
+  a pump event cannot actually be created until that signature changes.
 - **A breast feed carries a duration per side** (`leftSeconds` / `rightSeconds`),
   since one feed commonly uses both. A single-sided feed leaves the other nil.
 - **`LogEvent` is flat**, discriminated by `kindRaw`, rather than three models or a
@@ -72,7 +75,8 @@ asserted in tests.
 
 ### Denormalised `isOpen`
 
-`Shift.isOpen` and `SleepSession.isOpen` mirror `endedAt == nil`. Predicates on
+`Shift.isOpen` mirrors `endedAt == nil`; `SleepSession.isOpen` mirrors `endAt == nil`
+(the two models use different field names). Predicates on
 optional `Date` comparisons have a poor track record, and these are the queries that
 decide whether the app can log at all. Maintained by `close(at:)`.
 

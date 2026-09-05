@@ -25,13 +25,14 @@ construction). Conflating them caused every date bug in the PWA.
 
 ## DST fixtures
 
-Tests are parameterised over real transition dates in:
+`TestSupport.swift` defines four fixture zones. Only `DayOfLifeTests` iterates all
+of them; the rest pick the zone that exposes the behaviour under test, and most use
+New York:
 
 | Zone | Why |
 |---|---|
 | `America/New_York` | standard spring-forward / fall-back |
 | `Europe/London` | transition at 01:00, not 02:00 |
-| `America/Santiago` | southern-hemisphere schedule |
 | **`Australia/Lord_Howe`** | **30-minute shift** — breaks any code assuming ±1 hour |
 | `America/Phoenix` | no DST, control |
 
@@ -58,8 +59,8 @@ Assert that a test can fail. It has repeatedly paid off here:
 
 - Breaking the *apparently* load-bearing line in `SleepMath` changed nothing — the
   interval intersection was doing the work. Only reproducing the web version's
-  behaviour fully made the test fail, at which point it reported 606,000 seconds:
-  168 hours of sleep a week after the shift ended.
+  behaviour fully made the test fail, at which point it reported 606,000 seconds —
+  roughly 168 hours of sleep a week after the shift ended.
 - For the clip-vs-assign bug, **the partition sum alone does not catch it** — a
   session lying entirely inside the bucketed range sums correctly however it is
   distributed. Only the per-day split assertion exposes it.
@@ -74,8 +75,12 @@ Assert that a test can fail. It has repeatedly paid off here:
 xcrun simctl launch <device> com.sleepyllamas.moonlog -moonlogSeedDemo YES
 ```
 
-`DemoSeed` is DEBUG-only and gated behind that launch argument, never "seed when
-empty" — an empty store is a legitimate first-run state. It seeds a twin night with
+`DemoSeed` is DEBUG-only and requires **both** the launch argument and an empty
+store. It is never "seed when empty" alone, because an empty store is a legitimate
+first-run state.
+
+`-moonlogTab summary|settings` and `-moonlogOpenSheet feed|diaper|sleep|note` open a
+specific screen for screenshotting. It seeds a twin night with
 one baby asleep and one awake, which is the state that exercises the layout.
 
 Some bugs only appear when the thing runs: the CloudKit launch crash and the theme

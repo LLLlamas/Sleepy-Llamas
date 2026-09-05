@@ -8,10 +8,8 @@ options:
     # (iOS 26) for feed-due alarms, which is the last feature in the order
     # and will be wrapped in @available.
     #
-    # iOS 18 also matters for the PWA import: swift-foundation's rewrite
-    # (shipped with iOS 18) routes JSONDecoder's .iso8601 through
-    # ISO8601FormatStyle, which parses the fractional-second timestamps the
-    # PWA emits. On iOS 17 that throws and would need a custom strategy.
+    # (An earlier note here justified iOS 18 by the PWA importer. That was
+    # dropped — the PWA held only test data and there is no importer.)
     iOS: "18.0"
   createIntermediateGroups: true
 
@@ -19,10 +17,10 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "0.1.0"
-    # Must be a Unix timestamp at archive time — App Store Connect rejects
-    # anything lower than the last shipped build. `xcodegen generate` resets
-    # this to the placeholder, so after regenerating run:
-    #   agvtool new-version -all $(date -u +%s)
+    # A Unix timestamp — App Store Connect rejects a build number lower than the
+    # last shipped one. Stamped by ./scripts/archive.sh, which edits THIS file.
+    # Do not use agvtool: it writes into the generated .xcodeproj (discarded on the
+    # next regenerate) and fails outright because our Info.plist is generated.
     CURRENT_PROJECT_VERSION: "1788645277"
     DEVELOPMENT_TEAM: GYFN949Q5E
 

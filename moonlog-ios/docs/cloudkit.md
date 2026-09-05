@@ -40,7 +40,10 @@ Note the last row contradicts the comment in
 `The-Llamas-Cookbook/ios-native/Sources/App/LlamasCookbookApp.swift`, which says
 cascade is rejected. It is not.
 
-`SchemaCloudKitCompatibilityTests` asserts every one of these mechanically, so a
+`SchemaCloudKitCompatibilityTests` asserts most of these mechanically (uniqueness,
+optional-or-default, relationship-optional, `.deny`). Two rows are **not** yet
+covered by a test: that every relationship *has* an inverse, and that `.cascade` is
+accepted. It exists so a
 future property that CloudKit cannot mirror fails a test instead of surfacing months
 later as a store that silently refuses to open. It has been mutation-verified.
 
@@ -57,8 +60,9 @@ later as a store that silently refuses to open. It has been mutation-verified.
 - ~~**Field-level encryption**~~ — **applied 2026-09-05.** Encrypted:
   `Family.name`, `Baby.name`, `Baby.birthAt`, `Shift.caregiver`, `LogEvent.text`,
   `LogEvent.tempF`, `LogEvent.medicationName`, `LogEvent.doseText`,
-  `LogEvent.weightGrams`. Everything else — timestamps, enums, ids, flags — stays in
-  the clear so predicates and future trend queries keep working.
+  `LogEvent.weightGrams`. Note `Baby.birthAt` **is** encrypted despite being a
+  timestamp — it identifies a child and is never filtered on. Everything queried —
+  event times, enums, ids, flags — stays in the clear.
 
   An encrypted field must be *newly introduced*; an existing one can never be
   converted, and encrypted fields cannot be indexed. `SchemaCloudKitCompatibilityTests`
