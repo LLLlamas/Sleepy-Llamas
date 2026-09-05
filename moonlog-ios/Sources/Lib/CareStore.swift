@@ -182,9 +182,7 @@ actor CareStore {
         at: Date,
         configure: (LogEvent) -> Void
     ) throws {
-        guard let event = try one(
-            FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == eventID }))
-        else { throw CareStoreError.eventNotFound }
+        guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
         event.at = at
         configure(event)
         try modelContext.save()
@@ -193,9 +191,7 @@ actor CareStore {
     /// Moves an event to a different baby. The whole reason the confirmation names
     /// the baby is so a wrong-twin tap is caught — this is how it gets fixed.
     func reassignEvent(_ eventID: UUID, toBaby babyID: UUID) throws {
-        guard let event = try one(
-            FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == eventID }))
-        else { throw CareStoreError.eventNotFound }
+        guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
         event.baby = baby
         event.babyIDRaw = baby.id
@@ -203,8 +199,7 @@ actor CareStore {
     }
 
     func deleteEvent(_ eventID: UUID) throws {
-        let descriptor = FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == eventID })
-        guard let event = try modelContext.fetch(descriptor).first else { return }
+        guard let event = try event(eventID) else { return }
         modelContext.delete(event)
         try modelContext.save()
     }
@@ -339,6 +334,10 @@ actor CareStore {
 
     private func shift(_ id: UUID) throws -> Shift? {
         try one(FetchDescriptor<Shift>(predicate: #Predicate { $0.id == id }))
+    }
+
+    private func event(_ id: UUID) throws -> LogEvent? {
+        try one(FetchDescriptor<LogEvent>(predicate: #Predicate { $0.id == id }))
     }
 
     private func one<T: PersistentModel>(_ descriptor: FetchDescriptor<T>) throws -> T? {

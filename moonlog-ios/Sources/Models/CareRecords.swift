@@ -150,7 +150,10 @@ final class LogEvent {
     }
 
     var tags: [String] {
-        (tagsRaw ?? "").split(separator: ",").map(String.init).filter { !$0.isEmpty }
+        // Short-circuit: most events have no tags, and this otherwise allocated
+        // three arrays each on every snapshot build.
+        guard let tagsRaw, !tagsRaw.isEmpty else { return [] }
+        return tagsRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty }
     }
 }
 

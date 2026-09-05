@@ -70,7 +70,7 @@ struct TonightView: View {
             .padding(.horizontal, 16)
             .padding(.top, 8)
             // Clears the floating tab bar, which overlays the scroll content.
-            .padding(.bottom, 88)
+            .padding(.bottom, MoonLayout.tabBarClearance)
         }
         .background(palette.bg)
         .toolbar {
@@ -376,7 +376,7 @@ private struct Tonight {
         var accents: [UUID: BabyAccent] = [:]
         var lastFeed: [UUID: Date] = [:]
         var lastDiaper: [UUID: Date] = [:]
-        var openSleep: [UUID: SleepSnapshot] = [:]
+        var openSnapshots: [SleepSnapshot] = []
         var timeline: [TimelineEntry] = []
 
         models.reserveCapacity(roster.count)
@@ -415,16 +415,17 @@ private struct Tonight {
                 TimelineEntry(
                     id: session.id, at: session.startAt, babyID: session.babyIDRaw,
                     icon: "moon.zzz.fill", title: "Asleep",
-                    detail: session.endAt.map { Fmt.duration($0.timeIntervalSince(session.startAt)) }
-                        ?? "still asleep",
+                    // Clipped to the shift, like Totals — an unclipped duration here
+                    // made the timeline and the Summary disagree about one sleep.
+                    detail: session.isOpen
+                        ? "still asleep"
+                        : session.snapshot.map {
+                            Fmt.duration(
+                                SleepMath.seconds(of: $0, clippedTo: shift.window, asOf: now))
+                        } ?? nil,
                     edit: session.babyIDRaw.map { .editSleep(id: session.id, babyID: $0) }))
 
-            guard session.isOpen, let snapshot = session.snapshot else { continue }
-            // Earliest start wins, so a duplicate delivered by sync resolves the
-            // same way on every device. See `SleepReconciler`.
-            if snapshot.startAt < openSleep[snapshot.babyID]?.startAt ?? .distantFuture {
-                openSleep[snapshot.babyID] = snapshot
-            }
+            if session.isOpen, let snapshot = session.snapshot { openSnapshots.append(snapshot) }
         }
 
         timeline.sort { $0.at == $1.at ? $0.id.uuidString < $1.id.uuidString : $0.at > $1.at }
@@ -442,7 +443,9 @@ private struct Tonight {
                 accent: baby.accent,
                 dayOfLife: DayOfLife.calendarDay(
                     birthAt: baby.birthAt, forShift: shift.window, calendar: calendar),
-                asleepSince: openSleep[baby.id]?.startAt,
+                // Through Core, which breaks an equal-start tie on id so every
+                // device resolves a synced duplicate the same way.
+                asleepSince: SleepMath.openSession(in: openSnapshots, forBaby: baby.id)?.startAt,
                 lastFeedAt: feedAt,
                 lastDiaperAt: lastDiaper[baby.id],
                 // A future-dated feed (only reachable via sync from a device with a

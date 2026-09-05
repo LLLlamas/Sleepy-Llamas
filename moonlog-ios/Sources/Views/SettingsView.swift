@@ -89,7 +89,7 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         // A Form needs the same clearance as the scroll views — the floating tab
         // bar overlays its last rows otherwise.
-        .contentMargins(.bottom, 72, for: .scrollContent)
+        .contentMargins(.bottom, MoonLayout.tabBarClearance, for: .scrollContent)
         .background(palette.bg)
     }
 
