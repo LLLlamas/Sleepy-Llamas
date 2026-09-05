@@ -48,6 +48,19 @@ actor CareStore {
         return baby.id
     }
 
+    /// Rename or recolour a baby. Accent is the user's choice — the auto-assigned
+    /// default only exists so twins are distinct before anyone picks.
+    func updateBaby(_ babyID: UUID, name: String? = nil, accent: BabyAccent? = nil) throws {
+        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        if let name {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
+            baby.name = trimmed
+        }
+        if let accent { baby.accentRaw = accent.rawValue }
+        try modelContext.save()
+    }
+
     /// Archives rather than deletes.
     ///
     /// `.deny` would have been the natural guard against removing a baby that still
@@ -264,4 +277,5 @@ enum CareStoreError: Error, Equatable {
     case shiftAlreadyOpen
     case shiftAlreadyClosed
     case endBeforeStart
+    case emptyName
 }

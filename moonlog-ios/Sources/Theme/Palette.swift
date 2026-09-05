@@ -118,25 +118,66 @@ public struct Palette: Sendable {
     }
 }
 
-/// Accent assigned to an individual baby so twins are distinguishable at a glance.
+/// A baby's accent colour, chosen by the user.
 ///
-/// Colour is deliberately never the *only* signal — the baby's name is always
-/// visible and card order is stable — because mis-logging to the wrong twin is the
-/// main failure mode multi-baby support introduces, and hue discrimination degrades
-/// in a very dark room and for colourblind users alike.
-public enum BabyAccent: String, CaseIterable, Sendable {
-    case gold, sage, rose
+/// These are **not** palette roles. An earlier version reused `--accent`, `--sleep`
+/// and `--warn`, which meant "gold" resolved to maroon in the Day theme and sat far
+/// too close to "rose" — twins were distinguishable at night and barely so by day.
+/// Each accent now carries its own value per theme, spaced around the hue wheel and
+/// tuned separately for dark maroon and light blush surfaces.
+///
+/// There are five, not six. A "clay" terracotta was tried and removed: in a warm
+/// maroon palette it sits inescapably close to gold, and a contrast test caught it
+/// in every theme. Five well-separated options beat six that crowd — nobody needs a
+/// sixth, and two colours a tired person can confuse are worse than one fewer.
+///
+/// Colour is still only ever the **third** identifying signal. The baby's name is
+/// always visible and card order is fixed, because hue discrimination degrades in a
+/// dark room and is absent for colourblind users — and mis-logging to the wrong twin
+/// is the failure this whole layout is built to prevent.
+public enum BabyAccent: String, CaseIterable, Sendable, Identifiable {
+    case gold, rose, lilac, sky, sage
 
+    public var id: String { rawValue }
+
+    /// Spoken by VoiceOver and shown under each swatch, so the choice is never
+    /// communicated by colour alone.
+    public var displayName: String {
+        switch self {
+        case .gold: return "Gold"
+        case .rose: return "Rose"
+        case .lilac: return "Lilac"
+        case .sky: return "Sky"
+        case .sage: return "Sage"
+        }
+    }
+
+    /// Default for the nth baby in a family — distinct without the user choosing.
     public static func forIndex(_ index: Int) -> BabyAccent {
         let all = BabyAccent.allCases
         return all[((index % all.count) + all.count) % all.count]
     }
 
-    public func color(in palette: Palette) -> Color {
-        switch self {
-        case .gold: return palette.accent
-        case .sage: return palette.sleep
-        case .rose: return palette.warn
+    public func color(for theme: MoonTheme) -> Color {
+        switch theme {
+        case .night, .deepNight:
+            // Light enough to carry on #1a0a0e / #100508.
+            switch self {
+            case .gold: return .hex("d9a96b")
+            case .rose: return .hex("e39aa6")
+            case .lilac: return .hex("b7a0dd")
+            case .sky: return .hex("6aa8dd")
+            case .sage: return .hex("8fb8a8")
+            }
+        case .day:
+            // Darkened to hold contrast on the cream/blush surfaces.
+            switch self {
+            case .gold: return .hex("9a6b1f")
+            case .rose: return .hex("b8446a")
+            case .lilac: return .hex("6b4d9e")
+            case .sky: return .hex("1f5f9e")
+            case .sage: return .hex("3f7d68")
+            }
         }
     }
 }

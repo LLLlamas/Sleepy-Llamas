@@ -15,8 +15,10 @@ struct BabyStatusCard: View {
     var onFeed: () -> Void
     var onDiaper: () -> Void
     var onToggleSleep: () -> Void
+    var onEditBaby: () -> Void
 
     @Environment(\.palette) private var palette
+    @Environment(\.moonTheme) private var theme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -35,12 +37,20 @@ struct BabyStatusCard: View {
     // MARK: - Header
 
     private var header: some View {
+        Button(action: onEditBaby) {
+            headerContent
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(baby.name), day \(baby.dayOfLife). Edit name and colour.")
+    }
+
+    private var headerContent: some View {
         HStack(spacing: 10) {
             // Accent is the THIRD identifying signal, never the only one — the name
             // is always present and card order is fixed. Hue discrimination is poor
             // in a dark room and absent for colourblind users.
             Circle()
-                .fill(baby.accent.color(in: palette))
+                .fill(baby.accent.color(for: theme))
                 .frame(width: 10, height: 10)
 
             Text(baby.name)
@@ -52,7 +62,12 @@ struct BabyStatusCard: View {
             Text("Day \(baby.dayOfLife)")
                 .font(.subheadline)
                 .foregroundStyle(palette.faint)
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(palette.faint)
         }
+        .contentShape(Rectangle())
     }
 
     // MARK: - Status

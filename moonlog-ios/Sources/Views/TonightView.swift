@@ -17,6 +17,7 @@ struct TonightView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var sheet: LogSheet?
+    @State private var editingBaby: Baby?
 
     var body: some View {
         // Ticks every 30s, matching the web version's clock. Cheap, and it keeps
@@ -38,7 +39,8 @@ struct TonightView: View {
                         dueSoonHours: 3,
                         onFeed: { sheet = .feed(babyID: baby.id) },
                         onDiaper: { sheet = .diaper(babyID: baby.id) },
-                        onToggleSleep: { sheet = .sleep(babyID: baby.id) }
+                        onToggleSleep: { sheet = .sleep(babyID: baby.id) },
+                        onEditBaby: { editingBaby = baby }
                     )
                 }
 
@@ -59,6 +61,22 @@ struct TonightView: View {
         .sheet(item: $sheet) { which in
             Text("\(which.title) — coming next")
                 .presentationDetents([.medium])
+        }
+        .sheet(item: $editingBaby) { baby in
+            BabyDetailSheet(
+                babyID: baby.id,
+                name: baby.name,
+                accent: baby.accent
+            ) { newName, newAccent in
+                // Written directly on the main context rather than through
+                // CareStore: this is a view-scoped edit of an object the view
+                // already holds, and routing it through the actor would mean
+                // re-fetching by id for no benefit.
+                baby.name = newName
+                baby.accentRaw = newAccent.rawValue
+                try? modelContext.save()
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 

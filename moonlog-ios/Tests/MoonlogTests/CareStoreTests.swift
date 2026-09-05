@@ -205,6 +205,44 @@ final class CareStoreTests: XCTestCase {
         XCTAssertTrue(remaining[0].isOpen)
     }
 
+    // MARK: - Editing
+
+    /// The accent is the user's choice. The auto-assigned default only exists so
+    /// twins are distinct before anyone picks.
+    func testUpdatingBabyNameAndAccent() async throws {
+        let (_, mia, _) = try await makeFamilyWithTwins()
+        try await store.updateBaby(mia, name: "  Amelia  ", accent: .lilac)
+
+        let baby = try XCTUnwrap(
+            ModelContext(container)
+                .fetch(FetchDescriptor<Baby>(predicate: #Predicate { $0.id == mia })).first)
+        XCTAssertEqual(baby.name, "Amelia", "whitespace trimmed")
+        XCTAssertEqual(baby.accent, .lilac)
+    }
+
+    func testUpdatingEitherFieldAloneLeavesTheOther() async throws {
+        let (_, mia, _) = try await makeFamilyWithTwins()
+        try await store.updateBaby(mia, accent: .sky)
+        try await store.updateBaby(mia, name: "Amelia")
+
+        let baby = try XCTUnwrap(
+            ModelContext(container)
+                .fetch(FetchDescriptor<Baby>(predicate: #Predicate { $0.id == mia })).first)
+        XCTAssertEqual(baby.name, "Amelia")
+        XCTAssertEqual(baby.accent, .sky)
+    }
+
+    /// A blank name would leave a timeline row identified by colour alone.
+    func testBlankNameIsRejected() async throws {
+        let (_, mia, _) = try await makeFamilyWithTwins()
+        do {
+            try await store.updateBaby(mia, name: "   ")
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .emptyName)
+        }
+    }
+
     // MARK: - Babies are archived, never deleted
 
     func testArchivingABabyKeepsItAndItsRecords() async throws {

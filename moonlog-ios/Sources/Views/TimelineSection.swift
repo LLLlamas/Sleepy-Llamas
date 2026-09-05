@@ -22,6 +22,7 @@ struct TimelineSection: View {
     let babyAccents: [UUID: BabyAccent]
 
     @Environment(\.palette) private var palette
+    @Environment(\.moonTheme) private var theme
 
     private var showsBabyNames: Bool { babyNames.count > 1 }
 
@@ -105,6 +106,6 @@ struct TimelineSection: View {
 
     private func accentColor(for entry: TimelineEntry) -> Color {
         guard let id = entry.babyID, let accent = babyAccents[id] else { return palette.faint }
-        return showsBabyNames ? accent.color(in: palette) : palette.faint
+        return showsBabyNames ? accent.color(for: theme) : palette.faint
     }
 }
