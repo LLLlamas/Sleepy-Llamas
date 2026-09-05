@@ -100,6 +100,14 @@ public enum Fmt {
         }
     }
 
+    public static func temp(_ f: Double) -> String {
+        String(format: "%.1f°F", f)
+    }
+
+    public static func stool(_ colour: StoolColor) -> String {
+        colour.rawValue.capitalized
+    }
+
     public static func diaper(_ contents: DiaperContents) -> String {
         switch contents {
         case .wet: return "Wet"

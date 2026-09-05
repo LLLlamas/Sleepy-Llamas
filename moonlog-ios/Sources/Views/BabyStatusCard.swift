@@ -62,20 +62,14 @@ struct BabyStatusCard: View {
             actions
         }
         .padding(16)
-        .background(palette.raised, in: card)
-        .overlay(card.stroke(palette.line, lineWidth: 1))
-    }
-
-    private var card: RoundedRectangle {
-        RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous)
+        .cardSurface(palette)
     }
 
     // A visible chevron, not a long-press — see `docs/design.md`.
     private var header: some View {
         Button(action: { Haptics.tap(); onEditBaby() }) {
-            HStack(spacing: 10) {
-                Circle().fill(accentColor).frame(width: 10, height: 10)
-                Text(baby.name).font(.headline).foregroundStyle(palette.ink)
+            HStack {
+                BabyChip(name: baby.name, accent: baby.accent)
                 Spacer()
                 Text("Day \(baby.dayOfLife)").font(.subheadline).foregroundStyle(palette.faint)
                 Image(systemName: "chevron.right")

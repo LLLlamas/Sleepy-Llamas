@@ -90,7 +90,7 @@ struct StartShiftView: View {
 
     @Environment(\.palette) private var palette
 
-    private var isFuture: Bool { startedAt > Date().addingTimeInterval(60) }
+    private var isFuture: Bool { startedAt.isMeaningfullyInFuture }
 
     var body: some View {
         Form {

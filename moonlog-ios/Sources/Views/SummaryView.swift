@@ -88,7 +88,7 @@ struct SummaryView: View {
                     let totals = Totals.compute(
                         events: events, sessions: sessions, forBaby: baby.id,
                         shift: shift.window, asOf: now)
-                    babyCard(baby, totals: totals, unit: unit, now: now)
+                    babyCard(baby, totals: totals, unit: unit, shift: shift)
                 }
             }
             .padding(.horizontal, 16)
@@ -117,16 +117,19 @@ struct SummaryView: View {
     }
 
     private func babyCard(
-        _ baby: Baby, totals: ShiftTotals, unit: VolumeUnit, now: Date
+        _ baby: Baby, totals: ShiftTotals, unit: VolumeUnit, shift: Shift
     ) -> some View {
+        // Pinned to the shift, like Tonight. Reading the optional property here
+        // meant a dead fallback that, if it ever fired, would show a different day
+        // number for the same baby in the same session.
+        let dayOfLife = DayOfLife.calendarDay(
+            birthAt: baby.birthAt, forShift: shift.window, calendar: family.calendar)
+        return
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(baby.accent.color(for: theme))
-                    .frame(width: 10, height: 10)
-                Text(baby.name).font(.headline).foregroundStyle(palette.ink)
+            HStack {
+                BabyChip(name: baby.name, accent: baby.accent)
                 Spacer()
-                Text("Day \(DayOfLife.calendarDay(birthAt: baby.birthAt, forShift: shift?.window ?? ShiftWindow(startedAt: now), calendar: family.calendar))")
+                Text("Day \(dayOfLife)")
                     .font(.subheadline)
                     .foregroundStyle(palette.faint)
             }
@@ -149,8 +152,7 @@ struct SummaryView: View {
             detail("Wet / dirty", "\(totals.wet) / \(totals.dirty)")
             if !totals.stoolProgression.isEmpty {
                 detail("Stool",
-                       totals.stoolProgression.map { $0.rawValue.capitalized }
-                        .joined(separator: " → "))
+                       totals.stoolProgression.map(Fmt.stool).joined(separator: " → "))
             }
             if totals.stretches > 0 {
                 detail("Stretches", "\(totals.stretches)")
@@ -161,23 +163,15 @@ struct SummaryView: View {
                         .font(.footnote)
                         .foregroundStyle(palette.faint)
                     Spacer()
-                    Text(String(format: "%.1f °F", temp))
+                    Text(Fmt.temp(temp))
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(totals.hasFever ? palette.stop : palette.soft)
                 }
-                if totals.hasFever {
-                    Label("At or above \(String(format: "%.1f", ShiftTotals.feverThresholdF))°F",
-                          systemImage: "thermometer.high")
-                        .font(.footnote)
-                        .foregroundStyle(palette.stop)
-                }
+                if totals.hasFever { FeverBadge() }
             }
         }
         .padding(16)
-        .background(palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(palette.line, lineWidth: 1))
+        .cardSurface(palette)
     }
 
     private func statRow(_ stats: [(String, String, Color)]) -> some View {

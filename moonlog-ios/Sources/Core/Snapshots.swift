@@ -187,3 +187,12 @@ public enum TagAction: String, Sendable, CaseIterable {
     case logFeed = "log-feed"
     case logDiaper = "log-diaper"
 }
+
+
+public extension Date {
+    /// A minute of slack, so setting "now" by hand is never rejected by a race
+    /// between the picker and the save. Used by every sheet that bounds a time.
+    var isMeaningfullyInFuture: Bool {
+        self > Date().addingTimeInterval(60)
+    }
+}

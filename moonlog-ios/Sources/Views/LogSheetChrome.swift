@@ -30,8 +30,7 @@ struct LogSheetChrome<Content: View>: View {
     @State private var isSaving = false
     @State private var confirmingDelete = false
 
-    /// A minute of slack, so setting "now" by hand is never rejected by a race.
-    private var isFuture: Bool { at > Date().addingTimeInterval(60) }
+    private var isFuture: Bool { at.isMeaningfullyInFuture }
 
     private var isOutsideShift: Bool {
         guard !isFuture else { return false }
@@ -50,7 +49,7 @@ struct LogSheetChrome<Content: View>: View {
                         HStack(spacing: 10) {
                             Circle().fill(accent).frame(width: 10, height: 10)
                             Text(babyName).font(.headline).foregroundStyle(palette.ink)
-                        }
+                        }  // accent is passed in already resolved, so BabyChip does not fit here
                     }
                     .listRowBackground(palette.raised)
                 }

@@ -342,7 +342,7 @@ private extension TonightView {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(palette.accent, in: Capsule())
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
+                .shadow(color: palette.backdrop, radius: 8, y: 2)
                 .padding(.top, 12)
                 .transition(.move(edge: .top).combined(with: .opacity))
         }

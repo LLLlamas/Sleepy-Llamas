@@ -16,7 +16,7 @@ struct RootView: View {
     @Query(filter: #Predicate<Family> { !$0.isArchived }, sort: \Family.createdAt)
     private var families: [Family]
 
-    /// Only the open shifts, which is at most one per family — not every shift the
+    /// Only the open shifts — at most one per family — rather than every shift the
     /// family has ever had. The previous version walked `family.shifts` and sorted
     /// it on every body pass, so the work grew by one element per night, forever.
     @Query(filter: #Predicate<Shift> { $0.isOpen }, sort: \Shift.startedAt, order: .reverse)
@@ -30,101 +30,107 @@ struct RootView: View {
         return systemScheme == .dark ? .night : .day
     }
 
-    // `Palette.for` is cached per theme, so this is a lookup rather than the five
-    // full palette constructions per body it used to be.
     private var palette: Palette { Palette.for(theme) }
 
     var body: some View {
-        NavigationStack {
-            content
-                .background(palette.bg)
-                .navigationTitle("Moonlog")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbarBackground(palette.bg, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
-        }
-        .tint(palette.accent)
-        .environment(\.moonTheme, theme)
-        .preferredColorScheme(deepNightEnabled ? .dark : nil)
-        .alert(
-            "Something went wrong",
-            isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })
-        ) {
-            Button("OK", role: .cancel) { error = nil }
-        } message: {
-            Text(error ?? "")
-        }
-    }
-
-    /// The tabs are always present, including during onboarding. Seeing the shape
-    /// of the app while setting it up is reassuring, and it keeps Settings reachable
-    /// — Deep Night in particular, which someone may want before logging anything.
-    private var content: some View {
         tabs(families.first)
+            .tint(palette.accent)
+            .environment(\.moonTheme, theme)
+            // Only forced for the explicit override. Applying it in the
+            // system-following case would latch the theme on its first value.
+            .preferredColorScheme(deepNightEnabled ? .dark : nil)
+            .alert(
+                "Something went wrong",
+                isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })
+            ) {
+                Button("OK", role: .cancel) { error = nil }
+            } message: {
+                Text(error ?? "")
+            }
     }
 
-    /// Bottom tabs, following the retired PWA's shape: Tonight, Summary, Settings.
-    /// Summary and Settings are reachable with no shift running, because that is a
-    /// normal state and both still have something to say.
+    /// Bottom tabs, following the retired PWA's shape. Present from the very first
+    /// screen — seeing the app's shape while setting it up is reassuring, and it
+    /// keeps Settings reachable before a family exists.
     @ViewBuilder
     private func tabs(_ family: Family?) -> some View {
         let shift = family.flatMap(openShift(for:))
+
         TabView(selection: $tab) {
-            Group {
-                if let family {
-                    if let shift {
-                        TonightView(family: family, shift: shift)
-                    } else {
-                        StartShiftView(familyName: family.name) { startedAt, caregiver in
-                            Haptics.commit()
-                            run {
-                                _ = try await $0.startShift(
-                                    familyID: family.id, startedAt: startedAt,
-                                    caregiver: caregiver)
-                            }
-                        }
-                    }
-                } else {
-                    OnboardingView { familyName, babyName, birthAt, unit in
-                        run { store in
-                            let familyID = try await store.createFamily(name: familyName)
-                            try await store.setVolumeUnit(unit, familyID: familyID)
-                            _ = try await store.addBaby(
-                                to: familyID, name: babyName, birthAt: birthAt)
-                        }
-                    }
-                }
-            }
-            .tabItem { Label("Tonight", systemImage: "moon.stars.fill") }
-            .tag("tonight")
+            stack("Moonlog") { tonight(family, shift) }
+                .tabItem { Label("Tonight", systemImage: "moon.stars.fill") }
+                .tag("tonight")
 
-            Group {
-                if let family {
-                    SummaryView(family: family, shift: shift)
-                } else {
-                    EmptyStatePlaceholder(
-                        emoji: "📋",
-                        title: "Nothing yet",
-                        message: "Set up a family first — the night's totals appear here.")
-                }
-            }
-            .tabItem { Label("Summary", systemImage: "list.bullet.rectangle") }
-            .tag("summary")
+            stack("Summary") { summary(family, shift) }
+                .tabItem { Label("Summary", systemImage: "list.bullet.rectangle") }
+                .tag("summary")
 
-            SettingsView(family: family) { error = $0 }
+            stack("Settings") { SettingsView(family: family) { error = $0 } }
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag("settings")
         }
-        // Softened during onboarding: the bar is visible so the app's shape is
+        // Softened during onboarding: the bar stays visible so the app's shape is
         // legible from the first screen, but muted because two of its three
         // destinations have nothing in them yet.
-        .toolbarBackground(
-            palette.bg.opacity(families.isEmpty ? 0.55 : 1), for: .tabBar)
+        .toolbarBackground(palette.bg.opacity(families.isEmpty ? 0.55 : 1), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .sensoryFeedback(.selection, trigger: tab)
         #if DEBUG
         .task { tab = DemoSeed.requestedTab ?? tab }
         #endif
+    }
+
+    /// One `NavigationStack` per tab, which is the standard iOS shape. A single
+    /// stack wrapping the whole `TabView` does not surface the selected tab's
+    /// toolbar items — that silently made Summary's Copy and Share unreachable.
+    private func stack<Content: View>(
+        _ title: String, @ViewBuilder _ content: () -> Content
+    ) -> some View {
+        NavigationStack {
+            content()
+                .background(palette.bg)
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(palette.bg, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+        }
+    }
+
+    @ViewBuilder
+    private func tonight(_ family: Family?, _ shift: Shift?) -> some View {
+        if let family {
+            if let shift {
+                TonightView(family: family, shift: shift)
+            } else {
+                StartShiftView(familyName: family.name) { startedAt, caregiver in
+                    Haptics.commit()
+                    run {
+                        _ = try await $0.startShift(
+                            familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+                    }
+                }
+            }
+        } else {
+            OnboardingView { familyName, babyName, birthAt, unit in
+                run { store in
+                    let familyID = try await store.createFamily(name: familyName)
+                    try await store.setVolumeUnit(unit, familyID: familyID)
+                    _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func summary(_ family: Family?, _ shift: Shift?) -> some View {
+        if let family {
+            SummaryView(family: family, shift: shift)
+        } else {
+            EmptyStatePlaceholder(
+                emoji: "📋",
+                title: "Nothing yet",
+                message: "Set up a family first — the night's totals appear here.")
+        }
     }
 
     /// Between visits there is genuinely no open shift — a normal state.
@@ -133,7 +139,10 @@ struct RootView: View {
     }
 
     private func run(_ action: @escaping (CareStore) async throws -> Void) {
-        guard let store else { return }
+        guard let store else {
+            error = "The data store is unavailable."
+            return
+        }
         Task {
             do { try await action(store) } catch { self.error = "\(error)" }
         }

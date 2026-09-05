@@ -45,9 +45,7 @@ struct SleepSheet: View {
     /// `LogSheetChrome` bounds only the start. Nothing bounded the wake time, so a
     /// mis-nudged date wheel could save a wake 24 hours ahead — and because totals
     /// clip to the shift window, that absorbed the entire rest of the shift as sleep.
-    private var endIsInFuture: Bool {
-        !stillAsleep && endAt > Date().addingTimeInterval(60)
-    }
+    private var endIsInFuture: Bool { !stillAsleep && endAt.isMeaningfullyInFuture }
 
     private var duration: TimeInterval? {
         stillAsleep ? nil : max(0, endAt.timeIntervalSince(startAt))

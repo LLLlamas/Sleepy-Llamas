@@ -57,11 +57,7 @@ struct TimelineSection: View {
                         }
                     }
                 }
-                .background(
-                    palette.raised, in: RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous)
-                        .stroke(palette.line, lineWidth: 1))
+                .cardSurface(palette)
             }
         }
     }
@@ -78,7 +74,7 @@ struct TimelineSection: View {
             Spacer()
         }
         .padding(.vertical, 28)
-        .background(palette.raised, in: RoundedRectangle(cornerRadius: MoonLayout.cardCorner, style: .continuous))
+        .cardSurface(palette)
     }
 
     private func row(_ entry: TimelineEntry) -> some View {
