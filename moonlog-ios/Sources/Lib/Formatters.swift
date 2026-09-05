@@ -46,11 +46,36 @@ enum Fmt {
 
     static func feedMethod(_ method: FeedMethod) -> String {
         switch method {
-        case .breastLeft: return "Left breast"
-        case .breastRight: return "Right breast"
+        case .breast: return "Breast"
         case .bottleBreastmilk: return "Bottle · breastmilk"
         case .bottleFormula: return "Bottle · formula"
         case .unknown: return "Feed"
+        }
+    }
+
+    /// "L 8m, R 6m" — or one side alone when only one was used.
+    static func sides(left: Int?, right: Int?) -> String? {
+        var parts: [String] = []
+        if let l = left, l > 0 { parts.append("L \(duration(TimeInterval(l)))") }
+        if let r = right, r > 0 { parts.append("R \(duration(TimeInterval(r)))") }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+
+    /// Weight in the unit system implied by the family's volume unit — a household
+    /// working in ounces expects pounds and ounces, not grams.
+    static func weight(grams: Double, unit: VolumeUnit) -> String {
+        switch unit {
+        case .ml:
+            return grams >= 1000
+                ? String(format: "%.2f kg", grams / 1000)
+                : "\(Int(grams.rounded())) g"
+        case .oz:
+            let totalOz = grams / 28.3495
+            let pounds = Int(totalOz / 16)
+            let ounces = totalOz - Double(pounds) * 16
+            return pounds > 0
+                ? String(format: "%d lb %.1f oz", pounds, ounces)
+                : String(format: "%.1f oz", ounces)
         }
     }
 
@@ -62,8 +87,4 @@ enum Fmt {
         case .unknown: return "Diaper"
         }
     }
-}
-
-enum VolumeUnit: String, CaseIterable, Sendable {
-    case ml, oz
 }

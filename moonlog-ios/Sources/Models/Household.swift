@@ -35,6 +35,15 @@ final class Family {
 
     var isArchived: Bool = false
 
+    /// Households mark bottles differently, so the unit is per family and the
+    /// handoff reads the way that family expects.
+    var volumeUnitRaw: String = VolumeUnit.oz.rawValue
+
+    /// Which optional event kinds this family uses, as joined raw values. A joined
+    /// string rather than `[String]`, which SwiftData stores as an opaque Codable
+    /// blob that CloudKit merges last-writer-wins.
+    var optionalKindsRaw: String = ""
+
     @Relationship(deleteRule: .cascade, inverse: \Baby.family)
     var babies: [Baby]? = []
 
@@ -61,6 +70,17 @@ final class Family {
         (babies ?? [])
             .filter { !$0.isArchived }
             .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    var volumeUnit: VolumeUnit { VolumeUnit(rawValue: volumeUnitRaw) ?? .oz }
+
+    /// Core kinds are always on; only the extras are opt-in.
+    var enabledKinds: [EventKind] {
+        EventKind.core + EventKind.optional.filter { optionalKindsRaw.contains($0.rawValue) }
+    }
+
+    func setOptionalKinds(_ kinds: [EventKind]) {
+        optionalKindsRaw = kinds.map(\.rawValue).joined(separator: ",")
     }
 
     var calendar: Calendar {

@@ -79,6 +79,9 @@ final class LogEvent {
     var amountMl: Double? = nil
     /// Seconds, so durations aggregate without round-then-sum drift.
     var feedDurationSeconds: Int? = nil
+    /// A breast feed commonly uses both sides, so each carries its own time.
+    var leftSeconds: Int? = nil
+    var rightSeconds: Int? = nil
 
     // Diaper payload
     var diaperContentsRaw: String? = nil
@@ -87,6 +90,14 @@ final class LogEvent {
     // Note payload
     var text: String? = nil
     var tempF: Double? = nil
+    /// Joined raw tag values — see `Family.optionalKindsRaw` for why not `[String]`.
+    var tagsRaw: String? = nil
+
+    // Optional kinds. `pump` carries no baby; it is about the mother.
+    var pumpedMl: Double? = nil
+    var medicationName: String? = nil
+    var doseText: String? = nil
+    var weightGrams: Double? = nil
 
     /// Manual or NFC, so a mis-scan is traceable.
     var sourceRaw: String = EventSource.manual.rawValue
@@ -122,6 +133,10 @@ final class LogEvent {
         diaperContentsRaw.flatMap(DiaperContents.init(rawValue:))
     }
     var stoolColor: StoolColor? { stoolColorRaw.flatMap(StoolColor.init(rawValue:)) }
+
+    var tags: [String] {
+        (tagsRaw ?? "").split(separator: ",").map(String.init).filter { !$0.isEmpty }
+    }
 }
 
 /// A session, not a pair of events — cleaner totals, and "is she asleep" is a
@@ -158,6 +173,22 @@ final class SleepSession {
     func close(at date: Date) {
         endAt = date
         isOpen = false
+    }
+}
+
+/// A note tag the user has defined. A model rather than a stored array so tags can
+/// be renamed, and so two devices adding tags concurrently both survive the merge.
+@Model
+final class NoteTagPreset {
+    var id: UUID = UUID()
+    var label: String = ""
+    var sortOrder: Int = 0
+    var family: Family? = nil
+
+    init(id: UUID = UUID(), label: String, sortOrder: Int = 0) {
+        self.id = id
+        self.label = label
+        self.sortOrder = sortOrder
     }
 }
 

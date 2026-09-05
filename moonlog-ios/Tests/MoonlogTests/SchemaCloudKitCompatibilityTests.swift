@@ -13,8 +13,13 @@ final class SchemaCloudKitCompatibilityTests: XCTestCase {
 
     private var entities: [Schema.Entity] { ModelContainerFactory.schema.entities }
 
-    func testSchemaIsNotEmpty() {
-        XCTAssertEqual(entities.count, 6, "all six models are registered")
+    /// Names, not a count — this also catches a model quietly dropped from the
+    /// schema, which would silently stop it syncing.
+    func testEveryModelIsRegistered() {
+        XCTAssertEqual(
+            Set(entities.map(\.name)),
+            ["Family", "Baby", "Shift", "LogEvent", "SleepSession",
+             "NoteTagPreset", "TagBinding"])
     }
 
     /// "CloudKit integration does not support unique constraints."

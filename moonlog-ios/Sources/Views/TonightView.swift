@@ -99,6 +99,7 @@ private struct Tonight {
             accents[baby.id] = baby.accent
         }
 
+        let unit = family.volumeUnit
         let events = shift.events ?? []
         let sessions = shift.sleepSessions ?? []
         timeline.reserveCapacity(events.count + sessions.count)
@@ -107,8 +108,8 @@ private struct Tonight {
             timeline.append(
                 TimelineEntry(
                     id: event.id, at: event.at, babyID: event.babyIDRaw,
-                    icon: event.kind.icon, title: event.timelineTitle,
-                    detail: event.timelineDetail))
+                    icon: event.kind.icon, title: event.timelineTitle(unit: unit),
+                    detail: event.timelineDetail(unit: unit)))
 
             guard let babyID = event.babyIDRaw else { continue }
             switch event.kind {
@@ -116,7 +117,7 @@ private struct Tonight {
                 if event.at > lastFeed[babyID] ?? .distantPast { lastFeed[babyID] = event.at }
             case .diaper:
                 if event.at > lastDiaper[babyID] ?? .distantPast { lastDiaper[babyID] = event.at }
-            case .note:
+            case .note, .pump, .medication, .measurement:
                 break
             }
         }
@@ -198,30 +199,46 @@ extension EventKind {
         case .feed: return "drop.fill"
         case .diaper: return "square.on.square"
         case .note: return "text.bubble.fill"
+        case .pump: return "waveform.path"
+        case .medication: return "pills.fill"
+        case .measurement: return "scalemass.fill"
         }
     }
 }
 
 extension LogEvent {
-    var timelineTitle: String {
+    func timelineTitle(unit: VolumeUnit) -> String {
         switch kind {
         case .feed: return feedMethod.map(Fmt.feedMethod) ?? "Feed"
         case .diaper: return diaperContents.map(Fmt.diaper) ?? "Diaper"
         case .note: return "Note"
+        case .pump: return "Pumped"
+        case .medication: return "Medication"
+        case .measurement: return "Weight"
         }
     }
 
-    var timelineDetail: String? {
+    func timelineDetail(unit: VolumeUnit) -> String? {
         switch kind {
         case .feed:
             var parts: [String] = []
-            if let ml = amountMl { parts.append(Fmt.amount(ml: ml, unit: .ml)) }
-            if let s = feedDurationSeconds, s > 0 { parts.append(Fmt.duration(TimeInterval(s))) }
+            if let ml = amountMl { parts.append(Fmt.amount(ml: ml, unit: unit)) }
+            if let sides = Fmt.sides(left: leftSeconds, right: rightSeconds) {
+                parts.append(sides)
+            } else if let s = feedDurationSeconds, s > 0 {
+                parts.append(Fmt.duration(TimeInterval(s)))
+            }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .diaper:
             return stoolColor?.rawValue.capitalized
         case .note:
             return text
+        case .pump:
+            return pumpedMl.map { Fmt.amount(ml: $0, unit: unit) }
+        case .medication:
+            return [medicationName, doseText].compactMap { $0 }.joined(separator: " · ")
+        case .measurement:
+            return weightGrams.map { Fmt.weight(grams: $0, unit: unit) }
         }
     }
 }

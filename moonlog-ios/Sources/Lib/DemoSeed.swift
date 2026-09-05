@@ -28,6 +28,7 @@ enum DemoSeed {
         let birth = calendar.date(byAdding: .day, value: -5, to: now) ?? now
 
         let family = Family(name: "Nguyen")
+        family.volumeUnitRaw = VolumeUnit.oz.rawValue
         let mia = Baby(name: "Mia", birthAt: birth, sortOrder: 0, accent: .gold)
         let leo = Baby(name: "Leo", birthAt: birth, sortOrder: 1, accent: .sage)
         mia.family = family
@@ -55,8 +56,8 @@ enum DemoSeed {
             context.insert(event)
         }
 
-        log(.feed, mia, 245) { $0.feedMethodRaw = FeedMethod.breastLeft.rawValue
-                               $0.feedDurationSeconds = 840 }
+        log(.feed, mia, 245) { $0.feedMethodRaw = FeedMethod.breast.rawValue
+                               $0.leftSeconds = 480; $0.rightSeconds = 360 }
         log(.diaper, mia, 238) { $0.diaperContentsRaw = DiaperContents.both.rawValue
                                  $0.stoolColorRaw = StoolColor.transitional.rawValue }
         log(.feed, leo, 230) { $0.feedMethodRaw = FeedMethod.bottleFormula.rawValue
@@ -64,8 +65,8 @@ enum DemoSeed {
                                $0.feedDurationSeconds = 600 }
         log(.diaper, leo, 205) { $0.diaperContentsRaw = DiaperContents.wet.rawValue }
         log(.note, mia, 150) { $0.text = "Spit-up after the feed, settled with swaddle" }
-        log(.feed, mia, 95) { $0.feedMethodRaw = FeedMethod.breastRight.rawValue
-                              $0.feedDurationSeconds = 900 }
+        log(.feed, mia, 95) { $0.feedMethodRaw = FeedMethod.breast.rawValue
+                              $0.rightSeconds = 900 }
         log(.feed, leo, 42) { $0.feedMethodRaw = FeedMethod.bottleBreastmilk.rawValue
                               $0.amountMl = 75
                               $0.feedDurationSeconds = 720 }

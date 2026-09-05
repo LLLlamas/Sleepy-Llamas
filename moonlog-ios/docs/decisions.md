@@ -4,6 +4,39 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## Volume unit is per family; breast feeds carry a duration per side
+**2026-09-05**
+
+Households mark bottles differently, so `Family.volumeUnit` decides display and
+entry (oz or ml) while storage stays canonical millilitres. The handoff then reads
+the way that family expects. Weight follows the same unit system — a household
+working in ounces gets pounds and ounces, not grams.
+
+`FeedMethod` collapsed from `breastLeft`/`breastRight` to a single `breast`, with
+`leftSeconds` and `rightSeconds` on the event. One feed commonly uses both sides,
+and the old shape could not express that without logging two feeds. A single-sided
+feed simply leaves the other nil.
+
+*Free to do now* — a CloudKit raw value can never be renamed after a production
+deploy, so this had to happen before the first TestFlight build or not at all.
+
+---
+
+## Pumping, medication and weight are optional event kinds
+**2026-09-05**
+
+Added to `EventKind` but **off by default**, enabled per family via
+`Family.optionalKinds`. The three core kinds stay in the thumb row; nobody pays for
+a feature they do not use.
+
+`pump` is about the mother, so it carries **no baby** — `attachesToBaby` is false
+and totals count it for the shift regardless of whose figures are being computed.
+
+Note tags become a `NoteTagPreset` model rather than a fixed list, so the user
+defines their own. A model rather than a stored array because SwiftData persists
+`[String]` as an opaque Codable blob that CloudKit merges last-writer-wins — two
+devices adding a tag concurrently would silently lose one.
+
 ## Five baby accents, defined per theme, not as palette roles
 **2026-09-05**
 

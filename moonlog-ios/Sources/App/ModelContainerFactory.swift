@@ -15,6 +15,7 @@ enum ModelContainerFactory {
             Shift.self,
             LogEvent.self,
             SleepSession.self,
+            NoteTagPreset.self,
             TagBinding.self,
         ])
     }

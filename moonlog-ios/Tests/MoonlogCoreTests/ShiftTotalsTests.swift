@@ -22,7 +22,7 @@ final class ShiftTotalsTests: XCTestCase {
             EventSnapshot(babyID: babyA, kind: .feed, at: at("2026-09-04 23:00"),
                           feedMethod: .bottleFormula, amountMl: 60, feedDurationSeconds: 900),
             EventSnapshot(babyID: babyA, kind: .feed, at: at("2026-09-05 02:00"),
-                          feedMethod: .breastLeft, feedDurationSeconds: 840),
+                          feedMethod: .breast, leftSeconds: 480, rightSeconds: 360),
             EventSnapshot(babyID: babyA, kind: .diaper, at: at("2026-09-05 02:10"),
                           diaperContents: .both, stoolColor: .transitional),
             EventSnapshot(babyID: babyA, kind: .note, at: at("2026-09-05 03:00"),
@@ -34,7 +34,8 @@ final class ShiftTotalsTests: XCTestCase {
 
         XCTAssertEqual(t.feeds, 2)
         XCTAssertEqual(t.feedMl, 60)
-        XCTAssertEqual(t.feedSeconds, 1740)
+        XCTAssertEqual(t.feedSeconds, 900, "bottle time only")
+        XCTAssertEqual(t.breastSeconds, 840, "both sides combined")
         XCTAssertEqual(t.diapers, 1)
         XCTAssertEqual(t.notes, 1)
     }
@@ -172,6 +173,53 @@ final class ShiftTotalsTests: XCTestCase {
         XCTAssertEqual(b.feeds, 1)
         XCTAssertEqual(b.feedMl, 90)
         XCTAssertEqual(b.diapers, 1)
+    }
+
+    /// A breast feed carries a duration per side, since one feed commonly uses both.
+    func testBreastSidesCombineAndAreSeparateFromBottleTime() {
+        let events = [
+            EventSnapshot(babyID: babyA, kind: .feed, at: at("2026-09-05 01:00"),
+                          feedMethod: .breast, leftSeconds: 480, rightSeconds: 360),
+            EventSnapshot(babyID: babyA, kind: .feed, at: at("2026-09-05 03:00"),
+                          feedMethod: .breast, rightSeconds: 600),
+            EventSnapshot(babyID: babyA, kind: .feed, at: at("2026-09-05 04:00"),
+                          feedMethod: .bottleFormula, amountMl: 60, feedDurationSeconds: 720),
+        ]
+        let t = Totals.compute(events: events, sessions: [], forBaby: babyA,
+                               shift: shift, asOf: .distantFuture)
+        XCTAssertEqual(t.feeds, 3)
+        XCTAssertEqual(t.breastSeconds, 480 + 360 + 600)
+        XCTAssertEqual(t.feedSeconds, 720)
+    }
+
+    /// Pumping is about the mother, so it carries no baby and must still be counted.
+    func testPumpEventsCountDespiteHavingNoBaby() {
+        let events = [
+            EventSnapshot(babyID: babyA, kind: .pump, at: at("2026-09-05 02:00"),
+                          pumpedMl: 120),
+            EventSnapshot(babyID: babyB, kind: .feed, at: at("2026-09-05 02:30")),
+        ]
+        // Counted for whichever baby's totals are being computed, not duplicated
+        // into a baby's feed figures.
+        let t = Totals.compute(events: events, sessions: [], forBaby: babyA,
+                               shift: shift, asOf: .distantFuture)
+        XCTAssertEqual(t.pumpedMl, 120)
+        XCTAssertEqual(t.feeds, 0, "babyB's feed is not babyA's")
+    }
+
+    func testMedicationAndLatestWeight() {
+        let events = [
+            EventSnapshot(babyID: babyA, kind: .medication, at: at("2026-09-05 01:00"),
+                          medicationName: "Vitamin D", doseText: "1 drop"),
+            EventSnapshot(babyID: babyA, kind: .measurement, at: at("2026-09-05 02:00"),
+                          weightGrams: 3200),
+            EventSnapshot(babyID: babyA, kind: .measurement, at: at("2026-09-05 05:00"),
+                          weightGrams: 3260),
+        ]
+        let t = Totals.compute(events: events, sessions: [], forBaby: babyA,
+                               shift: shift, asOf: .distantFuture)
+        XCTAssertEqual(t.medications, 1)
+        XCTAssertEqual(t.latestWeightGrams, 3260, "the last one in the shift wins")
     }
 
     func testEmptyShiftProducesZeroTotals() {

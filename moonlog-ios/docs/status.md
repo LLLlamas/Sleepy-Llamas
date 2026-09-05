@@ -12,8 +12,11 @@ Updated 2026-09-05.
 | `CareStore` write layer | done |
 | Tonight screen — adaptive twins layout, timeline | done, runs on simulator |
 | Baby rename + colour picker | done |
+| Per-family volume unit, L/R breast feeds | done |
+| Optional kinds (pump, medication, weight) | model only — no UI yet |
+| User-defined note tags | model only — no UI yet |
 
-86 tests green. Verified running in Night and Day themes.
+89 tests green. Verified running in Night and Day themes.
 
 ## Next
 

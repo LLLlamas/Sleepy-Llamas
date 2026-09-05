@@ -53,18 +53,27 @@ public struct ShiftWindow: Sendable, Hashable {
 
 public enum EventKind: String, Sendable, CaseIterable {
     case feed, diaper, note
+    // Optional kinds — off by default, enabled per family.
+    case pump, medication, measurement
+
+    /// The three the app is built around. Always available, always in the thumb row.
+    public static let core: [EventKind] = [.feed, .diaper, .note]
+
+    /// Opt-in extras. `pump` is about the mother, so it carries no baby.
+    public static let optional: [EventKind] = [.pump, .medication, .measurement]
+
+    public var attachesToBaby: Bool { self != .pump }
 }
 
 public enum FeedMethod: String, Sendable, CaseIterable {
-    case breastLeft = "breast-left"
-    case breastRight = "breast-right"
+    /// One feed, not one side. Sides carry their own durations on the event, since
+    /// a single feed commonly uses both.
+    case breast
     case bottleBreastmilk = "bottle-breastmilk"
     case bottleFormula = "bottle-formula"
     case unknown
 
-    public var isBottle: Bool {
-        self == .bottleBreastmilk || self == .bottleFormula
-    }
+    public var isBottle: Bool { self == .bottleBreastmilk || self == .bottleFormula }
 }
 
 public enum DiaperContents: String, Sendable, CaseIterable {
@@ -86,13 +95,13 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
     public let kind: EventKind
     public let at: Date
 
-    // Feed payload
+    // Feed payload. Amounts are canonical millilitres, converted at display.
     public let feedMethod: FeedMethod?
-    /// Canonical millilitres, as in the PWA. Converted at display only.
     public let amountMl: Double?
-    /// Seconds, not the PWA's minutes — so durations aggregate without the
-    /// round-then-sum drift.
+    /// Bottle duration. For a breast feed the sides carry their own.
     public let feedDurationSeconds: Int?
+    public let leftSeconds: Int?
+    public let rightSeconds: Int?
 
     // Diaper payload
     public let diaperContents: DiaperContents?
@@ -102,6 +111,12 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
     public let noteTags: [String]
     public let tempF: Double?
 
+    // Optional kinds
+    public let pumpedMl: Double?
+    public let medicationName: String?
+    public let doseText: String?
+    public let weightGrams: Double?
+
     public init(
         id: UUID = UUID(),
         babyID: UUID,
@@ -110,10 +125,16 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
         feedMethod: FeedMethod? = nil,
         amountMl: Double? = nil,
         feedDurationSeconds: Int? = nil,
+        leftSeconds: Int? = nil,
+        rightSeconds: Int? = nil,
         diaperContents: DiaperContents? = nil,
         stoolColor: StoolColor? = nil,
         noteTags: [String] = [],
-        tempF: Double? = nil
+        tempF: Double? = nil,
+        pumpedMl: Double? = nil,
+        medicationName: String? = nil,
+        doseText: String? = nil,
+        weightGrams: Double? = nil
     ) {
         self.id = id
         self.babyID = babyID
@@ -122,11 +143,31 @@ public struct EventSnapshot: Sendable, Hashable, Identifiable {
         self.feedMethod = feedMethod
         self.amountMl = amountMl
         self.feedDurationSeconds = feedDurationSeconds
+        self.leftSeconds = leftSeconds
+        self.rightSeconds = rightSeconds
         self.diaperContents = diaperContents
         self.stoolColor = stoolColor
         self.noteTags = noteTags
         self.tempF = tempF
+        self.pumpedMl = pumpedMl
+        self.medicationName = medicationName
+        self.doseText = doseText
+        self.weightGrams = weightGrams
     }
+
+    /// Total time at the breast, both sides.
+    public var breastSeconds: Int? {
+        guard leftSeconds != nil || rightSeconds != nil else { return nil }
+        return (leftSeconds ?? 0) + (rightSeconds ?? 0)
+    }
+}
+
+/// Volume unit, set per family — households mark bottles differently, and the
+/// handoff should read the way that family expects.
+public enum VolumeUnit: String, Sendable, CaseIterable {
+    case oz, ml
+
+    public var displayName: String { self == .oz ? "Ounces" : "Millilitres" }
 }
 
 /// A tag scan never writes silently, but recording the source makes a mis-scan

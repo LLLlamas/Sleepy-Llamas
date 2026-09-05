@@ -6,6 +6,8 @@ public struct ShiftTotals: Sendable, Equatable {
     public var feeds: Int = 0
     public var feedMl: Double = 0
     public var feedSeconds: TimeInterval = 0
+    /// Time at the breast, both sides combined.
+    public var breastSeconds: TimeInterval = 0
 
     public var diapers: Int = 0
     public var wet: Int = 0
@@ -19,6 +21,12 @@ public struct ShiftTotals: Sendable, Equatable {
     public var longestStretchSeconds: TimeInterval = 0
 
     public var notes: Int = 0
+
+    // Optional kinds. Zero unless the family has them enabled.
+    public var pumpedMl: Double = 0
+    public var medications: Int = 0
+    /// Most recent weight in the shift, if one was taken.
+    public var latestWeightGrams: Double?
     /// Flagged at or above.
     public static let feverThresholdF: Double = 100.4
     public var highestTempF: Double?
@@ -43,8 +51,10 @@ public enum Totals {
         guard let window = shift.interval(asOf: now) else { return totals }
 
         // Sorted so `stoolProgression` reflects genuine first appearance.
+        // `pump` is about the mother and carries no baby, so it is counted for the
+        // shift regardless of which baby's totals these are.
         let relevant = events
-            .filter { $0.babyID == babyID && window.contains($0.at) }
+            .filter { window.contains($0.at) && ($0.babyID == babyID || $0.kind == .pump) }
             .sorted { $0.at < $1.at }
 
         for event in relevant {
@@ -53,6 +63,7 @@ public enum Totals {
                 totals.feeds += 1
                 totals.feedMl += event.amountMl ?? 0
                 totals.feedSeconds += TimeInterval(event.feedDurationSeconds ?? 0)
+                totals.breastSeconds += TimeInterval(event.breastSeconds ?? 0)
             case .diaper:
                 totals.diapers += 1
                 let contents = event.diaperContents ?? .unknown
@@ -67,6 +78,13 @@ public enum Totals {
                 if let temp = event.tempF {
                     totals.highestTempF = max(totals.highestTempF ?? temp, temp)
                 }
+            case .pump:
+                totals.pumpedMl += event.pumpedMl ?? 0
+            case .medication:
+                totals.medications += 1
+            case .measurement:
+                // `relevant` is sorted ascending, so the last one wins.
+                if let grams = event.weightGrams { totals.latestWeightGrams = grams }
             }
         }
 
