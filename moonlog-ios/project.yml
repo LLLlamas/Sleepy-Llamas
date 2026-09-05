@@ -23,7 +23,7 @@ settings:
     # anything lower than the last shipped build. `xcodegen generate` resets
     # this to the placeholder, so after regenerating run:
     #   agvtool new-version -all $(date -u +%s)
-    CURRENT_PROJECT_VERSION: "1788644622"
+    CURRENT_PROJECT_VERSION: "1788645277"
     DEVELOPMENT_TEAM: GYFN949Q5E
 
 targets:
@@ -84,13 +84,21 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
         ENABLE_USER_SCRIPT_SANDBOXING: YES
-        # CloudKit sync is OFF until the iCloud capability actually exists.
-        # Requesting a CloudKit-backed store without the entitlement does not
-        # throw — ModelContainer init succeeds and CloudKit then traps on a
-        # background queue, killing the app a moment after launch with no
-        # catchable error. Add "MOONLOG_CLOUDKIT" here at the same time as
-        # enabling the capability in Xcode, and not before.
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+      # Per-configuration, NOT in `base`. Putting DEBUG in base defines it in
+      # Release too, which compiled the debug demo seed into a shipped build —
+      # the fake twin night was reachable in the TestFlight binary.
+      #
+      # CloudKit sync is OFF until the iCloud capability actually exists.
+      # Requesting a CloudKit-backed store without the entitlement does not
+      # throw: ModelContainer init succeeds and CloudKit then traps on a
+      # background queue, killing the app a moment after launch with no
+      # catchable error. Add MOONLOG_CLOUDKIT to BOTH lines below at the same
+      # time as enabling the capability in Xcode, and not before.
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+        Release:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: ""
 
   # Fast, host-free tests for the logic that matters most. No app launch,
   # no ModelContainer — these run in milliseconds so the DST fixtures can

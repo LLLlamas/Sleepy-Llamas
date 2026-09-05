@@ -15,7 +15,8 @@ doula working across client families. Read `docs/` before changing architecture.
    this app replaces it. `git status` should only ever show `moonlog-ios/`.
 3. **Do not enable `MOONLOG_CLOUDKIT` until the iCloud capability actually exists.**
    See `docs/cloudkit.md` — getting this wrong crashes the app at launch with no
-   catchable error.
+   catchable error. It goes in **both** `configs:` entries in `project.yml`, never
+   in `settings.base` — anything in `base` applies to Release too.
 
 ## Commands
 
@@ -37,11 +38,16 @@ xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
   -destination "generic/platform=iOS" -allowProvisioningUpdates build
 ```
 
-Before archiving, stamp the build number:
+To archive for TestFlight:
 
 ```bash
-./scripts/stamp-build.sh     # stamps project.yml, then regenerates
+./scripts/archive.sh    # stamps, archives, and REFUSES a build with debug code in it
 ```
+
+It lands the archive where Organizer can see it and greps the Release binary for
+debug-only markers. That guard exists because the demo seed once shipped inside a
+TestFlight build — see the note on `SWIFT_ACTIVE_COMPILATION_CONDITIONS` in
+`project.yml`. No test can catch that; only the binary can be asked.
 
 **Do not use `agvtool`.** It writes into the generated `.xcodeproj`, so the next
 `xcodegen generate` discards it — and because our Info.plist is generated, it also

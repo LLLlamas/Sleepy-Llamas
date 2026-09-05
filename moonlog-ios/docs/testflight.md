@@ -47,12 +47,18 @@ end shift. Add-baby and end-shift live in the Tonight toolbar.
 
 ```bash
 cd moonlog-ios
-./scripts/stamp-build.sh    # stamps the build number AND regenerates the project
-open Moonlog.xcodeproj
+./scripts/archive.sh    # stamps, archives, and verifies no debug code shipped
 ```
 
-Then Product → Archive → Distribute App → App Store Connect → Upload. Xcode creates
-the distribution certificate and profile on first archive.
+Then Xcode → Window → Organizer → Archives → Distribute App → App Store Connect.
+Xcode creates the distribution certificate and profile on first archive.
+
+**The 0.1.0 build shipped on 2026-09-05 contains the debug demo seed.** DEBUG was
+defined in the Release configuration, so `#if DEBUG` code compiled in. Fixed by
+moving `SWIFT_ACTIVE_COMPILATION_CONDITIONS` to per-configuration, and
+`scripts/archive.sh` now fails the archive if any debug marker survives. Any future
+build is clean; that one is not, which is another reason not to run a real shift on
+it.
 
 The build number is a Unix timestamp so it always increases, which App Store Connect
 requires. **Do not use `agvtool`** — see `scripts/stamp-build.sh` for why it does not
