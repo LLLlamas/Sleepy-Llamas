@@ -41,6 +41,12 @@ actor CareStore {
         return baby.id
     }
 
+    func setVolumeUnit(_ unit: VolumeUnit, familyID: UUID) throws {
+        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        family.volumeUnitRaw = unit.rawValue
+        try modelContext.save()
+    }
+
     /// Accent is the user's choice; the auto-assigned default only makes twins
     /// distinct before anyone picks.
     func updateBaby(_ babyID: UUID, name: String? = nil, accent: BabyAccent? = nil) throws {

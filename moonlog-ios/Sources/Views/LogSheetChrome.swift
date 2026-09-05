@@ -141,3 +141,26 @@ struct AmountField: View {
         }
     }
 }
+
+
+extension View {
+    /// Ending a shift is the one irreversible-feeling action in a night, so it names
+    /// who is still asleep — that is what the parents are about to be handed.
+    func confirmDialogEndShift(
+        isPresented: Binding<Bool>,
+        asleep: [String],
+        onConfirm: @escaping () -> Void
+    ) -> some View {
+        confirmationDialog("End shift?", isPresented: isPresented, titleVisibility: .visible) {
+            Button("End shift", role: .destructive, action: onConfirm)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if asleep.isEmpty {
+                Text("Logging stops until you start the next one.")
+            } else {
+                Text("\(asleep.joined(separator: " and ")) still asleep — that stays in "
+                     + "the record. Logging stops until you start the next shift.")
+            }
+        }
+    }
+}

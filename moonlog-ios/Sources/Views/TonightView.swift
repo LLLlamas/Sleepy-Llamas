@@ -18,6 +18,8 @@ struct TonightView: View {
     @State private var editingBaby: Baby?
     @State private var confirmation: String?
     @State private var saveError: String?
+    @State private var addingBaby = false
+    @State private var confirmEndShift = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -58,6 +60,43 @@ struct TonightView: View {
             .padding(.bottom, 32)
         }
         .background(palette.bg)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Add baby", systemImage: "person.badge.plus") { addingBaby = true }
+                    Divider()
+                    Button("End shift", systemImage: "moon.stars", role: .destructive) {
+                        confirmEndShift = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $addingBaby) {
+            AddBabySheet(familyName: family.name) { name, birthAt in
+                guard let store else { return }
+                Task {
+                    do {
+                        _ = try await store.addBaby(to: family.id, name: name, birthAt: birthAt)
+                        confirmation = "\(name) added"
+                        try? await Task.sleep(for: .seconds(2))
+                        confirmation = nil
+                    } catch { saveError = "\(error)" }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .confirmDialogEndShift(
+            isPresented: $confirmEndShift,
+            asleep: data.babies.filter(\.isAsleep).map(\.name)
+        ) {
+            guard let store else { return }
+            Task {
+                do { try await store.endShift(shift.id, endedAt: Date()) }
+                catch { saveError = "\(error)" }
+            }
+        }
         .overlay(alignment: .top) { confirmationBanner }
         .alert(
             "Couldn't save",

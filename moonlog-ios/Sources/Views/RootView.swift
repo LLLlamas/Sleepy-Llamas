@@ -3,23 +3,19 @@ import SwiftData
 import MoonlogCore
 
 struct RootView: View {
-    /// Theme follows the system light/dark appearance, with Deep Night as an
-    /// explicit override. Deliberately *not* switched automatically by shift hours:
-    /// changing the screen under a tired user at 3am is when predictability matters
-    /// most.
+    /// Theme follows the system appearance, with Deep Night as an explicit override.
     @AppStorage("moonlog.deepNight") private var deepNightEnabled = false
 
-    /// Read here, in a View. An `App` struct does not receive a live system
-    /// `colorScheme`, and — more importantly — deriving the theme from this value
-    /// and then applying `.preferredColorScheme` from that same derivation is
-    /// circular: the forced scheme becomes the value we read next, so the theme
-    /// latches on whatever it resolved first and never changes again. That is why
-    /// `preferredColorScheme` below is only applied for the explicit Deep Night
-    /// override, never for the system-following case.
+    /// Read here, in a View. Deriving the theme from this and then applying
+    /// `.preferredColorScheme` from that derivation is circular — the forced scheme
+    /// becomes the value read next, so it latches on whatever resolved first. Hence
+    /// `preferredColorScheme` below covers only the explicit override.
     @Environment(\.colorScheme) private var systemScheme
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.careStore) private var store
 
     @Query(sort: \Family.createdAt) private var families: [Family]
+
+    @State private var error: String?
 
     private var theme: MoonTheme {
         if deepNightEnabled { return .deepNight }
@@ -39,9 +35,15 @@ struct RootView: View {
         }
         .tint(palette.accent)
         .environment(\.moonTheme, theme)
-        // Only forced for the explicit override. Applying it in the
-        // system-following case would create the latch described above.
         .preferredColorScheme(deepNightEnabled ? .dark : nil)
+        .alert(
+            "Something went wrong",
+            isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })
+        ) {
+            Button("OK", role: .cancel) { error = nil }
+        } message: {
+            Text(error ?? "")
+        }
     }
 
     @ViewBuilder
@@ -50,57 +52,36 @@ struct RootView: View {
             if let shift = openShift(for: family) {
                 TonightView(family: family, shift: shift)
             } else {
-                StartShiftPlaceholder(familyName: family.name)
+                StartShiftView(familyName: family.name) { startedAt, caregiver in
+                    run {
+                        _ = try await $0.startShift(
+                            familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+                    }
+                }
             }
         } else {
-            EmptyStatePlaceholder(
-                emoji: "🌙",
-                title: "No family yet",
-                message: "Onboarding lands next.")
+            OnboardingView { familyName, babyName, birthAt, unit in
+                run { store in
+                    let familyID = try await store.createFamily(name: familyName)
+                    try await store.setVolumeUnit(unit, familyID: familyID)
+                    _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
+                }
+            }
         }
     }
 
-    /// The doula sets shift times explicitly, so between visits there is genuinely
-    /// no open shift — that is a normal state, not an error.
+    /// Between visits there is genuinely no open shift — a normal state.
     private func openShift(for family: Family) -> Shift? {
         (family.shifts ?? [])
             .filter(\.isOpen)
             .sorted { $0.startedAt > $1.startedAt }
             .first
     }
-}
 
-struct StartShiftPlaceholder: View {
-    let familyName: String
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-        EmptyStatePlaceholder(
-            emoji: "🌙",
-            title: "No shift running",
-            message: "\(familyName) · start a shift to begin logging.")
-    }
-}
-
-struct EmptyStatePlaceholder: View {
-    let emoji: String
-    let title: String
-    let message: String
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Text(emoji).font(.system(size: 40))
-            Text(title)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(palette.ink)
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(palette.faint)
-                .multilineTextAlignment(.center)
+    private func run(_ action: @escaping (CareStore) async throws -> Void) {
+        guard let store else { return }
+        Task {
+            do { try await action(store) } catch { self.error = "\(error)" }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(32)
-        .background(palette.bg)
     }
 }
