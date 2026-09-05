@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      App Store privacy manifest. Apple has auto-rejected submissions without one
+      since 2024-05-01.
+
+      Moonlog's is short because the app genuinely does very little: there is no
+      analytics, no third-party SDK, no advertising, and no developer-controlled
+      server of any kind. Care records live on the device, and when CloudKit sync is
+      enabled they live in the user's OWN private iCloud database — Apple treats
+      that as user data on the user's own storage, not as data collected by us. So
+      NSPrivacyCollectedDataTypes is deliberately empty rather than omitted.
+
+      Sensitive fields (names, caregiver, notes, temperatures, weights) additionally
+      carry .allowsCloudEncryption — see docs/cloudkit.md.
+    -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <!--
+              UserDefaults, via @AppStorage for the Deep Night preference and the
+              DEBUG-only launch flags. CA92.1 = access info from the same app only.
+            -->
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

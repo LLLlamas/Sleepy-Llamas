@@ -57,8 +57,9 @@ targets:
       - path: Sources/Views
       - path: Sources/Lib
       - path: Sources/Theme
-      # Sources/Shared is added when it lands — XcodeGen errors on a source path
-      # that doesn't exist yet.
+      - path: Resources/Assets.xcassets
+      # App Store Connect auto-rejects an upload without a privacy manifest.
+      - path: Resources/PrivacyInfo.xcprivacy
     dependencies:
       - target: MoonlogCore
         embed: true
@@ -75,6 +76,11 @@ targets:
         # Portrait only. The layout is thumb-zone driven and there is no
         # landscape design; letting it rotate at 3am only causes reflow.
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Declared so App Store Connect stops asking on every upload. The only
+        # cryptography is CloudKit's own field encryption, which uses Apple's
+        # standard crypto and is exempt.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
         ENABLE_USER_SCRIPT_SANDBOXING: YES
