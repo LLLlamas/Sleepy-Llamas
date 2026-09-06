@@ -125,7 +125,7 @@ private struct StoolPicker: View {
     }
 }
 
-struct DiaperEntry {
+struct DiaperEntry: Sendable {
     let at: Date
     let contents: DiaperContents
     let stool: StoolColor?

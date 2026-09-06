@@ -175,16 +175,23 @@ struct TonightView: View {
             logSheet(which, data: data)
         }
         .sheet(item: $editingBaby) { baby in
-            BabyDetailSheet(name: baby.name, accent: baby.accent) { name, accent in
+            BabyDetailSheet(
+                name: baby.name, accent: baby.accent, birthAt: baby.birthAt
+            ) { name, accent, birthAt in
                 // Through the store, not the view's context: writing the model
                 // directly skipped `updateBaby`'s trim and empty-name guard, and the
                 // `try?` meant a failed save still rendered the new name.
                 let wasNamed = baby.name
                 let woreAccent = baby.accent
+                let wasBorn = baby.birthAt
                 let id = baby.id
                 perform("\(name) updated") { store in
-                    try await store.updateBaby(id, name: name, accent: accent)
-                    return { try await $0.updateBaby(id, name: wasNamed, accent: woreAccent) }
+                    try await store.updateBaby(
+                        id, name: name, accent: accent, birthAt: birthAt)
+                    return {
+                        try await $0.updateBaby(
+                            id, name: wasNamed, accent: woreAccent, birthAt: wasBorn)
+                    }
                 }
             }
             .presentationDetents([.medium, .large])
@@ -283,12 +290,15 @@ private extension TonightView {
                     sheet = .extra(kind: kind, babyID: only.id)
                 }
             } else {
-                Menu {
-                    ForEach(data.babies) { baby in
-                        Button(baby.name) { sheet = .extra(kind: kind, babyID: baby.id) }
+                // Flat, not a submenu. Three levels deep in the dark — ellipsis,
+                // then the kind, then the twin — to log one dose of vitamin D.
+                ForEach(data.babies) { baby in
+                    Button(
+                        "Log \(kind.noun.lowercased()) — \(baby.name)",
+                        systemImage: kind.icon
+                    ) {
+                        sheet = .extra(kind: kind, babyID: baby.id)
                     }
-                } label: {
-                    Label("Log \(kind.noun.lowercased())", systemImage: kind.icon)
                 }
             }
         }
@@ -643,15 +653,22 @@ private extension TonightView {
                 if pendingUndo != nil {
                     // Underlined, because colour is never the only signal that
                     // something can be tapped. See `docs/design.md`.
+                    // Padded and shape-clipped, not bare text: the hit region of
+                    // a plain-styled `Text` is the glyph bounds, so the app's one
+                    // six-second recovery from a wrong-twin tap had a target about
+                    // 44×20pt — under both Apple's floor and this app's own 56.
                     Button("Undo") { runUndo() }
                         .font(.subheadline.weight(.semibold))
                         .buttonStyle(.plain)
                         .underline()
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 8)
+                        .contentShape(.rect)
                 }
             }
             .foregroundStyle(palette.accentInk)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 2)
             .background(palette.accent, in: Capsule())
             .shadow(color: palette.backdrop, radius: 8, y: 2)
             // Clears the floating tab bar, which this would otherwise sit under.

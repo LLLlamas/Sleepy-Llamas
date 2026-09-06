@@ -83,14 +83,14 @@ struct FeedSheet: View {
             if method.isBottle {
                 Section("Bottle") {
                     AmountField(unit: unit, ml: $amountMl)
-                    MinutesField(label: "Duration", minutes: $bottleMinutes)
+                    MinutesField(label: "Duration", minutes: $bottleMinutes, step: 5)
                 }
             } else {
                 // Each side separately: one feed commonly uses both, and a single
                 // combined figure cannot express that.
                 Section("Time at breast") {
-                    MinutesField(label: "Left", minutes: $leftMinutes)
-                    MinutesField(label: "Right", minutes: $rightMinutes)
+                    MinutesField(label: "Left", minutes: $leftMinutes, step: 5)
+                    MinutesField(label: "Right", minutes: $rightMinutes, step: 5)
                 }
             }
         }
@@ -108,7 +108,7 @@ struct FeedSheet: View {
     }
 }
 
-struct FeedEntry {
+struct FeedEntry: Sendable {
     let at: Date
     let method: FeedMethod
     let amountMl: Double?

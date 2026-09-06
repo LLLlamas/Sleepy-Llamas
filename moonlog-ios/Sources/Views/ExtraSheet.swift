@@ -3,7 +3,7 @@ import MoonlogCore
 
 /// The opt-in kinds — pumping, a medication, a weight — share one entry, because
 /// each is a time plus one or two fields.
-struct ExtraEntry {
+struct ExtraEntry: Sendable {
     let at: Date
     let pumpedMl: Double?
     let medicationName: String?

@@ -18,10 +18,18 @@ struct SettingsView: View {
     let roster: FamilyRoster
     let onError: (String) -> Void
 
-    @AppStorage("moonlog.deepNight") private var deepNightEnabled = false
+    @AppStorage("moonlog.appearance") private var appearanceRaw = ""
+    /// Retired. Read only so the picker opens on what is actually in force; see
+    /// `AppearancePreference.stored`.
+    @AppStorage("moonlog.deepNight") private var legacyDeepNight = false
     @State private var newTag = ""
     @State private var addingFamily = false
     @State private var addingBaby = false
+    /// The baby whose name, colour or birth date is being corrected. Editing one
+    /// also lives on Tonight, on her card; it is here as well because a wrong
+    /// birth date is a setup mistake, and Tonight has no cards to tap between
+    /// shifts.
+    @State private var editingBaby: Baby?
     /// Drives the push to `HistoryView`. State rather than a `NavigationLink`'s
     /// own routing so there is exactly one way in — a screenshot run can set it,
     /// which a `NavigationLink` cannot be made to do without a second route.
@@ -90,6 +98,18 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $addingFamily) {
             AddFamilySheet(onAdd: roster.create)
+        }
+        .sheet(item: $editingBaby) { baby in
+            let id = baby.id
+            BabyDetailSheet(
+                name: baby.name, accent: baby.accent, birthAt: baby.birthAt
+            ) { name, accent, birthAt in
+                // No Undo here: Settings writes through `StoreWrite.run`, which has
+                // no banner to offer one on. Tonight's copy of this sheet does.
+                run { try await $0.updateBaby(id, name: name, accent: accent, birthAt: birthAt) }
+            } onArchive: {
+                run { try await $0.archiveBaby(id) }
+            }
         }
         .sheet(isPresented: $addingBaby) {
             if let family {
@@ -189,18 +209,29 @@ struct SettingsView: View {
     private func babiesSection(_ family: Family) -> some View {
         Section {
             ForEach(family.activeBabies) { baby in
-                HStack {
-                    BabyChip(name: baby.name, accent: baby.accent)
-                    Spacer()
-                    // The birth date, not "Day N". Day-of-life is pinned to a
-                    // shift everywhere it appears, precisely so it cannot drift
-                    // mid-night; there is no shift in scope here, and computing
-                    // one against `Date()` would put a second, differently-derived
-                    // day number in the app.
-                    Text("Born \(Fmt.nightOf(baby.birthAt, timeZone: family.calendar.timeZone))")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(palette.faint)
+                Button {
+                    Haptics.tap()
+                    editingBaby = baby
+                } label: {
+                    HStack {
+                        BabyChip(name: baby.name, accent: baby.accent)
+                        Spacer()
+                        // The birth date, not "Day N". Day-of-life is pinned to a
+                        // shift everywhere it appears, precisely so it cannot drift
+                        // mid-night; there is no shift in scope here, and computing
+                        // one against `Date()` would put a second, differently-derived
+                        // day number in the app.
+                        Text("Born \(Fmt.nightOf(baby.birthAt, timeZone: family.calendar.timeZone))")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(palette.faint)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(palette.faint)
+                    }
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
+                .accessibilityHint("Edit \(baby.name)")
             }
             Button {
                 Haptics.tap()
@@ -211,7 +242,8 @@ struct SettingsView: View {
         } header: {
             Text("Babies")
         } footer: {
-            Text("Rename a baby or change her colour by tapping her card on Tonight.")
+            Text("Tap a baby to correct her name, colour or birth date. The birth "
+                 + "date is what \"Day 4\" on the handoff counts from.")
         }
         .listRowBackground(palette.raised)
     }
@@ -294,20 +326,37 @@ struct SettingsView: View {
 
     // MARK: - App-wide
 
+    /// Three ways, not a toggle. "Follow phone" gives Day on a phone in Light
+    /// appearance, which is the wrong screen to be holding over a sleeping baby —
+    /// and the only override used to be a switch called Deep Night, whose label
+    /// says nothing about the cream page you are actually trying to escape.
     private var appearanceSection: some View {
         Section {
-            // The one control that makes Deep Night reachable at all. It was
-            // read in three places and written nowhere.
-            Toggle("Deep Night", isOn: $deepNightEnabled)
-                .sensoryFeedback(.selection, trigger: deepNightEnabled)
+            Picker("Appearance", selection: appearanceBinding) {
+                ForEach(AppearancePreference.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .sensoryFeedback(.selection, trigger: appearanceRaw)
         } header: {
             Text("Appearance")
         } footer: {
-            Text("Night and Day follow the system setting. Deep Night is darker "
-                 + "still, for when even Night is too bright — it stays on until "
-                 + "you turn it off.")
+            Text("Follow phone is Night when your phone is in dark mode and Day "
+                 + "when it is not. Night and Deep Night stay dark whatever the "
+                 + "phone is set to; Deep Night is darker still, for when even "
+                 + "Night is too bright.")
         }
         .listRowBackground(palette.raised)
+    }
+
+    private var appearanceBinding: Binding<AppearancePreference> {
+        Binding(
+            get: {
+                AppearancePreference.stored(
+                    raw: appearanceRaw, legacyDeepNight: legacyDeepNight)
+            },
+            set: { appearanceRaw = $0.rawValue })
     }
 
     /// App-wide, not per family. This is how the doula wants the app to behave, and

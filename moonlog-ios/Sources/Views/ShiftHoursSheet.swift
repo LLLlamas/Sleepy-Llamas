@@ -155,7 +155,11 @@ struct ShiftHoursSheet: View {
     /// Names who is still asleep, because that is the fact most likely to change the
     /// answer — the totals clip to the window, so ending now stops counting them.
     private var endWarning: String {
-        let base = "The shift closes for good. This cannot be undone."
+        // Says where the handoff goes as well as what is lost. Ending the shift
+        // is the moment the parents' document is wanted, and the alert used to
+        // describe only the irreversible half.
+        let base = "The shift closes for good. This cannot be undone. "
+            + "The night stays on Summary, with Copy and Share."
         guard !asleep.isEmpty else { return base }
         return "\(asleep.joined(separator: " and ")) "
             + (asleep.count == 1 ? "is" : "are") + " still asleep. " + base

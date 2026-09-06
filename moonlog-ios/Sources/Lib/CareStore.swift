@@ -38,6 +38,7 @@ actor CareStore {
         birthAt: Date
     ) throws -> UUID {
         guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        try rejectFuture(birthAt)
         let existing = family.activeBabies
         let baby = Baby(
             name: name,
@@ -90,7 +91,15 @@ actor CareStore {
 
     /// Accent is the user's choice; the auto-assigned default only makes twins
     /// distinct before anyone picks.
-    func updateBaby(_ babyID: UUID, name: String? = nil, accent: BabyAccent? = nil) throws {
+    /// `birthAt` is here rather than fixed at creation because it was typed once,
+    /// half-asleep, and drives the day of life on every handoff and keepsake page
+    /// from then on. A wrong one was wrong forever.
+    func updateBaby(
+        _ babyID: UUID,
+        name: String? = nil,
+        accent: BabyAccent? = nil,
+        birthAt: Date? = nil
+    ) throws {
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
         if let name {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -98,6 +107,10 @@ actor CareStore {
             baby.name = trimmed
         }
         if let accent { baby.accentRaw = accent.rawValue }
+        if let birthAt {
+            try rejectFuture(birthAt)
+            baby.birthAt = birthAt
+        }
         try modelContext.save()
     }
 

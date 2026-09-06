@@ -221,6 +221,9 @@ struct BabyStatusCard: View {
 
     private func lastSeen(now: Date) -> some View {
         HStack(spacing: 14) {
+            // The glyph changes as well as the colour when a feed is due —
+            // `docs/design.md`: colour is never the only signal. It was the only
+            // signal here, on the one chip that decides the next action.
             chip("drop.fill", baby.lastFeedAt, now: now,
                  empty: "no feed yet", warn: baby.feedIsDue(now: now))
             chip("square.on.square", baby.lastDiaperAt, now: now,
@@ -233,16 +236,26 @@ struct BabyStatusCard: View {
         _ icon: String, _ at: Date?, now: Date, empty: String, warn: Bool
     ) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: icon).font(.caption2)
-            Text(at.map { Fmt.ago($0, now: now) } ?? empty).font(.caption.monospacedDigit())
+            Image(systemName: warn ? "exclamationmark.triangle.fill" : icon)
+                .font(.caption2)
+            Text((at.map { Fmt.ago($0, now: now) } ?? empty) + (warn ? " · due" : ""))
+                .font(.caption.monospacedDigit())
         }
-        .foregroundStyle(warn ? palette.warn : palette.faint)
+        // `soft`, not `faint`, when it is not warning: these two lines are what
+        // decide the next action, and they were the palest text on the card.
+        .foregroundStyle(warn ? palette.warn : palette.soft)
     }
 
+    /// Four, not three. `onNote` was declared here and passed in from `TonightView`
+    /// from the day the card was written, and never called — so the note sheet, the
+    /// note tags in Settings, the temperature field and the fever badge were all
+    /// built, tested and unreachable, and shipped that way. The comment on
+    /// `extraButtons` already said "the card's four controls".
     private var actions: some View {
         HStack(spacing: 8) {
             action("Feed", "drop.fill", onFeed)
             action("Diaper", "square.on.square", onDiaper)
+            action("Note", "text.bubble.fill", onNote)
             // Tinted by the state the button moves *to*, matching its label —
             // "Wake" is gold, "Sleep" is sage, whichever state you are in now.
             action(

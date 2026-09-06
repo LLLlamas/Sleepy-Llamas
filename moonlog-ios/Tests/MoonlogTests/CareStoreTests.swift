@@ -458,6 +458,43 @@ final class CareStoreTests: XCTestCase {
         XCTAssertEqual(baby.accent, .sky)
     }
 
+    /// Typed once, half-asleep, and it sets the day of life on every handoff from
+    /// then on. It was wrong-forever until this landed.
+    func testCorrectingABirthDate() async throws {
+        let (_, mia, _) = try await makeFamilyWithTwins()
+        let corrected = Date(timeIntervalSince1970: 1_786_000_000)
+        try await store.updateBaby(mia, birthAt: corrected)
+
+        let baby = try XCTUnwrap(
+            ModelContext(container)
+                .fetch(FetchDescriptor<Baby>(predicate: #Predicate { $0.id == mia })).first)
+        XCTAssertEqual(baby.birthAt, corrected)
+        XCTAssertEqual(baby.name, "Mia", "name untouched")
+    }
+
+    /// Day-of-life counts from this, so a future birth date would put a negative
+    /// day number on a document the parents read.
+    func testABirthDateCannotBeInTheFuture() async throws {
+        let (_, mia, _) = try await makeFamilyWithTwins()
+        do {
+            try await store.updateBaby(mia, birthAt: Date().addingTimeInterval(86_400))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .futureTimestamp)
+        }
+    }
+
+    func testABabyCannotBeAddedWithAFutureBirthDate() async throws {
+        let family = try await store.createFamily(name: "Okafor")
+        do {
+            _ = try await store.addBaby(
+                to: family, name: "Ada", birthAt: Date().addingTimeInterval(86_400))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .futureTimestamp)
+        }
+    }
+
     /// A blank name would leave a timeline row identified by colour alone.
     func testBlankNameIsRejected() async throws {
         let (_, mia, _) = try await makeFamilyWithTwins()
@@ -467,6 +504,37 @@ final class CareStoreTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? CareStoreError, .emptyName)
         }
+    }
+
+    // MARK: - Who a shift is about
+
+    /// The Summary cards used to come from `activeBabies`, so archiving a baby
+    /// mid-shift erased her totals from the screen while the handoff went on
+    /// naming her — the same bug the document had, fixed only in the document.
+    /// Both call `Handoff.roster` through this now.
+    func testAnArchivedBabyKeepsHerCardForTheNightSheWasHere() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let discharged = try await store.addBaby(
+            to: family, name: "Ada", birthAt: Date(timeIntervalSince1970: 1_787_000_000))
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        _ = try await store.logEvent(
+            kind: .feed, at: shiftStart.addingTimeInterval(600), shiftID: shift, babyID: mia)
+        try await store.archiveBaby(mia)
+        try await store.archiveBaby(discharged)
+
+        let context = ModelContext(container)
+        let familyModel = try XCTUnwrap(
+            context.fetch(FetchDescriptor<Family>(predicate: #Predicate { $0.id == family })).first)
+        let shiftModel = try XCTUnwrap(
+            context.fetch(FetchDescriptor<Shift>(predicate: #Predicate { $0.id == shift })).first)
+
+        XCTAssertEqual(
+            shiftModel.roster(of: familyModel).map(\.name), ["Mia", "Leo"],
+            "Mia logged something tonight; Ada was discharged with nothing logged")
+        XCTAssertEqual(
+            familyModel.activeBabies.map(\.name), ["Leo"],
+            "and the roster is not just the active list")
     }
 
     // MARK: - Babies are archived, never deleted

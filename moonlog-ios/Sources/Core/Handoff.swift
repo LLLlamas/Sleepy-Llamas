@@ -18,6 +18,17 @@ public struct HandoffBaby: Sendable, Identifiable {
     }
 }
 
+/// The two facts the roster rule needs about a baby. `Baby` — the SwiftData model
+/// — conforms in the app, so the Summary cards and the handoff apply one rule
+/// instead of two copies of it, which is how the cards came to disagree with the
+/// document in the first place.
+public protocol RosterMember {
+    var id: UUID { get }
+    var isArchived: Bool { get }
+}
+
+extension HandoffBaby: RosterMember {}
+
 /// The night, written out for the parents.
 ///
 /// Lives in Core, and is a pure function of value types, for two reasons: it is the
@@ -37,9 +48,9 @@ public enum Handoff {
     /// An archived baby with nothing logged stays out — an empty section for a
     /// discharged baby is noise on a page read at 6am. Input order is preserved, so
     /// the caller sorts once (by `sortOrder`) and this never reshuffles the cards.
-    public static func roster(
-        _ babies: [HandoffBaby], loggedFor logged: Set<UUID>
-    ) -> [HandoffBaby] {
+    public static func roster<Member: RosterMember>(
+        _ babies: [Member], loggedFor logged: Set<UUID>
+    ) -> [Member] {
         babies.filter { !$0.isArchived || logged.contains($0.id) }
     }
 

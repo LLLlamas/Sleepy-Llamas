@@ -63,7 +63,30 @@ final class Shift {
         endedAt = date
         isOpen = false
     }
+
+    /// Every baby this shift has anything logged against.
+    ///
+    /// `babyIDRaw`, not `baby?.id` — attribution has to survive both a `.nullify`
+    /// delete and a relationship that is transiently nil during sync, which is the
+    /// same reason the id is denormalised in the first place.
+    var loggedBabyIDs: Set<UUID> {
+        Set(
+            (events ?? []).compactMap(\.babyIDRaw)
+                + (sleepSessions ?? []).compactMap(\.babyIDRaw))
+    }
+
+    /// Who this shift is about: everyone still on the family's roster, plus anyone
+    /// archived that the night actually logged something for. Archiving a baby
+    /// mid-shift used to erase her from the Summary cards while the handoff went on
+    /// naming her, because the rule lived only in the document. It lives in
+    /// `Handoff.roster` now, and both call it.
+    func roster(of family: Family) -> [Baby] {
+        let all = (family.babies ?? []).sorted { $0.sortOrder < $1.sortOrder }
+        return Handoff.roster(all, loggedFor: loggedBabyIDs)
+    }
 }
+
+extension Baby: RosterMember {}
 
 /// Feed, diaper and note in one flat model, discriminated by `kindRaw`. Flat rather
 /// than three models or a class hierarchy — reasoning in `docs/decisions.md`.

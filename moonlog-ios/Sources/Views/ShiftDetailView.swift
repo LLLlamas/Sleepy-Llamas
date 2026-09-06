@@ -185,29 +185,18 @@ enum HandoffComposer {
             + ".html"
     }
 
-    /// The `@Model` → value-type half of the roster rule; the rule itself is
-    /// `Handoff.roster`, which is where it can be tested. Sorted by `sortOrder`
-    /// here, once, for the same reason `activeBabies` is: card position is muscle
-    /// memory, and the handoff should read in that order.
-    ///
-    /// `babyIDRaw`, not `baby?.id` — attribution has to survive both a `.nullify`
-    /// delete and a relationship that is transiently nil during sync, which is the
-    /// same reason the id is denormalised in the first place.
+    /// The `@Model` → value-type half of the handoff. Who is on it is
+    /// `Shift.roster(of:)`, which the Summary cards call too; this only translates
+    /// the result, and `Handoff.roster` is where the rule can be tested.
     private static func roster(family: Family, shift: Shift) -> [HandoffBaby] {
-        let logged = Set(
-            (shift.events ?? []).compactMap(\.babyIDRaw)
-                + (shift.sleepSessions ?? []).compactMap(\.babyIDRaw))
-        let all = (family.babies ?? [])
-            .sorted { $0.sortOrder < $1.sortOrder }
-            .map {
-                HandoffBaby(
-                    id: $0.id, name: $0.name,
-                    dayOfLife: DayOfLife.calendarDay(
-                        birthAt: $0.birthAt, forShift: shift.window,
-                        calendar: family.calendar),
-                    isArchived: $0.isArchived)
-            }
-        return Handoff.roster(all, loggedFor: logged)
+        shift.roster(of: family).map {
+            HandoffBaby(
+                id: $0.id, name: $0.name,
+                dayOfLife: DayOfLife.calendarDay(
+                    birthAt: $0.birthAt, forShift: shift.window,
+                    calendar: family.calendar),
+                isArchived: $0.isArchived)
+        }
     }
 }
 

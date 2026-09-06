@@ -85,9 +85,19 @@ struct LogSheetChrome<Content: View>: View {
                 }
             }
         } label: {
-            Text("Wrong baby?")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(palette.accent)
+            // A `Label` with a chevron, not bare text: this is the app's named
+            // wrong-twin remedy and it rendered as a caption — no border, no
+            // indicator, nothing saying it could be tapped at all.
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.left.arrow.right")
+                Text("Wrong baby?")
+                Image(systemName: "chevron.down")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(palette.accent)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(palette.chip, in: Capsule())
         }
     }
 
@@ -235,6 +245,10 @@ struct LogSheetChrome<Content: View>: View {
 
 /// Minutes stepper with a readable value. Used for feed durations, where a wheel
 /// would be precision nobody has at 3am.
+///
+/// Feeds step by 5. A minute at a time meant fifteen taps for a fifteen-minute
+/// breastfeed — the most repeated interaction of the night, done one-handed — and
+/// the extra precision was never real: nobody times a latch to the minute.
 struct MinutesField: View {
     let label: String
     @Binding var minutes: Int

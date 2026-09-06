@@ -15,6 +15,11 @@ struct SummaryView: View {
     let family: Family
     let shift: Shift?
 
+    /// Closed shifts, newest first — the same query `HistoryView` runs, for the
+    /// same reason it cannot capture `family.id` in the predicate.
+    @Query(filter: #Predicate<Shift> { !$0.isOpen }, sort: \Shift.startedAt, order: .reverse)
+    private var closedShifts: [Shift]
+
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
     @Environment(\.careStore) private var store
@@ -23,12 +28,26 @@ struct SummaryView: View {
     @State private var editingNote = false
     @State private var saveError: String?
 
+    /// The night this screen is about: the running shift, or — the moment it ends —
+    /// the one just finished.
+    ///
+    /// Ending a shift used to empty this screen and take Copy and Share away with
+    /// it, at the exact moment the handoff was finished and wanted. Getting it back
+    /// was four taps through Settings › Past nights, on a different tab, described
+    /// in prose rather than offered as a route.
+    private var shown: Shift? {
+        shift ?? closedShifts.first { $0.familyIDRaw == family.id }
+    }
+
     var body: some View {
         Group {
             if let shift {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     content(shift: shift, now: context.date)
                 }
+            } else if let last = shown {
+                // No `TimelineView`: a finished night's totals do not move.
+                content(shift: last, now: last.endedAt ?? Date())
             } else {
                 EmptyStatePlaceholder(
                     emoji: "📋",
@@ -39,7 +58,7 @@ struct SummaryView: View {
         }
         .moonBackground(palette)
         .toolbar {
-            if let shift {
+            if let shift = shown {
                 ToolbarItem(placement: .topBarTrailing) {
                     // Inside a menu, so each document is composed when it is chosen
                     // rather than on every body evaluation — which also keeps a
@@ -64,7 +83,7 @@ struct SummaryView: View {
             }
         }
         .sheet(isPresented: $editingNote) {
-            if let shift {
+            if let shift = shown {
                 ParentNoteSheet(
                     babyNames: family.activeBabies.map(\.name).joined(separator: " & "),
                     existing: shift.parentNote ?? ""
@@ -88,7 +107,7 @@ struct SummaryView: View {
         // A screenshot affordance, never reachable in a real run — same rationale
         // as the rest of DemoSeed.
         .task {
-            guard DemoSeed.wantsHandoffDump, let shift else { return }
+            guard DemoSeed.wantsHandoffDump, let shift = shown else { return }
             let html = HandoffComposer.html(
                 family: family, shift: shift, now: shift.endedAt ?? Date())
             let url = URL.documentsDirectory.appending(path: "handoff.html")
@@ -157,7 +176,10 @@ struct SummaryCards: View {
         let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
         VStack(spacing: 18) {
             shiftHeader(shift, now: now)
-            ForEach(family.activeBabies) { baby in
+            // `shift.roster(of:)`, not `activeBabies`: a baby archived mid-shift
+            // keeps her card for the night she was actually here, and the cards
+            // agree with the handoff because both apply `Handoff.roster`.
+            ForEach(shift.roster(of: family)) { baby in
                 babyCard(
                     baby,
                     totals: Totals.compute(
@@ -175,8 +197,10 @@ struct SummaryCards: View {
             Text(family.name)
                 .font(.headline)
                 .foregroundStyle(palette.ink)
+            // "ended", not blank: Summary now keeps the night just finished, and
+            // a closed shift that says nothing reads exactly like a running one.
             Text("\(Fmt.clock(shift.startedAt, timeZone: zone)) – \(Fmt.clock(end, timeZone: zone))"
-                 + (shift.isOpen ? " · running" : ""))
+                 + (shift.isOpen ? " · running" : " · ended"))
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(palette.faint)
             if let caregiver = shift.caregiver, !caregiver.isEmpty {

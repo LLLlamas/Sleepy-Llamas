@@ -29,8 +29,11 @@ struct OnboardingView: View {
                 // One row, not two — two rows draw a separator between them.
                 VStack(spacing: 10) {
                     Text("🌙").font(.system(size: 34))
-                    Text("Set up the family you're caring for. You can add a second "
-                         + "baby, and more families, later.")
+                    // Says where, not just "later" — twins are the normal case
+                    // for this user, so the second baby is the expected next act
+                    // and the route to it was never signposted.
+                    Text("Set up the family you're caring for. A second baby, and "
+                         + "more families, go in Settings whenever you need them.")
                         .font(.footnote)
                         .foregroundStyle(palette.faint)
                         .multilineTextAlignment(.center)

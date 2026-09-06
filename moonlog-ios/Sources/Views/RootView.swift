@@ -4,7 +4,10 @@ import MoonlogCore
 
 struct RootView: View {
     /// Theme follows the system appearance, with Deep Night as an explicit override.
-    @AppStorage("moonlog.deepNight") private var deepNightEnabled = false
+    @AppStorage("moonlog.appearance") private var appearanceRaw = ""
+    /// Retired, read once so an existing Deep Night setting survives the change to
+    /// a three-way picker. Never written.
+    @AppStorage("moonlog.deepNight") private var legacyDeepNight = false
 
     /// Read here, in a View. Deriving the theme from this and then applying
     /// `.preferredColorScheme` from that derivation is circular — the forced scheme
@@ -31,9 +34,12 @@ struct RootView: View {
     @State private var error: String?
     @State private var tab = "tonight"
 
+    private var appearance: AppearancePreference {
+        AppearancePreference.stored(raw: appearanceRaw, legacyDeepNight: legacyDeepNight)
+    }
+
     private var theme: MoonTheme {
-        if deepNightEnabled { return .deepNight }
-        return systemScheme == .dark ? .night : .day
+        appearance.theme ?? (systemScheme == .dark ? .night : .day)
     }
 
     private var palette: Palette { Palette.for(theme) }
@@ -51,9 +57,9 @@ struct RootView: View {
         tabs(currentFamily)
             .tint(palette.accent)
             .environment(\.moonTheme, theme)
-            // Only forced for the explicit override. Applying it in the
+            // Only forced for an explicit override. Applying it in the
             // system-following case would latch the theme on its first value.
-            .preferredColorScheme(deepNightEnabled ? .dark : nil)
+            .preferredColorScheme(appearance.theme?.colorScheme)
             .alert(
                 "Something went wrong",
                 isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })

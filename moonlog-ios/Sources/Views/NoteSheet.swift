@@ -137,7 +137,7 @@ private struct TagChips: View {
     }
 }
 
-struct NoteEntry {
+struct NoteEntry: Sendable {
     let at: Date
     let text: String
     let tags: [String]
