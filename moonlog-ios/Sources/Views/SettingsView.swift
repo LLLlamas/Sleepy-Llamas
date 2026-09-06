@@ -162,9 +162,6 @@ struct SettingsView: View {
     }
 
     private func run(_ action: @escaping (CareStore) async throws -> Void) {
-        guard let store else { onError("The data store is unavailable."); return }
-        Task {
-            do { try await action(store) } catch { onError("\(error)") }
-        }
+        StoreWrite.run(store, onError: onError, action)
     }
 }

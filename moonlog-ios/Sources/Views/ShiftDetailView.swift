@@ -1,4 +1,6 @@
 import SwiftUI
+import CoreTransferable
+import UniformTypeIdentifiers
 import SwiftData
 import MoonlogCore
 
@@ -12,7 +14,10 @@ struct ShiftDetailView: View {
     let shift: Shift
 
     @Environment(\.palette) private var palette
+    @Environment(\.careStore) private var store
     @State private var copied = false
+    @State private var editingNote = false
+    @State private var saveError: String?
 
     private var zone: TimeZone {
         TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
@@ -49,9 +54,10 @@ struct ShiftDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                ShareLink(item: HandoffComposer.text(family: family, shift: shift, now: asOf)) {
-                    Image(systemName: "square.and.arrow.up")
-                }
+                // A menu, so the page is only composed when it is actually wanted —
+                // a `ShareLink` in the bare toolbar rebuilds its document on every
+                // body evaluation.
+                shareMenu
             }
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -70,6 +76,69 @@ struct ShiftDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $editingNote) {
+            ParentNoteSheet(
+                babyNames: family.activeBabies.map(\.name).joined(separator: " & "),
+                existing: shift.parentNote ?? ""
+            ) { text in
+                StoreWrite.run(store, onError: { saveError = $0 }) {
+                    try await $0.setShiftNote(shift.id, text: text)
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .alert(
+            "Couldn't save",
+            isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
+        ) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var shareMenu: some View {
+        Menu {
+            ShareLink(
+                item: HandoffPage(
+                    filename: HandoffComposer.filename(family: family, shift: shift),
+                    html: HandoffComposer.html(family: family, shift: shift, now: asOf)),
+                preview: SharePreview(HandoffComposer.filename(family: family, shift: shift))
+            ) {
+                Label("Send the page", systemImage: "doc.richtext")
+            }
+            ShareLink(item: HandoffComposer.text(family: family, shift: shift, now: asOf)) {
+                Label("Send as plain text", systemImage: "text.alignleft")
+            }
+            Divider()
+            Button {
+                editingNote = true
+            } label: {
+                Label(
+                    (shift.parentNote?.isEmpty ?? true)
+                        ? "Add a note to the parents" : "Edit the note to the parents",
+                    systemImage: "square.and.pencil")
+            }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+        }
+    }
+}
+
+/// The keepsake page, shared as an HTML file rather than as a string.
+///
+/// A string would paste raw markup into the message body. As a file the parents get
+/// something they can open, keep, forward, and print to PDF.
+struct HandoffPage: Transferable {
+    let filename: String
+    let html: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .html) { page in
+            Data(page.html.utf8)
+        }
+        .suggestedFileName { $0.filename }
     }
 }
 
@@ -86,6 +155,34 @@ enum HandoffComposer {
             unit: family.volumeUnit,
             timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
             asOf: now)
+    }
+
+    /// The keepsake page. Same roster, same records, same clipping as `text` — the
+    /// two documents describe one night and must not disagree about it.
+    static func html(family: Family, shift: Shift, now: Date) -> String {
+        HandoffHTML.render(
+            babies: roster(family: family, shift: shift),
+            shift: shift.window,
+            caregiver: shift.caregiver,
+            note: shift.parentNote,
+            events: (shift.events ?? []).compactMap(\.snapshot),
+            sessions: (shift.sleepSessions ?? []).compactMap(\.snapshot),
+            unit: family.volumeUnit,
+            timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
+            asOf: now)
+    }
+
+    /// What the share sheet calls the file. Slashes and colons are the two that turn
+    /// a filename into a path or get silently rewritten.
+    static func filename(family: Family, shift: Shift) -> String {
+        let zone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
+        let who = family.activeBabies.map(\.name).joined(separator: " & ")
+        let night = Fmt.nightOf(shift.startedAt, timeZone: zone)
+        let raw = who.isEmpty ? night : "\(who) — \(night)"
+        return raw
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            + ".html"
     }
 
     /// The `@Model` → value-type half of the roster rule; the rule itself is

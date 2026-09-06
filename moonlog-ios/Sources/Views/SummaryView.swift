@@ -18,8 +18,11 @@ struct SummaryView: View {
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
+    @Environment(\.careStore) private var store
 
     @State private var copied = false
+    @State private var editingNote = false
+    @State private var saveError: String?
 
     var body: some View {
         Group {
@@ -45,13 +48,10 @@ struct SummaryView: View {
         .toolbar {
             if let shift {
                 ToolbarItem(placement: .topBarTrailing) {
-                    // Composed at tap time, not at body time: the toolbar is
-                    // outside the tick, so a screen left open for an hour would
-                    // otherwise share an hour-stale document.
-                    ShareLink(item: HandoffComposer.text(
-                        family: family, shift: shift, now: shift.endedAt ?? Date())) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
+                    // Inside a menu, so each document is composed when it is chosen
+                    // rather than on every body evaluation — which also keeps a
+                    // screen left open for an hour from sharing an hour-stale one.
+                    shareMenu(shift)
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -69,6 +69,67 @@ struct SummaryView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $editingNote) {
+            if let shift {
+                ParentNoteSheet(
+                    babyNames: family.activeBabies.map(\.name).joined(separator: " & "),
+                    existing: shift.parentNote ?? ""
+                ) { text in
+                    StoreWrite.run(store, onError: { saveError = $0 }) {
+                        try await $0.setShiftNote(shift.id, text: text)
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
+        .alert(
+            "Couldn't save",
+            isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
+        ) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
+        }
+        #if DEBUG
+        // A screenshot affordance, never reachable in a real run — same rationale
+        // as the rest of DemoSeed.
+        .task {
+            guard DemoSeed.wantsHandoffDump, let shift else { return }
+            let html = HandoffComposer.html(
+                family: family, shift: shift, now: shift.endedAt ?? Date())
+            let url = URL.documentsDirectory.appending(path: "handoff.html")
+            try? Data(html.utf8).write(to: url)
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private func shareMenu(_ shift: Shift) -> some View {
+        let asOf = shift.endedAt ?? Date()
+        Menu {
+            ShareLink(
+                item: HandoffPage(
+                    filename: HandoffComposer.filename(family: family, shift: shift),
+                    html: HandoffComposer.html(family: family, shift: shift, now: asOf)),
+                preview: SharePreview(HandoffComposer.filename(family: family, shift: shift))
+            ) {
+                Label("Send the page", systemImage: "doc.richtext")
+            }
+            ShareLink(item: HandoffComposer.text(family: family, shift: shift, now: asOf)) {
+                Label("Send as plain text", systemImage: "text.alignleft")
+            }
+            Divider()
+            Button {
+                editingNote = true
+            } label: {
+                Label(
+                    (shift.parentNote?.isEmpty ?? true)
+                        ? "Add a note to the parents" : "Edit the note to the parents",
+                    systemImage: "square.and.pencil")
+            }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
         }
     }
 

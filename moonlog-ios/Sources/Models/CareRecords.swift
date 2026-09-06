@@ -11,6 +11,11 @@ final class Shift {
     var endedAt: Date? = nil
     @Attribute(.allowsCloudEncryption) var caregiver: String? = nil
 
+    /// The doula's own sentences to the parents, written at the end of the night and
+    /// editable afterwards. Encrypted: it is free text about somebody's newborn, and
+    /// encryption cannot be added to a field later.
+    @Attribute(.allowsCloudEncryption) var parentNote: String? = nil
+
     /// Denormalised so the query deciding whether the app can log at all is a Bool
     /// comparison, not an optional-Date one. Invariant: `isOpen == (endedAt == nil)`.
     var isOpen: Bool = true

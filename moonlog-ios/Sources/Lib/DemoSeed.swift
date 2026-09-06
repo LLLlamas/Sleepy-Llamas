@@ -54,6 +54,14 @@ enum DemoSeed {
         }
     }
 
+    /// `-moonlogDumpHandoff YES` — writes the keepsake page into the app's Documents
+    /// directory on appear, so the real rendered output can be pulled off the
+    /// simulator and looked at in a browser. Composing it in a test would only prove
+    /// the string; this proves what the parents actually open.
+    static var wantsHandoffDump: Bool {
+        UserDefaults.standard.bool(forKey: "moonlogDumpHandoff")
+    }
+
     /// `-moonlogDemoWrite YES` — performs one real write through the app's own path
     /// on appear, so the confirmation banner and its Undo can be screenshotted.
     /// Deliberately the real `write`, not a faked banner: the thing worth seeing is
@@ -90,6 +98,17 @@ enum DemoSeed {
         leo.family = family
 
         let shift = Shift(startedAt: shiftStart, caregiver: "Cat")
+        // So the keepsake page's note section is reachable in a screenshot run.
+        shift.parentNote = """
+            A settled night overall. Mia took a while to go down after the 9pm feed \
+            but slept solidly once she did — I kept her swaddled and she seemed \
+            comfortable.
+
+            Leo fed well both times and is taking the bottle more easily than \
+            earlier in the week. Nappies all looked normal.
+
+            Everything's in the log below if you want the detail. Sleep well.
+            """
         shift.attach(to: family)
 
         context.insert(family)

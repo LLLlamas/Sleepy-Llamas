@@ -37,8 +37,10 @@ below is on the branch, not in TestFlight.
 | **Wrong-twin remedy: "Wrong baby?" moves a record** | done |
 | **Pump, medication and weight: create, edit and delete** | done |
 | **Archived babies keep their records in the handoff** | done |
+| **The keepsake handoff — responsive HTML for the parents** | done |
+| **A note to the parents, written and editable per shift** | done |
 
-146 tests green (66 in `MoonlogCoreTests`, 80 in `MoonlogTests`).
+159 tests green (79 in `MoonlogCoreTests`, 80 in `MoonlogTests`).
 
 **A caveat worth keeping in view.** Test count is not a proxy for working software
 here, and this project has proved it twice: `Totals.compute` was fully tested and
@@ -62,18 +64,29 @@ duplicates what `MoonClock` exists to provide.
 
 ## Next, in order
 
-1. **CloudKit sync.** Now the only item that loses data outright: deleting the app
-   still deletes every client's record, and there is no export. The code side is
-   done and gated — see `docs/cloudkit.md`, which is now a checklist. It needs the
-   user in Xcode first, and it needs the remote-change trigger below.
-2. **A refresh trigger for remote changes.** Tonight now re-derives on an explicit
-   `refreshToken` after every local write, which was the accident described in the
-   old known-issue #1. A change arriving from *another device* still has nothing to
-   trigger it. This must land before sync is relied on, not after.
-3. **Edit a baby's birth date and the caregiver name.** Both are wrong-forever
-   today, and both appear on the handoff.
-4. **A UI test target.** See the caveat above.
-5. The keepsake handoff document (the PWA's themed, printable page).
+**CloudKit is deferred, not next** — see the correction below and `docs/cloudkit.md`.
+**NFC is backlog**, scoped in `docs/next-features.md` and not being built.
+
+1. **Edit a baby's birth date and the caregiver name.** Both are wrong-forever
+   today, and both appear on the handoff and on the keepsake page.
+2. **A UI test target.** See the caveat above — it is the one piece of tooling that
+   would close the gap this project keeps falling into.
+3. **A re-importable export (JSON to Files).** The keepsake page is what the parents
+   keep; it is not a backup the doula can restore from. This is what would close
+   that, and it is much cheaper and safer than sync.
+4. `SummaryView`'s archived-baby gap (known issue 6 below).
+
+### The backup picture, corrected
+
+An earlier version of this document said there was **"no backup at all."** That was
+wrong, and the error mattered because it ranked the work. Verified: the store is at
+`Library/Application Support/default.store`, nothing in `Sources/` excludes it from
+backup, so it is carried by iCloud Backup and by encrypted Finder backups. A lost or
+replaced phone restores it.
+
+What is genuinely still exposed is narrower: **deleting the app** on a working phone,
+and having no *re-importable* export of your own history. The handoff — text or
+keepsake — is a document for the parents, not something this app can read back.
 
 ## Known issues
 
@@ -81,6 +94,14 @@ Carried over and re-audited on 2026-09-05. The five that could put wrong data in
 front of the parents are fixed; what is left is listed honestly below.
 
 **Fixed since the last audit**
+
+0. The keepsake handoff and the plain text used to describe the same night
+   differently in five places — the page dropped unattributed records and note tags
+   entirely, lost the day of life for a single baby, phrased medication differently,
+   and sourced weight from somewhere else. Fixed by making one phrasing shared
+   between them: `Handoff.warmFeed`, `noteDetail`, `medicationDetail` and
+   `strayLine` are now internal and both renderers call them. **The rule to hold: a
+   fact that appears in both documents is phrased in exactly one place.**
 
 1. ~~Tonight's refresh rests on an accident~~ — fixed *for local writes*. The
    dependency is now an explicit `refreshToken` read in `TonightView.body` and
@@ -165,8 +186,22 @@ xcrun simctl launch <device> com.sleepyllamas.moonlog \
   -moonlogOpenSheet feed|diaper|sleep|note|pump|medication|weight \
   -moonlogEditFirst YES \                      # edit sheet for the newest record
   -moonlogShiftHours end|correct \             # the shift-hours sheet
-  -moonlogDemoWrite YES                        # one real write, for the Undo banner
+  -moonlogDemoWrite YES \                      # one real write, for the Undo banner
+  -moonlogDumpHandoff YES                      # writes the keepsake page to Documents
 ```
+
+`-moonlogDumpHandoff` is how the keepsake page gets looked at, since a string
+assertion cannot tell you whether a document is legible. Pull it off the simulator
+and open it in a browser:
+
+```bash
+C=$(xcrun simctl get_app_container booted com.sleepyllamas.moonlog data)
+cp "$C/Documents/handoff.html" /tmp/ && (cd /tmp && python3 -m http.server 8777 &)
+xcrun simctl openurl booted http://localhost:8777/handoff.html
+```
+
+A `file://` URL will not open in the simulator's Safari; a local server will. The
+demo seed carries a sample note so the note section is reachable.
 
 The demo seed enables all three optional kinds so they are reachable in a
 screenshot run. They stay off by default in a real family.

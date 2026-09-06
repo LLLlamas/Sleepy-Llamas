@@ -147,6 +147,16 @@ actor CareStore {
         try modelContext.save()
     }
 
+    /// The note that goes to the parents. Editable for as long as the shift exists —
+    /// it is the one part of the handoff written rather than recorded, and the
+    /// sentence you want at 6am is rarely the one you had at 5.
+    func setShiftNote(_ shiftID: UUID, text: String?) throws {
+        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        shift.parentNote = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        try modelContext.save()
+    }
+
     /// Corrects a shift's own hours after the fact. Both ends belong to the doula,
     /// which is why `startShift` and `endShift` are handed a time rather than reading
     /// one — ending thirty minutes late widens the window and credits sleep nobody

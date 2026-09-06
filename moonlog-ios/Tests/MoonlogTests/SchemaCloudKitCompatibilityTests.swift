@@ -82,6 +82,7 @@ final class SchemaCloudKitCompatibilityTests: XCTestCase {
         XCTAssertEqual(
             encrypted,
             ["Family.name", "Baby.name", "Baby.birthAt", "Shift.caregiver",
+             "Shift.parentNote",
              "LogEvent.text", "LogEvent.tempF", "LogEvent.medicationName",
              "LogEvent.doseText", "LogEvent.weightGrams"])
     }

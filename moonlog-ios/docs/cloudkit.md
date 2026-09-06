@@ -3,11 +3,71 @@
 Sync is to the user's own private database. All schema constraints below were
 **verified by probe on this machine**, not taken from documentation.
 
+**Deferred, not cancelled — decided 2026-09-05.** Nothing below has been deleted
+because of that: every constraint, trap and checklist step stands for whenever it is
+switched on. What changed is the priority, and one factual claim this document used to
+make. See [Why it is deferred](#why-it-is-deferred).
+
 **The code side is finished.** The app already asks for a CloudKit store when — and
 only when — the build says the entitlement is there, and degrades visibly rather
 than crashing when it is not. What is left is entitlement work in Xcode and the
 developer portal that only the user can do, plus one genuine code gap described
-under [Before switching it on](#before-switching-it-on).
+under [Unsolved for the day it is switched on](#unsolved-for-the-day-it-is-switched-on).
+
+## Why it is deferred
+
+### The store is already in the phone's backup
+
+This document, and `docs/status.md`, used to say there was **"no backup at all"** until
+sync existed. That was overstated, and the error mattered because it ranked the work —
+it made CloudKit look like the only thing standing between the doula and losing a year
+of nights.
+
+`ModelContainerFactory` opens `ModelConfiguration` without a `url:`, so the store goes
+to SwiftData's default location: `Library/Application Support/default.store`, confirmed
+on a running simulator. Nothing in `Sources/` sets `isExcludedFromBackupKey` on it, and
+`Library/Application Support` is included in iCloud Backup and in an encrypted Finder
+backup. A lost, broken or replaced phone therefore restores the data along with the
+rest of the device.
+
+### What CloudKit actually adds
+
+Three things, and nothing more:
+
+- **Surviving deletion of the app itself** on a working phone. A device backup restores
+  a phone; it does not bring back an app the user deleted and reinstalled.
+- **Multiple devices writing the same records.** A backup is a one-way restore of a
+  snapshot. Sync is two writers reconciling, which is a different problem.
+- **Continuous sync**, rather than whatever the last nightly backup happened to catch —
+  iCloud Backup runs when the phone is locked, charging and on Wi-Fi.
+
+### The decision
+
+For one doula with one phone, whose per-shift summary is sent to the family anyway,
+that is a narrow gain against a large amount of launch risk: see
+[The launch-crash trap](#the-launch-crash-trap), which is not a hypothetical here — the
+app died that way once already. So it waits, and the checklist below waits with it,
+intact.
+
+### What brings it back
+
+**An Apple Watch app that writes records directly** rather than handing them to the
+phone. That is option A in `docs/next-features.md`, where it is already the open
+question the whole Watch design hangs on: a watch with its own store is a second
+device, and the moment a second device exists, sync stops being a convenience and
+becomes a correctness requirement. A second phone or an iPad does the same.
+
+### The residual risk, stated plainly
+
+A handoff — plain text or keepsake page — is **not a restorable backup.** It is a
+document for the parents, and nothing in this app can read one back in. So in the case
+device backup does not cover — a phone lost and *not* restored, because no backup was
+taken or one was declined at setup — the families still have their summaries and the
+doula cannot get her own history back.
+
+The thing that would close that is a **re-importable export** (JSON to Files), which is
+cheaper and far safer than sync. It is **not built**; `docs/status.md` carries it in the
+ordered list.
 
 ## What the code already does
 
@@ -39,6 +99,9 @@ mentions CloudKit.
 > touches `SettingsView`, not to this document.
 
 ## Switching it on — the checklist
+
+**None of this has been done, and none of it is scheduled.** It is kept whole so that
+switching sync on later is a matter of following the list rather than rediscovering it.
 
 Steps 1–4 are Apple-side and are yours to do. **Step 6 must come last**, because the
 flag without the entitlement is the launch crash described below, and the entitlement
@@ -166,7 +229,10 @@ reports `nil`, and using it would disable sync forever on a correctly configured
 Hence a compile flag, and hence the discipline about flipping it at the same moment as
 the capability.
 
-## Before switching it on
+## Unsolved for the day it is switched on
+
+*Referred to elsewhere — including `docs/next-features.md` — as "before switching it
+on". Deferring CloudKit does not fix this. It only postpones the day it matters.*
 
 **One screen has no way to learn about a change that arrives from another device.**
 
@@ -211,8 +277,10 @@ Treat the following as a direction to investigate, not as code to paste:
 Whatever shape it takes, it has to be proved with **two real devices signed into the
 same iCloud account**: log a feed on one, watch the other's Tonight screen without
 touching it. A simulator pair and a single-device test both pass without exercising
-the thing that is broken. Until that test has actually been run, sync is a backup
-mechanism, not a live shared view — which is fine, but say so rather than assuming.
+the thing that is broken. Until that test has actually been run, sync is a way records
+reach the other device eventually, not a live shared view — which may be fine, but it
+has to be said rather than assumed. It is emphatically not the reason to turn sync on:
+the backup case is already covered, as above.
 
 ## Verified schema constraints
 
@@ -261,12 +329,15 @@ store that silently refuses to open. It has been mutation-verified.
 
 ## Irreversible, decide before the schema reaches production
 
-- ~~**Field-level encryption**~~ — **applied 2026-09-05.** Nine fields, matching the
+- ~~**Field-level encryption**~~ — **applied 2026-09-05.** Ten fields, matching the
   set pinned in the test: `Family.name`, `Baby.name`, `Baby.birthAt`,
-  `Shift.caregiver`, `LogEvent.text`, `LogEvent.tempF`, `LogEvent.medicationName`,
-  `LogEvent.doseText`, `LogEvent.weightGrams`. `Baby.birthAt` **is** encrypted despite
-  being a timestamp — it identifies a child and is never filtered on. Everything
-  queried — event times, enums, ids, flags — stays in the clear.
+  `Shift.caregiver`, `Shift.parentNote`, `LogEvent.text`, `LogEvent.tempF`,
+  `LogEvent.medicationName`, `LogEvent.doseText`, `LogEvent.weightGrams`.
+  `Baby.birthAt` **is** encrypted despite being a timestamp — it identifies a child and
+  is never filtered on. `Shift.parentNote` — the doula's own sentences to the family —
+  was introduced encrypted for the same reason, and the pinned set was updated in the
+  same change rather than after it. Everything queried — event times, enums, ids,
+  flags — stays in the clear.
 
   An encrypted field must be *newly introduced*; an existing one can never be
   converted, and encrypted fields cannot be indexed. A second test asserts that

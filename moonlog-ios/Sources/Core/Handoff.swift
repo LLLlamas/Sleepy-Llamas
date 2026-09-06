@@ -175,7 +175,11 @@ public enum Handoff {
     }
 
     /// Prose, not chips. "left breast — 18 min" reads; "Breast L · 18m" does not.
-    private static func warmFeed(_ feed: EventSnapshot, unit: VolumeUnit) -> String {
+    ///
+    /// Internal rather than private so `HandoffHTML` describes a feed with exactly
+    /// these words. Two documents about the same night that phrase it differently
+    /// is how the parents end up asking which one is right.
+    static func warmFeed(_ feed: EventSnapshot, unit: VolumeUnit) -> String {
         var parts: [String] = []
         switch feed.feedMethod {
         case .breast, .none:
@@ -207,6 +211,29 @@ public enum Handoff {
             parts.append("feed")
         }
         return parts.joined(separator: " — ")
+    }
+
+    /// What a note actually says. Shared with `HandoffHTML` so the keepsake page and
+    /// the plain text describe one note identically — the keepsake used to drop the
+    /// tags, which meant a note logged as "Spit-up" and nothing else reached the
+    /// parents as a timestamp with no words next to it.
+    static func noteDetail(_ note: EventSnapshot) -> String {
+        var pieces: [String] = []
+        if let text = note.text, !text.isEmpty { pieces.append(text) }
+        if !note.noteTags.isEmpty { pieces.append(note.noteTags.joined(separator: ", ")) }
+        if let temp = note.tempF {
+            pieces.append(String(format: "%.1f°F", temp)
+                + (temp >= ShiftTotals.feverThresholdF ? " — tell the parents" : ""))
+        }
+        return pieces.isEmpty ? "note" : pieces.joined(separator: " · ")
+    }
+
+    /// Shared for the same reason. The `filter` is load-bearing: `compactMap` alone
+    /// keeps an empty string, which renders as a dangling separator.
+    static func medicationDetail(_ event: EventSnapshot) -> String {
+        let what = [event.medicationName, event.doseText]
+            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
+        return what.isEmpty ? "given" : what
     }
 
     private static func diaperBlock(_ totals: ShiftTotals) -> [String] {
@@ -254,10 +281,8 @@ public enum Handoff {
         if !meds.isEmpty {
             out.append("💊  Medication · \(meds.count)")
             for med in meds {
-                let what = [med.medicationName, med.doseText]
-                    .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
                 out.append("     \(Fmt.shortClock(med.at, timeZone: timeZone))  "
-                    + (what.isEmpty ? "given" : what))
+                    + medicationDetail(med))
             }
         }
         if let grams = totals.latestWeightGrams {
@@ -304,7 +329,8 @@ public enum Handoff {
 
     /// Terser than the per-baby blocks on purpose: without a name to head them,
     /// these lines have to say what each record was.
-    private static func strayLine(_ event: EventSnapshot, unit: VolumeUnit) -> String {
+    /// Internal so `HandoffHTML` describes a stray record with the same words.
+    static func strayLine(_ event: EventSnapshot, unit: VolumeUnit) -> String {
         switch event.kind {
         case .feed:
             return warmFeed(event, unit: unit)
@@ -318,9 +344,8 @@ public enum Handoff {
             if let text = event.text, !text.isEmpty { return text }
             return event.noteTags.isEmpty ? "note" : event.noteTags.joined(separator: ", ")
         case .medication:
-            let what = [event.medicationName, event.doseText]
-                .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
-            return what.isEmpty ? "medication given" : "medication — \(what)"
+            let what = medicationDetail(event)
+            return what == "given" ? "medication given" : "medication — \(what)"
         case .measurement:
             guard let grams = event.weightGrams else { return "measurement" }
             return "weighed \(Fmt.weight(grams: grams, unit: unit))"
@@ -340,16 +365,8 @@ public enum Handoff {
         guard !notes.isEmpty else { return [] }
         var out = ["📝  Notes"]
         for note in notes {
-            var line = "     \(Fmt.shortClock(note.at, timeZone: timeZone))  "
-            var pieces: [String] = []
-            if let text = note.text, !text.isEmpty { pieces.append(text) }
-            if !note.noteTags.isEmpty { pieces.append(note.noteTags.joined(separator: ", ")) }
-            if let temp = note.tempF {
-                pieces.append(String(format: "%.1f°F", temp)
-                    + (temp >= ShiftTotals.feverThresholdF ? " — tell the parents" : ""))
-            }
-            line += pieces.isEmpty ? "note" : pieces.joined(separator: " · ")
-            out.append(line)
+            out.append("     \(Fmt.shortClock(note.at, timeZone: timeZone))  "
+                + noteDetail(note))
         }
         return out
     }

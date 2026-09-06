@@ -215,13 +215,7 @@ struct RootView: View {
     }
 
     private func run(_ action: @escaping (CareStore) async throws -> Void) {
-        guard let store else {
-            error = "The data store is unavailable."
-            return
-        }
-        Task {
-            do { try await action(store) } catch { self.error = "\(error)" }
-        }
+        StoreWrite.run(store, onError: { error = $0 }, action)
     }
 }
 

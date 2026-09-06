@@ -4,6 +4,152 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## CloudKit deferred; the phone's own backup already covers the loss case
+**2026-09-05**
+
+Sync was ranked first on the strength of a claim that turns out to be wrong: that a
+lost phone means a lost year of nights. It does not. `ModelConfiguration` is opened
+without a `url:`, so the store sits at `Library/Application Support/default.store` —
+confirmed on a running simulator — and nothing in `Sources/` excludes it from backup.
+That directory is carried by iCloud Backup and by an encrypted Finder backup, so a
+broken, lost or replaced phone restores it with the rest of the device.
+
+What CloudKit adds on top of that is narrower than it looked: surviving deletion of the
+app itself on a working phone, more than one device writing the same records, and
+continuous sync rather than nightly-when-locked-and-charging. Against that sits the
+launch-crash trap — requesting a CloudKit store without the entitlement kills the app on
+a background queue with no catchable error, and this app has already died that way once.
+For one doula with one phone, whose per-shift summary is sent to the family anyway, that
+is a large amount of launch risk for a narrow gain.
+
+Deferred, not cancelled. `docs/cloudkit.md` keeps the whole checklist, every verified
+constraint and every trap, because none of it stopped being true. What is honestly still
+open is that a handoff — text or keepsake — is a document for the parents, not something
+this app can read back: if a phone is lost and never restored, the families keep their
+summaries and the doula loses her own history. A re-importable export is the cheap thing
+that closes that, and it is not built.
+
+*Reverses if:* a Watch app writes records directly rather than handing them to the
+phone, or a second device is added at all — at which point sync stops being a
+convenience and becomes a correctness requirement.
+
+---
+
+## The keepsake handoff is responsive HTML, shared as a file
+**2026-09-05**
+
+`Handoff.text` exists to be pasted into Messages at 6am. The document the family keeps
+afterwards is a different job, so `HandoffHTML` renders the same night as a page, from
+the same records and the same `Totals.compute`.
+
+Self-contained is a requirement rather than a preference: no external stylesheet, font,
+script or image. The page is forwarded, saved to Files and opened offline months later,
+so anything fetched over the network is either missing by then or is a request that
+tells a third party the exact moment the parents opened it. Hence an inline stylesheet.
+It is written mobile-first for the plain reason that they read it on a phone, straight
+out of Messages — the stat tiles reflow with `auto-fit` and there are no breakpoints to
+maintain.
+
+It ships as a `Transferable` **file** — `HandoffPage` in
+`Sources/Views/ShiftDetailView.swift`, a `DataRepresentation(exportedContentType: .html)`
+with a suggested filename — and not as a `String`. `ShareLink` on a string pastes raw
+markup into the message body. As a file the parents get something they can open, keep,
+forward and print.
+
+No PDF renderer was written and none is needed: the page carries a print stylesheet
+(white ground, and no baby's card split across a page break), and Save to PDF goes
+through print, so a PDF costs nothing beyond CSS that already had to exist.
+
+Fraunces is still the intended face for this document and is still not bundled, and
+nothing may be fetched, so `ui-serif, Georgia, "Times New Roman", serif` carries the
+brand moments — the same compromise recorded further down for the app itself, and a
+smaller one on a page than on a screen.
+
+*Reverses if:* a font file is bundled, or the family needs something one self-contained
+HTML file cannot express.
+
+---
+
+## The parents' note lives on the `Shift`, encrypted, and stays editable
+**2026-09-05**
+
+The doula's own sentences to the family are `Shift.parentNote`: one optional `String` on
+the shift, written through `CareStore.setShiftNote`, which trims and stores `nil` for an
+empty result so a whitespace note cannot render an empty block on the keepsake page. It
+belongs to the shift rather than to a `LogEvent` because it is about the night as a
+whole, and it is the one part of the handoff that is composed rather than logged — so it
+stays editable after the shift has ended, from both Summary and a past night's detail.
+
+It carried `@Attribute(.allowsCloudEncryption)` from the moment it was introduced,
+because that is the only moment it can: an existing field can never be converted
+to an encrypted one, so a note that shipped in the clear would stay in the clear for the
+life of the schema, and this is free text about somebody's newborn. The pinned set in
+`Tests/MoonlogTests/SchemaCloudKitCompatibilityTests.swift` was updated deliberately in
+the same change. That test exists precisely so a new sensitive field cannot arrive
+unencrypted by omission.
+
+*Reverses if:* nothing cheap. Once the schema reaches production this is one of the
+decisions that cannot be taken back.
+
+---
+
+## One phrasing per fact, shared between the two handoff documents
+**2026-09-05**
+
+A review read the keepsake page against the plain text for the same night and found five
+places where they described it differently. The page dropped unattributed records
+entirely; it dropped a note's tags, so a note logged as "Spit-up" and nothing else
+reached the parents as a timestamp with no words beside it; it lost the day of life when
+the family had one baby; it phrased a medication differently and leaked a dangling
+separator when the dose was an empty string; and it took the weight from somewhere other
+than where the text took it.
+
+Individually these are small. Together they are two accounts of one night with no way
+for the family to tell which is the record, which is the exact failure the whole area
+exists to avoid.
+
+The fix was not to re-check the renderers against each other, which only holds until the
+next change. `Handoff.warmFeed`, `noteDetail`, `medicationDetail` and `strayLine` became
+internal rather than private, and `HandoffHTML` now calls them. Both documents already
+derived their numbers from `Totals.compute`; now they derive their words from one place
+too. The rule for anything added later: **a fact that appears in both documents is
+phrased in exactly one place.**
+
+The 14 string-exact tests over `Handoff.text` are what made the extraction safe. They
+assert the actual words of a feed, a note and a stray record, and they passed unchanged,
+which is the evidence that moving the helpers changed nothing the doula has already read
+at 6am. The keepsake's own tests assert on meaningful substrings instead of a golden
+file, so a CSS tweak cannot train anyone to re-bless a diff without reading it.
+
+*Reverses if:* the two documents ever need to say one fact differently on purpose — in
+which case the difference belongs in one function with a parameter, not in two
+renderers.
+
+---
+
+## `StoreWrite` for the screens whose only job on failure is to say so
+**2026-09-05**
+
+`RootView` and `SettingsView` had each grown the same six lines: unwrap the optional
+store, spawn a `Task`, `try await` the write, put the error into an alert. Adding the
+note to the parents would have made four copies. `Sources/Lib/StoreWrite.swift` is that
+shape written once — a `@MainActor enum` with a single `run(_:onError:_:)`.
+
+The line count is not the point. The failure path is: a care log that silently drops a
+write is worse than one that stops and says so, so no caller gets to leave the `catch`
+empty, and a missing store is reported in words rather than returned into silence.
+
+`TonightView` deliberately keeps its own path. It also owns the confirmation banner, the
+per-baby busy lock and Undo — its `perform` returns the action that reverses the write —
+and none of that belongs in a helper the other four screens would then have to opt out
+of. A shared abstraction that one caller has to work around is worse than two paths that
+are honest about doing different jobs.
+
+*Reverses if:* a second screen needs Undo, at which point the two paths should be merged
+rather than the Tonight one copied.
+
+---
+
 ## Time rules live in `CareStore`, with a minute of slack for clock skew
 **2026-09-05**
 
