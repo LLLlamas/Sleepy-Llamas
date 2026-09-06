@@ -6,8 +6,12 @@ Updated 2026-09-05.
 specific build: it is local-only, and it **contains the DEBUG demo seed** (a fake
 twin night), because `DEBUG` was defined in the Release configuration. Fixed
 afterwards, and `scripts/archive.sh` now fails an archive that carries debug code.
-Do not run a real shift on that build. Nothing since has been archived — everything
-below is on the branch, not in TestFlight.
+Do not run a real shift on that build.
+
+**A clean archive now exists**: 0.1.0 (1788666101), 2026-09-05, verified by
+`scripts/archive.sh` to contain no debug-only code. It has **not been uploaded** —
+it is sitting in Organizer waiting for a decision. It is local-only by design
+(CloudKit deferred) and carries everything below.
 
 ## Built
 
@@ -67,14 +71,23 @@ duplicates what `MoonClock` exists to provide.
 **CloudKit is deferred, not next** — see the correction below and `docs/cloudkit.md`.
 **NFC is backlog**, scoped in `docs/next-features.md` and not being built.
 
-1. **Edit a baby's birth date and the caregiver name.** Both are wrong-forever
-   today, and both appear on the handoff and on the keepsake page.
+1. **Edit a baby's birth date.** Wrong-forever today, and it drives day-of-life on
+   both the handoff and the keepsake page.
 2. **A UI test target.** See the caveat above — it is the one piece of tooling that
    would close the gap this project keeps falling into.
-3. **A re-importable export (JSON to Files).** The keepsake page is what the parents
-   keep; it is not a backup the doula can restore from. This is what would close
-   that, and it is much cheaper and safer than sync.
-4. `SummaryView`'s archived-baby gap (known issue 6 below).
+3. `SummaryView`'s archived-baby gap (known issue 6 below).
+
+**Dropped on 2026-09-05, deliberately:**
+
+- *Editing the caregiver name.* It is one person, every night. The field is already
+  `@AppStorage("moonlog.lastCaregiver")`, so it is typed once and pre-filled from
+  then on; `Shift.caregiver` is a snapshot taken at start. Correcting it on an
+  already-started shift is the only thing not possible, and it does not matter when
+  the answer never changes.
+- *A JSON export.* The on-disk store persists across launches and is carried by the
+  phone's own backup, which covers the case this would have covered. Revisit only if
+  a phone is ever lost *without* a restore, or if history has to move between
+  devices.
 
 ### The backup picture, corrected
 

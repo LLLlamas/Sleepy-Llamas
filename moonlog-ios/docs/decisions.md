@@ -4,6 +4,27 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## No JSON export, and the caregiver is named once
+
+**2026-09-05**
+
+Both were on the next list and both came off it after the user weighed them.
+
+The caregiver is one person every night — the doula this app is built for. The
+field is already `@AppStorage("moonlog.lastCaregiver")`, typed once and pre-filled
+from then on, and `Shift.caregiver` is the snapshot taken when the shift started so
+past handoffs keep saying what they said. Building an editor for a value that never
+changes would be work spent on a screen nobody opens twice.
+
+The JSON export was proposed as the thing that would make history restorable
+without CloudKit. It came off for the same reason CloudKit did: the store persists
+across launches and is carried by the phone's own backup, so the loss case it
+guarded against is already covered. What remains uncovered is deleting the app
+itself, which no export prevents either unless it has been run recently.
+
+*Reverses if:* a second caregiver ever works these shifts, or history has to move
+between devices without a full device restore.
+
 ## CloudKit deferred; the phone's own backup already covers the loss case
 **2026-09-05**
 

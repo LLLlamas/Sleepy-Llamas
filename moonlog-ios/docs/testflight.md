@@ -51,6 +51,20 @@ end shift. Add-baby and end-shift live in the Tonight toolbar.
   parents rather than something the app can read back.
 - **NFC.** Backlog. Needs the entitlement on the App ID and has no UI yet.
 
+## Ready to test — 0.1.0 (1788666101)
+
+Archived 2026-09-05 and **not yet uploaded**. The guard passed: no `moonlogSeedDemo`,
+`moonlogOpenSheet`, `moonlogEditFirst`, `moonlogShiftHours`, `moonlogDemoWrite` or
+`moonlogDumpHandoff` in the Release binary, so the demo seed and every screenshot
+hook are compiled out. The Release build is also warning-free.
+
+Unlike the first build, this one is safe to run a real shift on. It is local-only —
+that is the decision, not an omission — and the store persists across launches and
+is carried by the phone's own backup.
+
+To put it on a device: Xcode → Window → Organizer → Archives → the 23.41 archive →
+Distribute App → TestFlight.
+
 ## The archive ritual
 
 ```bash

@@ -33,7 +33,9 @@ BINARY="${DEST}/${NAME}/Products/Applications/Moonlog.app/Moonlog"
 
 # Markers that only exist inside `#if DEBUG`. If any survives, DEBUG leaked into
 # the Release configuration and the demo seed is reachable in a shipped build.
-LEAKED=$(strings "$BINARY" | grep -cE "moonlogSeedDemo|moonlogOpenSheet" || true)
+LEAKED=$(strings "$BINARY" | grep -cE \
+  "moonlogSeedDemo|moonlogOpenSheet|moonlogEditFirst|moonlogShiftHours|moonlogDemoWrite|moonlogDumpHandoff" \
+  || true)
 if [ "$LEAKED" -ne 0 ]; then
   echo "error: debug-only code is present in the Release binary (${LEAKED} markers)." >&2
   echo "       Check SWIFT_ACTIVE_COMPILATION_CONDITIONS is per-config, not in base." >&2

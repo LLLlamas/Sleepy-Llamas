@@ -211,8 +211,7 @@ struct SummaryCards: View {
         // number for the same baby in the same session.
         let dayOfLife = DayOfLife.calendarDay(
             birthAt: baby.birthAt, forShift: shift.window, calendar: family.calendar)
-        return
-        VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 BabyChip(name: baby.name, accent: baby.accent)
                 Spacer()
