@@ -8,6 +8,8 @@ struct FeedSheet: View {
     let editing: FeedEntry?
     let onSave: (FeedEntry) -> Void
     var onDelete: (() -> Void)?
+    /// Forwarded to the chrome; set only when editing.
+    var reassignment: Reassignment?
 
     @State private var at: Date
     @State private var method: FeedMethod
@@ -21,6 +23,7 @@ struct FeedSheet: View {
         shift: ShiftWindow,
         unit: VolumeUnit,
         editing: FeedEntry? = nil,
+        reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
         onSave: @escaping (FeedEntry) -> Void
     ) {
@@ -29,6 +32,7 @@ struct FeedSheet: View {
         self.unit = unit
         self.editing = editing
         self.onDelete = onDelete
+        self.reassignment = reassignment
         self.onSave = onSave
         _at = State(initialValue: editing?.at ?? Date())
         _method = State(initialValue: editing?.method ?? .breast)
@@ -58,6 +62,7 @@ struct FeedSheet: View {
             accent: baby.accent.color(for: theme),
             at: $at,
             shift: shift,
+            reassignment: reassignment,
             saveEnabled: hasContent,
             onSave: save,
             onDelete: onDelete

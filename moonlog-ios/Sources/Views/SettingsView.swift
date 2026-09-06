@@ -76,7 +76,7 @@ struct SettingsView: View {
 
             Section {
                 LabeledContent("Storage", value: storageLabel)
-                LabeledContent("Sync", value: "Off — this device only")
+                LabeledContent("Sync", value: syncLabel)
             } header: {
                 Text("Data")
             } footer: {
@@ -128,12 +128,25 @@ struct SettingsView: View {
         }
     }
 
+    /// Read from the mode rather than hardcoded. It used to say "Off" flatly, which
+    /// would have gone on saying it after the iCloud capability landed — while the
+    /// line directly above it said "iCloud".
+    private var syncLabel: String {
+        switch ModelContainerFactory.mode {
+        case .syncing: return "On"
+        case .localOnly, .inMemory: return "Off — this device only"
+        }
+    }
+
     private var storageFooter: String {
         switch ModelContainerFactory.mode {
         case .inMemory:
             return "⚠︎ The on-disk store failed to open. Anything logged now is lost "
                 + "when the app closes. Restart the app before relying on it."
-        default:
+        case .syncing:
+            return "Records sync to your iCloud account, so they survive losing this "
+                + "phone."
+        case .localOnly:
             return "Records stay on this phone. There is no backup yet — deleting the "
                 + "app deletes the records."
         }

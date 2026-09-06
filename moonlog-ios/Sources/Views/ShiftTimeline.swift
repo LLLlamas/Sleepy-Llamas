@@ -26,11 +26,12 @@ enum ShiftTimeline {
                     icon: event.kind.icon,
                     title: event.timelineTitle(unit: unit),
                     detail: event.timelineDetail(unit: unit),
-                    // Only the three core kinds have edit sheets. Routing a pump or
-                    // a weight here opened a note sheet against it, which could
-                    // write note fields onto a record that never renders them.
-                    edit: editable && EventKind.core.contains(event.kind)
-                        ? event.babyIDRaw.map { .editEvent(id: event.id, babyID: $0) }
+                    // Every kind has its own edit sheet now. A pump carries no
+                    // baby, so it routes with a nil one rather than staying inert —
+                    // which is what kept pumps, medications and weights
+                    // uncorrectable once logged.
+                    edit: editable
+                        ? .editEvent(id: event.id, babyID: event.babyIDRaw)
                         : nil))
         }
 

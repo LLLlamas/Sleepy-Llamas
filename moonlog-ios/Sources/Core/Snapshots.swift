@@ -47,9 +47,13 @@ public struct ShiftWindow: Sendable, Hashable {
 // Raw values are WIRE FORMAT: they become CloudKit fields, and a promoted schema is
 // additive-only. Add cases freely; never rename an existing value.
 //
-// Each has an `unknown` case that is never written but is always readable, so an
-// older build receiving a record from a newer one degrades gracefully instead of
-// failing to decode.
+// Where a value can arrive from a newer build, there is an `unknown` case that is
+// never written but is always readable, so the older build degrades gracefully
+// instead of decoding it as something else.
+//
+// `EventKind` is the exception and it is a known gap: `LogEvent.kind` falls back to
+// `.note`, so a kind added later would read here as a note. Closing it means adding
+// a case to several exhaustive switches — see `docs/status.md`.
 
 public enum EventKind: String, Sendable, CaseIterable {
     case feed, diaper, note
@@ -191,6 +195,10 @@ public enum TagAction: String, Sendable, CaseIterable {
     case toggleSleep = "toggle-sleep"
     case logFeed = "log-feed"
     case logDiaper = "log-diaper"
+    /// Never written. Without it the fallback was `.logDiaper`, so a tag bound as
+    /// "feed" by a newer build would have logged a diaper on this one — a record of
+    /// something that never happened, in the parents' handoff.
+    case unknown
 }
 
 

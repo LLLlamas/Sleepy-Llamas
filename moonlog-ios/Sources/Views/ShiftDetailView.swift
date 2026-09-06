@@ -31,10 +31,14 @@ struct ShiftDetailView: View {
                     entries: ShiftTimeline.entries(
                         for: shift, unit: family.volumeUnit, now: asOf, editable: false),
                     timeZone: zone,
+                    // Every baby, not just the active ones: these are lookups for
+                    // rows that already exist, and a night logged before a baby was
+                    // archived still has her rows in it. Filtering here rendered them
+                    // nameless and colourless — the same gap the handoff had.
                     names: Dictionary(
-                        uniqueKeysWithValues: family.activeBabies.map { ($0.id, $0.name) }),
+                        uniqueKeysWithValues: (family.babies ?? []).map { ($0.id, $0.name) }),
                     accents: Dictionary(
-                        uniqueKeysWithValues: family.activeBabies.map { ($0.id, $0.accent) }))
+                        uniqueKeysWithValues: (family.babies ?? []).map { ($0.id, $0.accent) }))
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -74,13 +78,7 @@ struct ShiftDetailView: View {
 enum HandoffComposer {
     static func text(family: Family, shift: Shift, now: Date) -> String {
         Handoff.text(
-            babies: family.activeBabies.map {
-                HandoffBaby(
-                    id: $0.id, name: $0.name,
-                    dayOfLife: DayOfLife.calendarDay(
-                        birthAt: $0.birthAt, forShift: shift.window,
-                        calendar: family.calendar))
-            },
+            babies: roster(family: family, shift: shift),
             shift: shift.window,
             caregiver: shift.caregiver,
             events: (shift.events ?? []).compactMap(\.snapshot),
@@ -88,6 +86,31 @@ enum HandoffComposer {
             unit: family.volumeUnit,
             timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
             asOf: now)
+    }
+
+    /// The `@Model` → value-type half of the roster rule; the rule itself is
+    /// `Handoff.roster`, which is where it can be tested. Sorted by `sortOrder`
+    /// here, once, for the same reason `activeBabies` is: card position is muscle
+    /// memory, and the handoff should read in that order.
+    ///
+    /// `babyIDRaw`, not `baby?.id` — attribution has to survive both a `.nullify`
+    /// delete and a relationship that is transiently nil during sync, which is the
+    /// same reason the id is denormalised in the first place.
+    private static func roster(family: Family, shift: Shift) -> [HandoffBaby] {
+        let logged = Set(
+            (shift.events ?? []).compactMap(\.babyIDRaw)
+                + (shift.sleepSessions ?? []).compactMap(\.babyIDRaw))
+        let all = (family.babies ?? [])
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map {
+                HandoffBaby(
+                    id: $0.id, name: $0.name,
+                    dayOfLife: DayOfLife.calendarDay(
+                        birthAt: $0.birthAt, forShift: shift.window,
+                        calendar: family.calendar),
+                    isArchived: $0.isArchived)
+            }
+        return Handoff.roster(all, loggedFor: logged)
     }
 }
 

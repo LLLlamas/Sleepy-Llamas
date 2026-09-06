@@ -5,11 +5,16 @@ public struct HandoffBaby: Sendable, Identifiable {
     public let id: UUID
     public let name: String
     public let dayOfLife: Int
+    /// Discharged, but their history did not go anywhere. Only `roster` reads this;
+    /// once a baby is in the roster the rest of the handoff treats them like any
+    /// other. Defaulted, so a caller that has no notion of archiving is unaffected.
+    public let isArchived: Bool
 
-    public init(id: UUID, name: String, dayOfLife: Int) {
+    public init(id: UUID, name: String, dayOfLife: Int, isArchived: Bool = false) {
         self.id = id
         self.name = name
         self.dayOfLife = dayOfLife
+        self.isArchived = isArchived
     }
 }
 
@@ -23,6 +28,20 @@ public struct HandoffBaby: Sendable, Identifiable {
 /// and abbreviations because a tired doula scans it; this is prose because the
 /// parents read it over coffee. "left breast", not "Breast L".
 public enum Handoff {
+
+    /// Who the night is written about: everyone currently on the family's roster,
+    /// plus anyone this shift actually logged something for. Composing from the
+    /// active babies alone meant archiving a baby mid-shift silently erased
+    /// everything already logged against them from the parents' document.
+    ///
+    /// An archived baby with nothing logged stays out — an empty section for a
+    /// discharged baby is noise on a page read at 6am. Input order is preserved, so
+    /// the caller sorts once (by `sortOrder`) and this never reshuffles the cards.
+    public static func roster(
+        _ babies: [HandoffBaby], loggedFor logged: Set<UUID>
+    ) -> [HandoffBaby] {
+        babies.filter { !$0.isArchived || logged.contains($0.id) }
+    }
 
     public static func text(
         babies: [HandoffBaby],
@@ -73,6 +92,18 @@ public enum Handoff {
                 lines.append("")
                 lines.append(contentsOf: notes)
             }
+        }
+
+        // Records logged against a baby who is nowhere in the roster — a `Baby`
+        // deleted out from under its history, or a relationship that never arrived
+        // from sync. They were logged for somebody, so they must not vanish from the
+        // parents' page just because the name has. Roster-independent, like the
+        // household total below it.
+        let stray = unattributedBlock(
+            babies, events, sessions, shift, now, unit, timeZone)
+        if !stray.isEmpty {
+            lines.append("")
+            lines.append(contentsOf: stray)
         }
 
         let household = Totals.household(events: allEvents, shift: shift, asOf: now)
@@ -233,6 +264,71 @@ public enum Handoff {
             out.append("⚖️  Weight · \(Fmt.weight(grams: grams, unit: unit))")
         }
         return out
+    }
+
+    /// The catch-all for records whose baby the roster does not name. Sleep is
+    /// clipped to the shift like everywhere else, so a session that contributed no
+    /// time inside the window is not announced as a record.
+    ///
+    /// `EventSnapshot.noBaby` is deliberately not an orphan: a pump carries no baby
+    /// by design and is reported as a household total, not as a lost record.
+    private static func unattributedBlock(
+        _ babies: [HandoffBaby], _ events: [EventSnapshot], _ sessions: [SleepSnapshot],
+        _ shift: ShiftWindow, _ now: Date, _ unit: VolumeUnit, _ timeZone: TimeZone
+    ) -> [String] {
+        let named = Set(babies.map(\.id))
+        let orphanEvents = events
+            .filter { !named.contains($0.babyID) && $0.babyID != EventSnapshot.noBaby }
+            .sorted { $0.at < $1.at }
+        let orphanSleep = sessions
+            .filter { !named.contains($0.babyID) }
+            .map { ($0, SleepMath.seconds(of: $0, clippedTo: shift, asOf: now)) }
+            .filter { $0.1 > 0 }
+            .sorted { $0.0.startAt < $1.0.startAt }
+
+        let count = orphanEvents.count + orphanSleep.count
+        guard count > 0 else { return [] }
+
+        var out = ["❔  Not matched to a baby · \(count) record"
+            + (count == 1 ? "" : "s")]
+        for event in orphanEvents {
+            out.append("     \(Fmt.shortClock(event.at, timeZone: timeZone))  "
+                + strayLine(event, unit: unit))
+        }
+        for (session, seconds) in orphanSleep {
+            out.append("     \(Fmt.shortClock(session.startAt, timeZone: timeZone))  "
+                + "asleep — \(Fmt.duration(seconds))")
+        }
+        return out
+    }
+
+    /// Terser than the per-baby blocks on purpose: without a name to head them,
+    /// these lines have to say what each record was.
+    private static func strayLine(_ event: EventSnapshot, unit: VolumeUnit) -> String {
+        switch event.kind {
+        case .feed:
+            return warmFeed(event, unit: unit)
+        case .diaper:
+            // `Fmt.diaper(.unknown)` is already the word "Diaper" — appending the
+            // noun to it reads "diaper diaper".
+            guard let contents = event.diaperContents, contents != .unknown
+            else { return "diaper" }
+            return Fmt.diaper(contents).lowercased() + " diaper"
+        case .note:
+            if let text = event.text, !text.isEmpty { return text }
+            return event.noteTags.isEmpty ? "note" : event.noteTags.joined(separator: ", ")
+        case .medication:
+            let what = [event.medicationName, event.doseText]
+                .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
+            return what.isEmpty ? "medication given" : "medication — \(what)"
+        case .measurement:
+            guard let grams = event.weightGrams else { return "measurement" }
+            return "weighed \(Fmt.weight(grams: grams, unit: unit))"
+        case .pump:
+            // Filtered out above; a pump reaching here would carry a real baby id,
+            // which no write path produces.
+            return "pumped"
+        }
     }
 
     private static func noteBlock(

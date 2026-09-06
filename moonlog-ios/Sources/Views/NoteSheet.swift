@@ -8,6 +8,8 @@ struct NoteSheet: View {
     let editing: NoteEntry?
     let onSave: (NoteEntry) -> Void
     var onDelete: (() -> Void)?
+    /// Forwarded to the chrome; set only when editing.
+    var reassignment: Reassignment?
 
     @State private var at: Date
     @State private var text: String
@@ -20,6 +22,7 @@ struct NoteSheet: View {
         shift: ShiftWindow,
         presetTags: [String],
         editing: NoteEntry? = nil,
+        reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
         onSave: @escaping (NoteEntry) -> Void
     ) {
@@ -28,6 +31,7 @@ struct NoteSheet: View {
         self.presetTags = presetTags
         self.editing = editing
         self.onDelete = onDelete
+        self.reassignment = reassignment
         self.onSave = onSave
         _at = State(initialValue: editing?.at ?? Date())
         _text = State(initialValue: editing?.text ?? "")
@@ -53,6 +57,7 @@ struct NoteSheet: View {
             accent: baby.accent.color(for: theme),
             at: $at,
             shift: shift,
+            reassignment: reassignment,
             saveEnabled: hasContent,
             onSave: {
                 onSave(

@@ -4,6 +4,167 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## Time rules live in `CareStore`, with a minute of slack for clock skew
+**2026-09-05**
+
+Future-blocking and the shift-overlap check used to exist only in `LogSheetChrome`, so
+they held for a thumb on a sheet and for nothing else. Anything that is not a view —
+the sleep reconciler, an NFC tap, a future import — wrote straight past them.
+`rejectFuture(_:)` and `requireOverlap(startAt:endAt:with:)` are the actor's now, and
+every mutating entry point calls them. The sheets keep their advisories, but as a
+courtesy to the thumb rather than as the enforcement. `CLAUDE.md` already said
+invariants belong in the actor; this makes that true for time as well as for identity.
+
+The tolerance is 60 seconds, the same figure as `Date.isMeaningfullyInFuture` in Core,
+so a sheet and the store can never disagree about what counts as the future. Two
+synced devices do not agree on the second, and a tap on the trailing one should not be
+refused. Twelve hours out — the web version's actual bug, which suppressed the
+overdue-feed warning for the rest of the night — still is.
+
+`futureTimestamp` and `outsideShift` arrive with a `CustomStringConvertible`
+conformance on `CareStoreError`. Every alert in the app renders `"\(error)"`, so
+`LocalizedError` alone would have shown a tired reader "futureTimestamp" at 3am.
+
+---
+
+## Undo is a compensating write, not `UndoManager`
+**2026-09-05**
+
+Every write action returns an `Undo?` — a `@Sendable (CareStore) async throws -> Void`
+naming the call that reverses it. Returning `nil` means the write cannot be taken
+back, and the banner then offers no Undo button rather than one that quietly does
+nothing.
+
+`UndoManager` was never really on the table. Nothing in the project wires
+`context.undoManager`, and the writes do not happen on the context the view holds:
+`CareStore` is a `@ModelActor` with its own. An undo stack on the main context would
+have nothing recorded on it. A compensating call also stays in the store's own
+vocabulary — `deleteEvent`, `reassignEvent`, `updateShift` — so undoing obeys the
+same invariants the original write did, instead of rewinding the object graph
+underneath them.
+
+The banner holds six seconds when there is something to undo and two when there is
+not. Two seconds is enough to read a confirmation and nowhere near enough to notice a
+wrong-twin tap and act on it.
+
+*Reverses if:* undo ever needs to span more than one step, which a single closure
+cannot express.
+
+---
+
+## Undo restores the record, not a lookalike
+**2026-09-05**
+
+A deleted entry could have been undone by logging an equivalent one. It is not.
+`LogEvent.restoration` captures an `EventRestoration` — a `Sendable` value type, so it
+crosses the actor boundary and outlives the model object — and `restoreEvent(_:)`
+re-inserts under the original `id`, `createdAt` and source. Re-logging would mint a
+fresh id, breaking anything already pointing at the old one, reset `createdAt`, and
+drop `sourceTagToken`, which is what makes a mis-scan traceable later.
+
+Sleep needed `restoreSleepSession(id:shiftID:babyID:startAt:endAt:)` of its own rather
+than reusing `recordSleep`: when a session is already open, `recordSleep` corrects
+*that* one instead of inserting, so undoing a deleted closed session would have
+dragged a live one backwards in time and rewritten a sleep nobody touched.
+
+Both restores return early when the id is already present, so a double-tap on Undo
+cannot produce two copies. Idempotence is the cheap half; keeping the identity is the
+point.
+
+---
+
+## The re-read is named, not inherited from the banner
+**2026-09-05**
+
+`TonightView` now bumps a `refreshToken` after every write and reads it in `body` via
+`Tonight(..., generation:)`. Before that, the screen re-derived itself because the
+confirmation banner's `@State` happened to mutate about two seconds after each write —
+so deleting the banner, or shortening it, would have silently stopped the timeline
+updating after a log. A dependency that nobody can see is one that a later change
+removes by accident.
+
+The remote case is deliberately left unsolved rather than guessed at: a merge arriving
+from another device bumps nothing, and it cannot be tested until the iCloud capability
+exists. It is named in `docs/architecture.md` so it is a known gap rather than a
+surprise.
+
+---
+
+## One sheet for all three opt-in kinds
+**2026-09-05**
+
+Pumping, a medication and a weight are each a time plus one or two fields, and each
+would have made the same `LogSheetChrome` call with a different middle section. One
+`ExtraSheet` and one `ExtraEntry` cover all three. Until it existed they could be
+switched on in Settings and then logged by nothing: there was no create path, and
+their timeline rows were deliberately inert because the only sheet they could have
+routed to was the note sheet, which would have written note fields onto a record that
+never renders them.
+
+`ExtraEntry` carries only the kind's own fields, because the store writes the payload
+wholesale and a stale value from another kind would persist. Logging a pump also
+needed `CareStore.logEvent` to take a `UUID?`, gated by `requiredBaby(_:for:)` — the
+signature was the last thing standing between "pump carries no baby" as a design and
+as a fact. And `ShiftTimeline` no longer gates the edit route on `EventKind.core`, so
+every kind is correctable, a pump routing with a nil baby rather than staying inert.
+
+*Reverses if:* one of the three grows a form of its own, at which point sharing the
+sheet costs more than it saves.
+
+---
+
+## The opt-in kinds live in Tonight's menu, not on the baby cards
+**2026-09-05**
+
+The card's four controls — feed, diaper, sleep, note — are the set a thumb finds in
+the dark without reading the labels. A fifth and a sixth would crowd them for records
+logged once a night at most. The extras go in Tonight's toolbar menu instead, which
+also gives pumping somewhere sensible to live: it belongs to no baby, so a control on
+a baby's card would have been a lie. A kind that does attach to a baby expands into a
+name picker only when the family has more than one.
+
+---
+
+## A sheet for the shift's own hours, replacing the end-shift dialog
+**2026-09-05**
+
+Ending a shift was a confirmation dialog that took the clock. Tapping it half an hour
+after actually leaving widened the window by half an hour — and since the totals and
+the handoff clip to that window, it credited the parents with sleep nobody watched.
+`ShiftHoursSheet` puts both times on pickers. Now is pre-filled, because it is right
+most nights, and editable, because the night it is wrong is the night it matters.
+
+The same sheet corrects a running shift's start, since ending is the last chance to
+fix it and both come off the same two pickers. Ending while a baby is asleep names
+who, rather than counting them: their sleep stays in the record either way, and the
+session is deliberately left open.
+
+`updateShift` will not reopen a closed shift. `close(at:)` is the only thing keeping
+`isOpen` honest and there is no `reopen()` to pair with it, which is also why ending a
+shift is the one write on this screen that offers no Undo. Narrowing a window is
+refused outright when it would strand an already-logged sleep session outside it.
+
+---
+
+## The client-family switcher is on Tonight, not in Settings
+**2026-09-05**
+
+Tonight is the screen the doula is on all night, so the switcher sits on its leading
+toolbar and its label doubles as a standing answer to "whose night am I logging?" The
+mistake it guards against is logging a feed against the wrong household; Settings, two
+taps away and rarely open, would not prevent that. It is a `Picker`, so the current
+family carries a checkmark — colour is never the only signal.
+
+The selection persists in `@AppStorage("moonlog.currentFamilyID")` as a string, since
+`@AppStorage` cannot hold a `UUID`, and resolves through
+`FamilySelection.resolve(storedID:among:)` — its own testable type, because the
+difference between falling back to the oldest active family and returning nothing is
+the difference between the wrong household's night and an empty screen. Tonight and
+Summary carry `.id(family.id)` so a half-filled sheet cannot survive a switch still
+holding the previous family's baby id.
+
+---
+
 ## Volume unit is per family; breast feeds carry a duration per side
 **2026-09-05**
 

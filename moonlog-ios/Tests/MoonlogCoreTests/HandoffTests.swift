@@ -161,6 +161,85 @@ final class HandoffTests: XCTestCase {
         XCTAssertTrue(anon.hasSuffix("🌙 logged with Moonlog"), anon)
     }
 
+    /// Archiving a baby mid-shift used to delete their whole night from the
+    /// parents' document: the records stayed in the store, and the roster the
+    /// handoff was composed from stopped naming them.
+    func testAnArchivedBabyWithRecordsInTheShiftIsStillWrittenUp() {
+        let babies = [
+            HandoffBaby(id: mia, name: "Mia", dayOfLife: 6),
+            HandoffBaby(id: leo, name: "Leo", dayOfLife: 6, isArchived: true),
+        ]
+        let events = [
+            EventSnapshot(babyID: leo, kind: .feed, at: at("2026-09-05 02:00"),
+                          feedMethod: .bottleFormula, amountMl: 90),
+            EventSnapshot(babyID: leo, kind: .diaper, at: at("2026-09-05 02:30"),
+                          diaperContents: .wet),
+        ]
+        let roster = Handoff.roster(babies, loggedFor: [leo])
+        XCTAssertEqual(roster.map(\.name), ["Mia", "Leo"], "order is the caller's")
+
+        let out = text(babies: roster, events: events)
+        XCTAssertTrue(out.contains("— Leo · Day 6 —"), out)
+        XCTAssertTrue(out.contains("bottle, formula — 3 oz"), out)
+        XCTAssertFalse(out.contains("Not matched to a baby"),
+                       "Leo is on the roster, so nothing of his is orphaned")
+    }
+
+    /// The other half of the rule: a discharged baby who was not cared for tonight
+    /// would otherwise get a section of zeroes on a page read at 6am.
+    func testAnArchivedBabyWithNothingLoggedIsLeftOutEntirely() {
+        let babies = [
+            HandoffBaby(id: mia, name: "Mia", dayOfLife: 6),
+            HandoffBaby(id: leo, name: "Leo", dayOfLife: 6, isArchived: true),
+        ]
+        let roster = Handoff.roster(babies, loggedFor: [mia])
+        XCTAssertEqual(roster.map(\.name), ["Mia"])
+
+        let out = text(
+            babies: roster,
+            events: [EventSnapshot(babyID: mia, kind: .diaper,
+                                   at: at("2026-09-05 02:00"), diaperContents: .wet)])
+        XCTAssertFalse(out.contains("Leo"), out)
+        XCTAssertTrue(out.contains("Mia's night · Day 6"),
+                      "one baby again, so the twin headings stay away")
+    }
+
+    /// A record whose baby resolves to nobody — deleted out from under its history,
+    /// or a relationship still in flight from sync — was invisible: no block in the
+    /// document claimed it, so the night silently lost feeds.
+    func testRecordsForABabyNobodyCanNameAreStillReported() {
+        let ghost = UUID()
+        let events = [
+            EventSnapshot(babyID: ghost, kind: .diaper, at: at("2026-09-05 02:00"),
+                          diaperContents: .wet),
+            EventSnapshot(babyID: ghost, kind: .note, at: at("2026-09-05 03:00"),
+                          text: "Fussy at the change"),
+        ]
+        let sessions = [
+            SleepSnapshot(babyID: ghost, startAt: at("2026-09-05 04:00"),
+                          endAt: at("2026-09-05 05:00")),
+        ]
+        let out = text(babies: [HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)],
+                       events: events, sessions: sessions)
+
+        XCTAssertTrue(out.contains("Not matched to a baby · 3 records"), out)
+        XCTAssertTrue(out.contains("wet diaper"), out)
+        XCTAssertTrue(out.contains("Fussy at the change"), out)
+        XCTAssertTrue(out.contains("asleep — 1h"), out)
+        XCTAssertTrue(out.contains("Diapers · 0"), "and none of it lands on Mia")
+    }
+
+    /// A pump carries no baby by design. It is a household total, not a record that
+    /// lost its owner, and must never be reported as one.
+    func testAPumpIsNeverMistakenForAnUnattributedRecord() {
+        let out = text(
+            babies: [HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)],
+            events: [EventSnapshot(babyID: EventSnapshot.noBaby, kind: .pump,
+                                   at: at("2026-09-05 01:00"), pumpedMl: 120)])
+        XCTAssertTrue(out.contains("Pumped · 4.1 oz over 1 session"), out)
+        XCTAssertFalse(out.contains("Not matched to a baby"), out)
+    }
+
     /// An open session at the end of the shift is clipped, not run to `now`.
     func testStillAsleepIsCountedOnlyToTheShiftEnd() {
         let sessions = [SleepSnapshot(babyID: mia, startAt: at("2026-09-05 05:40"))]

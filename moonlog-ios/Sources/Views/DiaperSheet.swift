@@ -7,6 +7,8 @@ struct DiaperSheet: View {
     let editing: DiaperEntry?
     let onSave: (DiaperEntry) -> Void
     var onDelete: (() -> Void)?
+    /// Forwarded to the chrome; set only when editing.
+    var reassignment: Reassignment?
 
     @State private var at: Date
     @State private var contents: DiaperContents
@@ -16,6 +18,7 @@ struct DiaperSheet: View {
         baby: BabyPresentation,
         shift: ShiftWindow,
         editing: DiaperEntry? = nil,
+        reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
         onSave: @escaping (DiaperEntry) -> Void
     ) {
@@ -23,6 +26,7 @@ struct DiaperSheet: View {
         self.shift = shift
         self.editing = editing
         self.onDelete = onDelete
+        self.reassignment = reassignment
         self.onSave = onSave
         _at = State(initialValue: editing?.at ?? Date())
         _contents = State(initialValue: editing?.contents ?? .wet)
@@ -39,6 +43,7 @@ struct DiaperSheet: View {
             accent: baby.accent.color(for: theme),
             at: $at,
             shift: shift,
+            reassignment: reassignment,
             saveEnabled: true,
             // Cleared when the contents no longer include stool. Keeping it meant a
             // corrected wet diaper still put meconium in the handoff.

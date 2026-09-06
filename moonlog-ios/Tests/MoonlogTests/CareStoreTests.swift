@@ -528,4 +528,304 @@ final class CareStoreTests: XCTestCase {
             XCTAssertEqual(error as? CareStoreError, .shiftNotFound)
         }
     }
+
+    // MARK: - Time rules
+    //
+    // These used to live only in `LogSheetChrome`, so they applied to a thumb and to
+    // nothing else. They are invariants, so they belong to the actor.
+
+    func testAFutureTimestampIsRefused() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        do {
+            _ = try await store.logEvent(
+                kind: .feed, at: Date().addingTimeInterval(3600),
+                shiftID: shift, babyID: mia)
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .futureTimestamp)
+        }
+    }
+
+    /// The web version's actual bug: a timestamp twelve hours out suppressed the
+    /// overdue-feed warning for the rest of the night.
+    func testAnEventCannotBeEditedIntoTheFuture() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let id = try await store.logEvent(
+            kind: .feed, at: shiftStart, shiftID: shift, babyID: mia)
+        do {
+            try await store.updateEvent(id, at: Date().addingTimeInterval(43_200)) { _ in }
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .futureTimestamp)
+        }
+    }
+
+    /// A minute of slack, because two synced devices do not agree on the second.
+    func testATimestampSecondsAheadIsAcceptedAsClockSkew() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        _ = try await store.logEvent(
+            kind: .feed, at: Date().addingTimeInterval(5), shiftID: shift, babyID: mia)
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<LogEvent>()).count, 1)
+    }
+
+    /// Such a session renders in the timeline with a duration and contributes
+    /// nothing to the totals or the handoff, because both clip to the shift window.
+    func testASleepSessionWhollyOutsideTheShiftIsRefused() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        do {
+            try await store.recordSleep(
+                shiftID: shift, babyID: mia,
+                startAt: shiftStart.addingTimeInterval(-7200),
+                endAt: shiftStart.addingTimeInterval(-3600))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .outsideShift)
+        }
+    }
+
+    /// The baby who was already down when the doula arrived. Those hours are real
+    /// and the totals clip them, so the session must still be recordable.
+    func testASleepSessionStartingBeforeTheShiftIsAccepted() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia,
+            startAt: shiftStart.addingTimeInterval(-1800),
+            endAt: shiftStart.addingTimeInterval(1800))
+        XCTAssertEqual(
+            try ModelContext(container).fetch(FetchDescriptor<SleepSession>()).count, 1)
+    }
+
+    func testASleepSessionCannotBeDraggedOutOfTheShift() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia,
+            startAt: shiftStart.addingTimeInterval(600),
+            endAt: shiftStart.addingTimeInterval(3600))
+        let session = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<SleepSession>()).first)
+        do {
+            try await store.updateSleepSession(
+                session.id,
+                startAt: shiftStart.addingTimeInterval(-7200),
+                endAt: shiftStart.addingTimeInterval(-3600))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .outsideShift)
+        }
+    }
+
+    // MARK: - Amending a shift's hours
+
+    /// Both ends belong to the doula. Ending thirty minutes late widens the window
+    /// and credits sleep nobody watched.
+    func testCorrectingAShiftStart() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+
+        let corrected = shiftStart.addingTimeInterval(-1800)
+        try await store.updateShift(shift, startedAt: corrected)
+
+        let stored = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<Shift>()).first)
+        XCTAssertEqual(stored.startedAt, corrected)
+        XCTAssertTrue(stored.isOpen, "correcting the start must not close the shift")
+    }
+
+    func testCorrectingAShiftEndKeepsTheOpenFlagHonest() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let end = shiftStart.addingTimeInterval(28_800)
+
+        try await store.updateShift(shift, endedAt: end)
+
+        let stored = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<Shift>()).first)
+        XCTAssertEqual(stored.endedAt, end)
+        XCTAssertFalse(stored.isOpen)
+    }
+
+    /// Narrowing the window is how sleep goes missing: the row stays in the
+    /// timeline, and the number the parents read stops counting it.
+    func testAShiftCannotBeNarrowedPastAnAlreadyLoggedSleep() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia,
+            startAt: shiftStart.addingTimeInterval(600),
+            endAt: shiftStart.addingTimeInterval(3600))
+
+        do {
+            try await store.updateShift(shift, startedAt: shiftStart.addingTimeInterval(7200))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .outsideShift)
+        }
+    }
+
+    func testAShiftCannotEndBeforeItsCorrectedStart() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.endShift(shift, endedAt: shiftStart.addingTimeInterval(3600))
+
+        do {
+            try await store.updateShift(shift, startedAt: shiftStart.addingTimeInterval(7200))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .endBeforeStart)
+        }
+    }
+
+    func testAShiftCannotEndInTheFuture() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        do {
+            try await store.endShift(shift, endedAt: Date().addingTimeInterval(3600))
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .futureTimestamp)
+        }
+    }
+
+    func testAmendingAMissingShiftThrows() async throws {
+        do {
+            try await store.updateShift(UUID(), startedAt: shiftStart)
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .shiftNotFound)
+        }
+    }
+
+    // MARK: - Undo
+
+    /// `pump` is about the mother, so it is the one kind logged against nobody.
+    func testAPumpIsLoggedWithoutABaby() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+
+        _ = try await store.logEvent(
+            kind: .pump, at: shiftStart.addingTimeInterval(600),
+            shiftID: shift, babyID: nil
+        ) { $0.pumpedMl = 90 }
+
+        let event = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<LogEvent>()).first)
+        XCTAssertNil(event.babyIDRaw)
+        XCTAssertEqual(event.pumpedMl, 90)
+    }
+
+    /// An unattributed feed cannot be counted for either twin, so the totals and
+    /// the handoff would quietly drop it.
+    func testAFeedWithoutABabyIsRefused() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        do {
+            _ = try await store.logEvent(
+                kind: .feed, at: shiftStart, shiftID: shift, babyID: nil)
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .babyNotFound)
+        }
+    }
+
+    /// Undo restores the record, not a lookalike. A fresh id would break anything
+    /// pointing at the old one, and a fresh `createdAt` loses when it was logged.
+    func testUndoingADeleteRestoresTheSameRecord() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let id = try await store.logEvent(
+            kind: .feed, at: shiftStart.addingTimeInterval(600),
+            shiftID: shift, babyID: mia, source: .nfcTag
+        ) { $0.amountMl = 60 }
+
+        let before = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<LogEvent>()).first)
+        let restoration = try XCTUnwrap(before.restoration)
+        let createdAt = before.createdAt
+
+        try await store.deleteEvent(id)
+        XCTAssertTrue(try ModelContext(container).fetch(FetchDescriptor<LogEvent>()).isEmpty)
+
+        try await store.restoreEvent(restoration)
+
+        let after = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<LogEvent>()).first)
+        XCTAssertEqual(after.id, id)
+        XCTAssertEqual(after.createdAt, createdAt)
+        XCTAssertEqual(after.source, .nfcTag, "the source is what makes a mis-scan traceable")
+        XCTAssertEqual(after.amountMl, 60)
+        XCTAssertEqual(after.babyIDRaw, mia)
+        XCTAssertEqual(after.shiftIDRaw, shift)
+    }
+
+    /// A second tap on Undo must not produce a second copy.
+    func testRestoringTwiceLeavesOneRecord() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        let id = try await store.logEvent(
+            kind: .diaper, at: shiftStart, shiftID: shift, babyID: mia)
+        let restoration = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<LogEvent>()).first?.restoration)
+
+        try await store.deleteEvent(id)
+        try await store.restoreEvent(restoration)
+        try await store.restoreEvent(restoration)
+
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<LogEvent>()).count, 1)
+    }
+
+    /// `recordSleep` cannot serve as this undo: with another session open it
+    /// corrects that one instead of inserting.
+    func testUndoingASleepDeleteRestoresTheSameSession() async throws {
+        let (family, mia, leo) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        try await store.recordSleep(
+            shiftID: shift, babyID: mia,
+            startAt: shiftStart.addingTimeInterval(600),
+            endAt: shiftStart.addingTimeInterval(3600))
+        let session = try XCTUnwrap(
+            ModelContext(container).fetch(FetchDescriptor<SleepSession>()).first)
+        let id = session.id
+        let startAt = session.startAt
+        let endAt = session.endAt
+
+        try await store.deleteSleepSession(id)
+        // Leo goes down in between, so a naive undo would drag his session backwards.
+        _ = try await store.toggleSleep(
+            shiftID: shift, babyID: leo, at: shiftStart.addingTimeInterval(5400))
+
+        try await store.restoreSleepSession(
+            id: id, shiftID: shift, babyID: mia, startAt: startAt, endAt: endAt)
+
+        let stored = try ModelContext(container).fetch(FetchDescriptor<SleepSession>())
+        let restored = try XCTUnwrap(stored.first { $0.id == id })
+        XCTAssertEqual(restored.startAt, startAt)
+        XCTAssertEqual(restored.endAt, endAt)
+        XCTAssertEqual(restored.babyIDRaw, mia)
+        let leos = try XCTUnwrap(stored.first { $0.babyIDRaw == leo })
+        XCTAssertEqual(
+            leos.startAt, shiftStart.addingTimeInterval(5400),
+            "restoring Mia's session must not move Leo's")
+    }
 }

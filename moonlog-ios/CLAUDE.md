@@ -69,7 +69,18 @@ which is the source of truth and is committed.
   `CareStore` re-opens a session by clearing both fields together, since there is
   no `reopen()`.
 - **Never attach an event by hand** — use `attach(to:baby:)`, the single place that
-  keeps a relationship and its denormalised id in step.
+  keeps a relationship and its denormalised id in step. Its `baby` is optional only
+  because `pump` is about the mother; `CareStore` still refuses a baby-less record
+  of any kind that `EventKind.attachesToBaby` covers.
+- **Time rules are invariants, so they live in the actor.** Future-blocking and the
+  shift-overlap rule are in `CareStore`, not in the sheets. `LogSheetChrome` shows
+  the same advisories as you type, but that is a courtesy to the thumb — it is not
+  the enforcement, and it does not apply to a non-view caller.
+- **A write returns the action that reverses it.** `TonightView.perform` is the one
+  path every write takes, and an action returning `nil` is one that cannot be
+  undone — no Undo button is offered rather than one that quietly does nothing.
+  Undoing a delete restores the record's own id and `createdAt`; re-logging would
+  mint a lookalike.
 - **Calendar arithmetic for calendar quantities, `TimeInterval` for physical
   durations, never multiply to cross a day boundary.** See `docs/testing.md`.
 
@@ -93,3 +104,4 @@ which is the source of truth and is committed.
 | `docs/status.md` | What is built, what is next, what needs the user |
 | `docs/testflight.md` | Release readiness and what shipped |
 | `docs/app-store-connect.md` | The one-off App Store Connect setup (done) |
+| `docs/next-features.md` | NFC and Apple Watch — scope, open questions, what needs the user |

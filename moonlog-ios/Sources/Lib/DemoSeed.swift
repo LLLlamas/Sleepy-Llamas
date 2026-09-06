@@ -31,8 +31,35 @@ enum DemoSeed {
         case "diaper": return .diaper(babyID: babyID)
         case "sleep": return .sleep(babyID: babyID)
         case "note": return .note(babyID: babyID)
+        case "pump": return .extra(kind: .pump, babyID: nil)
+        case "medication": return .extra(kind: .medication, babyID: babyID)
+        case "weight": return .extra(kind: .measurement, babyID: babyID)
         default: return nil
         }
+    }
+
+    /// `-moonlogEditFirst YES` — opens the edit sheet for the newest record, which
+    /// is the only way to see the delete row and the wrong-twin control rendered.
+    static var editsFirstRecord: Bool {
+        UserDefaults.standard.bool(forKey: "moonlogEditFirst")
+    }
+
+    /// `-moonlogShiftHours end|correct` — presents the shift-hours sheet, the one
+    /// surface a launch argument is the only way to reach without tapping a menu.
+    static var requestedShiftHours: ShiftHoursSheet.Purpose? {
+        switch UserDefaults.standard.string(forKey: "moonlogShiftHours") {
+        case "end": return .end
+        case "correct": return .correct
+        default: return nil
+        }
+    }
+
+    /// `-moonlogDemoWrite YES` — performs one real write through the app's own path
+    /// on appear, so the confirmation banner and its Undo can be screenshotted.
+    /// Deliberately the real `write`, not a faked banner: the thing worth seeing is
+    /// that the path produces one.
+    static var wantsDemoWrite: Bool {
+        UserDefaults.standard.bool(forKey: "moonlogDemoWrite")
     }
 
     @MainActor
@@ -49,6 +76,9 @@ enum DemoSeed {
 
         let family = Family(name: "Nguyen")
         family.volumeUnitRaw = VolumeUnit.oz.rawValue
+        // All three on, so the opt-in kinds are reachable in a screenshot run.
+        // They are off by default in a real family.
+        family.setOptionalKinds(EventKind.optional)
         for (i, label) in ["Spit-up", "Fussy", "Jaundice", "Swaddled", "Skin-to-skin"].enumerated() {
             let tag = NoteTagPreset(label: label, sortOrder: i)
             tag.family = family

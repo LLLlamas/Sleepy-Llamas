@@ -242,7 +242,7 @@ final class TagBinding {
         self.targetBabyIDRaw = targetBabyID
     }
 
-    var action: TagAction { TagAction(rawValue: actionRaw) ?? .logDiaper }
+    var action: TagAction { TagAction(rawValue: actionRaw) ?? .unknown }
 }
 
 /// A record owned by a shift and attributed to a baby.
@@ -257,13 +257,86 @@ protocol BabyRecord: AnyObject {
 }
 
 extension BabyRecord {
-    func attach(to shift: Shift, baby: Baby) {
+    /// `baby` is optional because `pump` is about the mother and carries none.
+    /// Routing that case through here anyway keeps this the single place where a
+    /// relationship and its denormalised id can ever be set.
+    func attach(to shift: Shift, baby: Baby?) {
         self.shift = shift
         self.shiftIDRaw = shift.id
         self.baby = baby
-        self.babyIDRaw = baby.id
+        self.babyIDRaw = baby?.id
+    }
+}
+
+/// A deleted event, held as value types so it can cross the actor boundary and
+/// outlive the model object it came from. See `LogEvent.restoration`.
+struct EventRestoration: Sendable {
+    let id: UUID
+    let kind: EventKind
+    let at: Date
+    let createdAt: Date
+    let source: EventSource
+    let sourceTagToken: String?
+    let shiftID: UUID
+    let babyID: UUID?
+
+    let feedMethodRaw: String?
+    let amountMl: Double?
+    let feedDurationSeconds: Int?
+    let leftSeconds: Int?
+    let rightSeconds: Int?
+    let diaperContentsRaw: String?
+    let stoolColorRaw: String?
+    let text: String?
+    let tempF: Double?
+    let tagsRaw: String?
+    let pumpedMl: Double?
+    let medicationName: String?
+    let doseText: String?
+    let weightGrams: Double?
+
+    /// Payload only. Identity and parentage are the store's to set, through
+    /// `attach(to:baby:)`.
+    func applyPayload(to event: LogEvent) {
+        event.feedMethodRaw = feedMethodRaw
+        event.amountMl = amountMl
+        event.feedDurationSeconds = feedDurationSeconds
+        event.leftSeconds = leftSeconds
+        event.rightSeconds = rightSeconds
+        event.diaperContentsRaw = diaperContentsRaw
+        event.stoolColorRaw = stoolColorRaw
+        event.text = text
+        event.tempF = tempF
+        event.tagsRaw = tagsRaw
+        event.pumpedMl = pumpedMl
+        event.medicationName = medicationName
+        event.doseText = doseText
+        event.weightGrams = weightGrams
+        event.sourceTagToken = sourceTagToken
     }
 }
 
 extension LogEvent: BabyRecord {}
+
+extension LogEvent {
+    /// Everything needed to put this event back exactly as it was.
+    ///
+    /// Undo restores the record, not a lookalike. Re-logging would mint a fresh id
+    /// — breaking anything already pointing at the old one — reset `createdAt`, and
+    /// drop `sourceTagToken`, which is what makes a mis-scan traceable later.
+    var restoration: EventRestoration? {
+        guard let shiftIDRaw else { return nil }
+        return EventRestoration(
+            id: id, kind: kind, at: at, createdAt: createdAt,
+            source: source, sourceTagToken: sourceTagToken,
+            shiftID: shiftIDRaw, babyID: babyIDRaw,
+            feedMethodRaw: feedMethodRaw, amountMl: amountMl,
+            feedDurationSeconds: feedDurationSeconds,
+            leftSeconds: leftSeconds, rightSeconds: rightSeconds,
+            diaperContentsRaw: diaperContentsRaw, stoolColorRaw: stoolColorRaw,
+            text: text, tempF: tempF, tagsRaw: tagsRaw,
+            pumpedMl: pumpedMl, medicationName: medicationName,
+            doseText: doseText, weightGrams: weightGrams)
+    }
+}
 extension SleepSession: BabyRecord {}

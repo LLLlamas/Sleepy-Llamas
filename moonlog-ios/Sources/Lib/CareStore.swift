@@ -120,6 +120,7 @@ actor CareStore {
         caregiver: String?
     ) throws -> UUID {
         guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        try rejectFuture(startedAt)
         if try openShift(familyID: familyID) != nil {
             throw CareStoreError.shiftAlreadyOpen
         }
@@ -140,9 +141,67 @@ actor CareStore {
     func endShift(_ shiftID: UUID, endedAt: Date) throws {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
         guard shift.isOpen else { throw CareStoreError.shiftAlreadyClosed }
+        try rejectFuture(endedAt)
         guard endedAt >= shift.startedAt else { throw CareStoreError.endBeforeStart }
         shift.close(at: endedAt)
         try modelContext.save()
+    }
+
+    /// Corrects a shift's own hours after the fact. Both ends belong to the doula,
+    /// which is why `startShift` and `endShift` are handed a time rather than reading
+    /// one — ending thirty minutes late widens the window and credits sleep nobody
+    /// watched. `nil` leaves that end alone; a closed shift cannot be reopened here,
+    /// because `close(at:)` is the only thing keeping `isOpen` honest.
+    func updateShift(_ shiftID: UUID, startedAt: Date? = nil, endedAt: Date? = nil) throws {
+        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+        let start = startedAt ?? shift.startedAt
+        let end = endedAt ?? shift.endedAt
+        try rejectFuture(start)
+        if let end {
+            try rejectFuture(end)
+            guard end >= start else { throw CareStoreError.endBeforeStart }
+        }
+
+        // Narrowing the window can strand a session outside it, where the timeline
+        // still shows a duration but the totals and the handoff — which both clip to
+        // this window — count nothing. Refuse rather than silently drop the hours.
+        let proposed = ShiftWindow(startedAt: start, endedAt: end)
+        for session in shift.sleepSessions ?? [] {
+            try requireOverlap(startAt: session.startAt, endAt: session.endAt, with: proposed)
+        }
+
+        shift.startedAt = start
+        if let endedAt { shift.close(at: endedAt) }
+        try modelContext.save()
+    }
+
+    // MARK: - Time rules
+    //
+    // These live here, not in the sheets. `LogSheetChrome` shows the same advisories
+    // as you type, but that is a courtesy to the thumb — it is not the enforcement.
+    // Anything that is not a sheet (the reconciler, an NFC tap, a future import)
+    // reaches these instead. `CLAUDE.md` puts invariants in the actor for exactly
+    // this reason.
+
+    /// The same `isMeaningfullyInFuture` the sheets bound their pickers with, so the
+    /// advisory and the enforcement can never disagree — a sheet saying a time is
+    /// fine while the actor refuses it would be maddening at 3am. Its minute of
+    /// slack covers clock skew between two synced devices; twelve hours out — the
+    /// web version's actual bug, which suppressed the overdue-feed warning for the
+    /// rest of the night — is still refused.
+    private func rejectFuture(_ date: Date) throws {
+        guard !date.isMeaningfullyInFuture else { throw CareStoreError.futureTimestamp }
+    }
+
+    /// An open session has no end yet, so it runs to `distantFuture` for this test
+    /// and always overlaps an open shift. Touching at an instant is not overlap: a
+    /// session ending exactly at the start contributes nothing.
+    private func requireOverlap(startAt: Date, endAt: Date?, with window: ShiftWindow) throws {
+        let sessionEnd = endAt ?? .distantFuture
+        let shiftEnd = window.endedAt ?? .distantFuture
+        guard sessionEnd > window.startedAt, startAt < shiftEnd else {
+            throw CareStoreError.outsideShift
+        }
     }
 
     /// Filtered in the predicate, not in memory — filtering a limited fetch can
@@ -155,16 +214,20 @@ actor CareStore {
 
     // MARK: - Logging
 
+    /// `babyID` is optional only because `pump` is about the mother. Every other
+    /// kind must name a baby: an unattributed feed cannot be counted for either
+    /// twin, so the totals and the handoff would quietly drop it.
     func logEvent(
         kind: EventKind,
         at: Date,
         shiftID: UUID,
-        babyID: UUID,
+        babyID: UUID?,
         source: EventSource = .manual,
         configure: (LogEvent) -> Void = { _ in }
     ) throws -> UUID {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        let baby = try requiredBaby(babyID, for: kind)
+        try rejectFuture(at)
 
         let event = LogEvent(kind: kind, at: at, source: source)
         configure(event)
@@ -172,6 +235,36 @@ actor CareStore {
         modelContext.insert(event)
         try modelContext.save()
         return event.id
+    }
+
+    /// Puts a deleted event back as it was, for Undo. Deliberately not `logEvent`:
+    /// a new tap deserves a new identity, an undo does not — see
+    /// `LogEvent.restoration`. Re-running it is harmless, so a double-tap on Undo
+    /// cannot produce two copies.
+    func restoreEvent(_ restoration: EventRestoration) throws {
+        guard let shift = try shift(restoration.shiftID) else {
+            throw CareStoreError.shiftNotFound
+        }
+        let restoredID = restoration.id
+        if try one(FetchDescriptor<LogEvent>(
+            predicate: #Predicate { $0.id == restoredID })) != nil { return }
+
+        let baby = try requiredBaby(restoration.babyID, for: restoration.kind)
+        let event = LogEvent(
+            id: restoration.id, kind: restoration.kind, at: restoration.at,
+            createdAt: restoration.createdAt, source: restoration.source)
+        restoration.applyPayload(to: event)
+        event.attach(to: shift, baby: baby)
+        modelContext.insert(event)
+        try modelContext.save()
+    }
+
+    private func requiredBaby(_ babyID: UUID?, for kind: EventKind) throws -> Baby? {
+        guard kind.attachesToBaby else { return babyID.flatMap { try? baby($0) } }
+        guard let babyID, let baby = try baby(babyID) else {
+            throw CareStoreError.babyNotFound
+        }
+        return baby
     }
 
     /// Applies a patch to an existing event. Payload fields are set wholesale by
@@ -183,6 +276,7 @@ actor CareStore {
         configure: (LogEvent) -> Void
     ) throws {
         guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
+        try rejectFuture(at)
         event.at = at
         configure(event)
         try modelContext.save()
@@ -212,6 +306,7 @@ actor CareStore {
     func toggleSleep(shiftID: UUID, babyID: UUID, at date: Date) throws -> SleepToggle {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        try rejectFuture(date)
 
         try reconcileSleep(shiftID: shiftID, babyID: babyID)
 
@@ -239,7 +334,10 @@ actor CareStore {
     func recordSleep(shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date?) throws {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
         guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        try rejectFuture(startAt)
+        if let endAt { try rejectFuture(endAt) }
         if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
+        try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
 
         if let existing = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
             existing.startAt = startAt
@@ -259,7 +357,12 @@ actor CareStore {
         guard let session = try one(
             FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
         else { return }
+        try rejectFuture(startAt)
+        if let endAt { try rejectFuture(endAt) }
         if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
+        if let shiftID = session.shiftIDRaw, let shift = try shift(shiftID) {
+            try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
+        }
         session.startAt = startAt
         if let endAt {
             session.close(at: endAt)
@@ -270,6 +373,27 @@ actor CareStore {
         try modelContext.save()
         try reconcileSleep(
             shiftID: session.shiftIDRaw ?? UUID(), babyID: session.babyIDRaw ?? UUID())
+    }
+
+    /// Puts a deleted sleep session back under its own id, for Undo.
+    ///
+    /// `recordSleep` cannot serve as the undo here: when another session is already
+    /// open it corrects *that* one rather than inserting, so undoing a deleted
+    /// closed session would silently drag a live one back in time. Re-running this
+    /// is harmless, so a double-tap on Undo cannot produce two copies.
+    func restoreSleepSession(
+        id: UUID, shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date?
+    ) throws {
+        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        if try one(FetchDescriptor<SleepSession>(
+            predicate: #Predicate { $0.id == id })) != nil { return }
+
+        let session = SleepSession(id: id, startAt: startAt, endAt: endAt)
+        session.attach(to: shift, baby: baby)
+        modelContext.insert(session)
+        try modelContext.save()
+        try reconcileSleep(shiftID: shiftID, babyID: babyID)
     }
 
     /// Removes a sleep session outright. A closed session is otherwise unreachable.
@@ -378,4 +502,32 @@ enum CareStoreError: Error, Equatable {
     case endBeforeStart
     case emptyName
     case eventNotFound
+    case futureTimestamp
+    case outsideShift
+}
+
+/// Every view already surfaces failures as `"\(error)"`, so the readable text has
+/// to come through `description` as well — conforming to `LocalizedError` alone
+/// would leave the alerts saying "futureTimestamp".
+extension CareStoreError: CustomStringConvertible {
+    var description: String { errorDescription ?? "Something went wrong." }
+}
+
+extension CareStoreError: LocalizedError {
+    /// The alert is the only thing the doula sees when a write is refused at 3am,
+    /// so it says what to do, not which case fired.
+    var errorDescription: String? {
+        switch self {
+        case .familyNotFound: return "That client family is no longer on this device."
+        case .babyNotFound: return "That baby is no longer on this device."
+        case .shiftNotFound: return "That shift is no longer on this device."
+        case .shiftAlreadyOpen: return "A shift is already running. End it first."
+        case .shiftAlreadyClosed: return "That shift has already ended."
+        case .endBeforeStart: return "That would end before it started. Check the times."
+        case .emptyName: return "A name is needed."
+        case .eventNotFound: return "That entry has already been removed."
+        case .futureTimestamp: return "That time hasn't happened yet."
+        case .outsideShift: return "That falls outside the shift, where it wouldn't be counted."
+        }
+    }
 }

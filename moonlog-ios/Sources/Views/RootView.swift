@@ -22,8 +22,15 @@ struct RootView: View {
     @Query(filter: #Predicate<Shift> { $0.isOpen }, sort: \Shift.startedAt, order: .reverse)
     private var openShifts: [Shift]
 
+    /// Which client household is on screen. A raw string because `@AppStorage`
+    /// cannot hold a `UUID`; it is resolved against `families` on every render, so
+    /// an id left behind by a deleted or archived family falls back rather than
+    /// leaving the doula on an empty screen. See `FamilySelection`.
+    @AppStorage("moonlog.currentFamilyID") private var currentFamilyIDRaw = ""
+
     @State private var error: String?
     @State private var tab = "tonight"
+    @State private var addingFamily = false
 
     private var theme: MoonTheme {
         if deepNightEnabled { return .deepNight }
@@ -32,8 +39,17 @@ struct RootView: View {
 
     private var palette: Palette { Palette.for(theme) }
 
+    /// Never `families.first` directly: that made every household after the first
+    /// unreachable. The stored id wins when it still names a family the query can
+    /// see; anything else falls back to the oldest active one.
+    private var currentFamily: Family? {
+        guard let id = FamilySelection.resolve(
+            storedID: currentFamilyIDRaw, among: families.map(\.id)) else { return nil }
+        return families.first { $0.id == id }
+    }
+
     var body: some View {
-        tabs(families.first)
+        tabs(currentFamily)
             .tint(palette.accent)
             .environment(\.moonTheme, theme)
             // Only forced for the explicit override. Applying it in the
@@ -99,32 +115,92 @@ struct RootView: View {
     @ViewBuilder
     private func tonight(_ family: Family?, _ shift: Shift?) -> some View {
         if let family {
-            if let shift {
-                TonightView(family: family, shift: shift)
-            } else {
-                StartShiftView(familyName: family.name) { startedAt, caregiver in
-                    Haptics.commit()
-                    run {
-                        _ = try await $0.startShift(
-                            familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+            Group {
+                if let shift {
+                    TonightView(family: family, shift: shift)
+                } else {
+                    StartShiftView(familyName: family.name) { startedAt, caregiver in
+                        Haptics.commit()
+                        run {
+                            _ = try await $0.startShift(
+                                familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+                        }
                     }
                 }
             }
+            // Switching household is deliberate, so the screen starts clean.
+            // Without a per-family identity SwiftUI keeps TonightView's `@State`
+            // across the change, and a half-filled log sheet would still be
+            // holding the previous family's baby id.
+            .id(family.id)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { familyMenu(family) }
+            }
+            .sheet(isPresented: $addingFamily) {
+                AddFamilySheet(onAdd: createFamily)
+            }
         } else {
-            OnboardingView { familyName, babyName, birthAt, unit in
-                run { store in
-                    let familyID = try await store.createFamily(name: familyName)
-                    try await store.setVolumeUnit(unit, familyID: familyID)
-                    _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
+            OnboardingView(onCreate: createFamily)
+        }
+    }
+
+    /// The switcher, on Tonight rather than in Settings: it is the screen the doula
+    /// is on all night, and the label doubles as a standing answer to "whose night
+    /// am I logging?" — the mistake this guards against is logging a feed against
+    /// the wrong household, which Settings, two taps away, would not prevent.
+    private func familyMenu(_ current: Family) -> some View {
+        Menu {
+            // A Picker, so the current household carries a checkmark. Colour is
+            // never the only signal.
+            Picker("Client family", selection: familyBinding(current)) {
+                ForEach(families) { family in
+                    Text(family.name).tag(family.id)
                 }
             }
+            Divider()
+            Button("Add client family", systemImage: "person.2.badge.plus") {
+                addingFamily = true
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(current.name).font(.subheadline.weight(.semibold)).lineLimit(1)
+                Image(systemName: "chevron.down").font(.caption2)
+            }
+        }
+        .accessibilityLabel("Client family, \(current.name)")
+    }
+
+    private func familyBinding(_ current: Family) -> Binding<UUID> {
+        Binding(
+            get: { current.id },
+            set: { id in
+                guard id != current.id else { return }
+                Haptics.tap()
+                currentFamilyIDRaw = id.uuidString
+            })
+    }
+
+    /// Shared by first-run onboarding and the later add-family sheet — the same
+    /// three writes, in the same order, so a second household is set up exactly
+    /// like the first.
+    private func createFamily(
+        _ familyName: String, _ babyName: String, _ birthAt: Date, _ unit: VolumeUnit
+    ) {
+        run { store in
+            let familyID = try await store.createFamily(name: familyName)
+            try await store.setVolumeUnit(unit, familyID: familyID)
+            _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
+            // Select what was just created. `families` is sorted oldest-first, so
+            // without this a newly added household would open behind the one
+            // already on screen.
+            currentFamilyIDRaw = familyID.uuidString
         }
     }
 
     @ViewBuilder
     private func summary(_ family: Family?, _ shift: Shift?) -> some View {
         if let family {
-            SummaryView(family: family, shift: shift)
+            SummaryView(family: family, shift: shift).id(family.id)
         } else {
             EmptyStatePlaceholder(
                 emoji: "📋",
@@ -146,5 +222,25 @@ struct RootView: View {
         Task {
             do { try await action(store) } catch { self.error = "\(error)" }
         }
+    }
+}
+
+/// Resolving the persisted family selection.
+///
+/// Its own type, not a computed property in the view, so the fallback rule can be
+/// tested: it is the difference between a stale id showing the wrong household's
+/// night and showing no household at all.
+enum FamilySelection {
+    /// The family to display, given what was stored and what actually exists.
+    ///
+    /// Falls back to the first of `ids` — the query's order, oldest active family
+    /// first — when nothing is stored, when the stored value is not a UUID, or when
+    /// it names a family that has since been archived or deleted. Returns `nil`
+    /// only when there are no families at all, which is the onboarding case.
+    static func resolve(storedID: String, among ids: [UUID]) -> UUID? {
+        guard let stored = UUID(uuidString: storedID), ids.contains(stored) else {
+            return ids.first
+        }
+        return stored
     }
 }
