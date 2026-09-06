@@ -129,17 +129,26 @@ by colour alone here: the glyph is a moon or a sun, the sentence says "Mia is as
 in words, and the elapsed counter appears only while asleep. Colour stays the third
 signal — it has changed what it is third *for*.
 
-**The blend factors were measured, not chosen.** 0.82 on Night, 0.85 on Deep Night,
-0.74 on Day: the deepest fill each card allows while keeping `ink` and `faint` at
-4.5:1 on it and the accent outline at 3:1, for all five accents. The outline and glyph
-are held to 3:1 rather than 4.5 because they are UI components, not text — WCAG 1.4.11.
-Holding them to 4.5 was tried and forced the accent 44% of the way to `ink`, bleaching
-out the one thing the tile's colour now exists to say.
+**Each fill has two jobs, and they pull against each other.** It must stand off the
+card enough to read as *this baby's colour*, and stand off the other state enough to
+read as awake or asleep. Deepening one costs the other. The six blend factors are the
+measured balance point per theme — every theme clears 1.20:1 on both, while `ink` and
+`soft` hold 4.5:1 on the fill and the accent outline holds 3:1.
 
-**The honest limit:** on Deep Night the awake and asleep fills are only 1.17:1 apart,
-and no tuning fixes it — a near-black card flattens whatever is blended into it. The
-fill is a supporting signal there, not the one carrying the state. `PaletteTests`
-asserts it at that number rather than pretending otherwise.
+The outline and glyph are held to 3:1 rather than 4.5 because they are UI components,
+not text — WCAG 1.4.11. Holding them to 4.5 was tried and forced the accent 44% of the
+way to `ink`, bleaching out the one thing the tile's colour now exists to say.
+
+The tile's subtitle uses `soft` rather than `faint`. `faint` was what capped how deep
+either fill could go, and the fills needed that depth; it is also a line read at 3am,
+so the brighter role is the better call regardless.
+
+**This was shipped wrong once, and the suite did not catch it.** The asleep fill was
+first set at 0.95 on every theme, which put it 1.06:1 from the card — not a faded
+version of the baby's colour but nothing at all, an outline with an empty middle. The
+test asserted only that the two fills *differed*, and an invisible fill differs from a
+visible one perfectly well. A screenshot caught it. `PaletteTests` now asserts both
+jobs.
 
 Its second line says **when the state started, then what the tap does** — "Since
 3:42am · tap to adjust". Both halves are departures from the web original, and both

@@ -251,31 +251,36 @@ public enum BabyAccent: String, CaseIterable, Sendable, Identifiable {
     /// wash as if it were solid, passing a pair the eye fails. See the note on
     /// `Palette.raisedHex`.
     ///
-    /// **The factors differ per theme, and that is not a rounding artefact.** How
-    /// deep the awake fill can go is set by how much room the theme's own text roles
-    /// have on it, and the three cards are nothing like each other: Day's is
-    /// near-white and takes a fill at 0.74, Deep Night's is near-black and gives out
-    /// at 0.85. Each number is the deepest that still keeps `ink` and `faint` at
-    /// 4.5:1 and the accent outline at 3:1, for all five accents. They were measured,
-    /// not chosen — change one and `PaletteTests` will tell you.
+    /// **Both fills have two jobs and they pull against each other.** Each must be
+    /// far enough from the card to read as *this baby's colour* — call that identity
+    /// — and far enough from the other state to read as awake or asleep. Deepening
+    /// one costs the other, exactly.
     ///
-    /// The asleep fill sits at 0.95 everywhere: far enough back to read as quietened,
-    /// not so far that the baby's colour disappears into the card.
+    /// These six numbers are the balance point, measured per theme rather than
+    /// chosen: the pair maximising the *smaller* of identity and separation while
+    /// `ink` and `soft` hold 4.5:1 on both fills and the accent outline holds 3:1,
+    /// across all five accents. Every theme clears 1.20:1 on both. Change one and
+    /// `PaletteTests` will tell you which job you broke.
     ///
-    /// The honest limit of this: on Deep Night the two fills are only 1.17:1 apart,
-    /// because a near-black card flattens everything blended into it. The fill is a
-    /// supporting signal there, not the one carrying the state — the moon or sun
-    /// glyph, the words "is asleep", and the elapsed counter that appears only while
-    /// asleep all say it outright.
+    /// They differ per theme because the cards do — near-white by day, near-black on
+    /// Deep Night — and a blend toward a near-black card loses colour far faster.
+    ///
+    /// **The first attempt put asleep at 0.95 everywhere and it was wrong**, which
+    /// only a screenshot showed: at 1.06:1 against the card the asleep fill was not a
+    /// faded version of the baby's colour, it was nothing, and the tile read as an
+    /// empty outline. The suite was green — it asserted the fills differed from each
+    /// other, and they did. Nothing asked whether either was still visible.
     public func wash(for theme: MoonTheme, asleep: Bool) -> Color {
-        let awake: Double
-        switch theme {
-        case .night: awake = 0.82
-        case .deepNight: awake = 0.85
-        case .day: awake = 0.74
+        let factor: Double
+        switch (theme, asleep) {
+        case (.night, false): factor = 0.65
+        case (.night, true): factor = 0.80
+        case (.deepNight, false): factor = 0.70
+        case (.deepNight, true): factor = 0.83
+        case (.day, false): factor = 0.71
+        case (.day, true): factor = 0.85
         }
-        return .blend(
-            hex(for: theme), toward: Palette.raisedHex(theme), by: asleep ? 0.95 : awake)
+        return .blend(hex(for: theme), toward: Palette.raisedHex(theme), by: factor)
     }
 }
 

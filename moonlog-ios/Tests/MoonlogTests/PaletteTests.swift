@@ -147,8 +147,10 @@ final class PaletteTests: XCTestCase {
     /// and forced the accent 44% of the way to `ink` to satisfy it, which bleached
     /// out the one thing the tile's colour now exists to say.
     ///
-    /// `faint` on a wash is a pair nothing checked before this — not for the old
-    /// `sleepFaint`/`awakeFaint` either. It is the tightest of the three.
+    /// The subtitle uses `soft` rather than `faint` precisely because of this test:
+    /// `faint` was what capped how deep either fill could go, and the fills need
+    /// depth to stay recognisable as the baby's colour. Text on a wash is a pair
+    /// nothing checked before this — not for the old `sleepFaint`/`awakeFaint` either.
     func testTheBabyTintedTileHoldsUpInEveryAccentAndState() {
         for theme in MoonTheme.allCases {
             let p = Palette.for(theme)
@@ -158,7 +160,7 @@ final class PaletteTests: XCTestCase {
                     let state = asleep ? "asleep" : "awake"
                     let where_ = "\(theme.displayName)/\(accent.displayName)/\(state)"
 
-                    for (name, text) in [("ink", p.ink), ("faint", p.faint)] {
+                    for (name, text) in [("ink", p.ink), ("soft", p.soft)] {
                         let ratio = contrast(text, wash)
                         XCTAssertGreaterThanOrEqual(
                             ratio, 4.5,
@@ -176,24 +178,39 @@ final class PaletteTests: XCTestCase {
         }
     }
 
-    /// Awake and asleep must not render the same fill. Not a WCAG threshold — the
-    /// state is stated in words and by the icon — but two states that paint
-    /// identically would mean the fill is decoration rather than information.
-    func testAwakeAndAsleepFillsAreDistinguishable() {
+    /// The fill has two jobs, and this asserts both — because asserting only the
+    /// second is how the first was shipped broken.
+    ///
+    /// **Identity:** each fill must stand off the card enough to read as this baby's
+    /// colour. **Separation:** the two states must not paint the same. They pull
+    /// against each other; 1.20 is what every theme clears on both.
+    ///
+    /// The first version of this test checked separation alone. The factors then in
+    /// place put the asleep fill 1.06:1 from the card — invisible, an outline with
+    /// nothing inside — and the suite passed, because an invisible fill is still
+    /// different from a visible one. It took a screenshot to catch. Neither
+    /// assertion below is redundant.
+    func testBothFillsStayVisibleAndTellTheStatesApart() {
         for theme in MoonTheme.allCases {
+            let card = Palette.for(theme).raised
             for accent in BabyAccent.allCases {
-                let ratio = contrast(
-                    accent.wash(for: theme, asleep: false),
-                    accent.wash(for: theme, asleep: true))
-                // Low, and deliberately so. A near-black card flattens whatever is
-                // blended into it, so Deep Night tops out at 1.17:1 however the
-                // factors are tuned — this asserts the fill still says *something*,
-                // not that it carries the state on its own. The icon, the sentence
-                // and the elapsed counter do that.
+                let awake = accent.wash(for: theme, asleep: false)
+                let asleep = accent.wash(for: theme, asleep: true)
+                let where_ = "\(theme.displayName)/\(accent.displayName)"
+
+                for (state, fill) in [("awake", awake), ("asleep", asleep)] {
+                    let ratio = contrast(fill, card)
+                    XCTAssertGreaterThan(
+                        ratio, 1.18,
+                        "\(where_): the \(state) fill is \(String(format: "%.3f:1", ratio)) "
+                            + "against the card — too close to read as a colour at all")
+                }
+
+                let apart = contrast(awake, asleep)
                 XCTAssertGreaterThan(
-                    ratio, 1.15,
-                    "\(theme.displayName)/\(accent.displayName): the two fills are "
-                        + String(format: "%.3f:1", ratio))
+                    apart, 1.18,
+                    "\(where_): the two fills are only "
+                        + String(format: "%.3f:1", apart) + " apart")
             }
         }
     }

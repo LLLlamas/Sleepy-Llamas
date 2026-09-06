@@ -149,7 +149,12 @@ struct BabyStatusCard: View {
                     .foregroundStyle(palette.ink)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(palette.faint)
+                    // `soft`, not `faint`, and the fills depend on it. `faint` was
+                    // the binding constraint on how deep either fill could go, and
+                    // the fill had to be deep enough to still look like this baby's
+                    // colour. Moving one line to the next role up bought that room —
+                    // and it is a line read at 3am, so it is the better call anyway.
+                    .foregroundStyle(palette.soft)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)
