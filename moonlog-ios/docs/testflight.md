@@ -38,13 +38,18 @@ end shift. Add-baby and end-shift live in the Tonight toolbar.
 
 ## Deliberately still off
 
-- **CloudKit sync.** Needs the iCloud capability, a container, Background Modes →
-  Remote notifications, and `MOONLOG_CLOUDKIT` flipped at the same moment. The app
-  runs local-only until then, which avoids the launch-crash trap
-  (`docs/cloudkit.md`). Schema encryption is already correct for when it is enabled.
-  **This is now the main data-safety gap** — there is no backup or export of any
-  kind, so deleting the app deletes every client's records.
-- **NFC.** Needs the entitlement on the App ID and has no UI yet.
+- **CloudKit sync — deferred, not pending.** The app runs local-only, which avoids
+  the launch-crash trap entirely (`docs/cloudkit.md`). Schema encryption is already
+  correct for the day it is switched on.
+
+  An earlier version of this section called that "the main data-safety gap" on the
+  grounds that there was "no backup or export of any kind". That was wrong: the
+  store sits in `Library/Application Support` with nothing excluding it, so the
+  phone's own backup carries it and a replaced phone restores it. The real
+  remaining gap is narrower — deleting the app, and having no *re-importable*
+  export of your own history. The handoff, text or keepsake, is a document for the
+  parents rather than something the app can read back.
+- **NFC.** Backlog. Needs the entitlement on the App ID and has no UI yet.
 
 ## The archive ritual
 

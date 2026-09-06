@@ -158,9 +158,9 @@ front of the parents are fixed; what is left is listed honestly below.
 |---|---|---|
 | ~~Xcode signing~~ | done | Cloud-managed distribution signing. |
 | ~~App Store Connect record~~ | done | Build uploaded 2026-09-05. |
-| ~~Field encryption~~ | done | Nine fields, pinned by test. |
-| **iCloud capability + container + Background Modes** | before relying on the app | The whole of `docs/cloudkit.md`. `MOONLOG_CLOUDKIT` must be flipped in the same moment, in **both** `configs:` entries. Until then there is no backup at all. |
-| NFC Tag Reading on the App ID | before NFC | Developer portal. See `docs/next-features.md`. |
+| ~~Field encryption~~ | done | Ten fields, pinned by test. |
+| iCloud capability + container + Background Modes | **deferred** | Only when CloudKit is actually wanted — see the corrected backup picture above and `docs/cloudkit.md`, which is kept whole for that day. Nothing is waiting on this. |
+| NFC Tag Reading on the App ID | **backlog** | Developer portal, when NFC is picked up. Scoped in `docs/next-features.md`; nothing is being built. |
 
 ## Open questions
 
