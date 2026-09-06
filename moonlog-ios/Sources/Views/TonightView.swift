@@ -378,7 +378,6 @@ private struct Tonight {
         var lastFeed: [UUID: Date] = [:]
         var lastDiaper: [UUID: Date] = [:]
         var openSnapshots: [SleepSnapshot] = []
-        var timeline: [TimelineEntry] = []
 
         models.reserveCapacity(roster.count)
         for baby in roster {
@@ -390,16 +389,8 @@ private struct Tonight {
         let unit = family.volumeUnit
         let events = shift.events ?? []
         let sessions = shift.sleepSessions ?? []
-        timeline.reserveCapacity(events.count + sessions.count)
 
         for event in events {
-            timeline.append(
-                TimelineEntry(
-                    id: event.id, at: event.at, babyID: event.babyIDRaw,
-                    icon: event.kind.icon, title: event.timelineTitle(unit: unit),
-                    detail: event.timelineDetail(unit: unit),
-                    edit: event.babyIDRaw.map { .editEvent(id: event.id, babyID: $0) }))
-
             guard let babyID = event.babyIDRaw else { continue }
             switch event.kind {
             case .feed:
@@ -411,26 +402,12 @@ private struct Tonight {
             }
         }
 
-        for session in sessions {
-            timeline.append(
-                TimelineEntry(
-                    id: session.id, at: session.startAt, babyID: session.babyIDRaw,
-                    icon: "moon.zzz.fill", title: "Asleep",
-                    // Clipped to the shift, like Totals — an unclipped duration here
-                    // made the timeline and the Summary disagree about one sleep.
-                    detail: session.isOpen
-                        ? "still asleep"
-                        : session.snapshot.map {
-                            Fmt.duration(
-                                SleepMath.seconds(of: $0, clippedTo: shift.window, asOf: now))
-                        } ?? nil,
-                    edit: session.babyIDRaw.map { .editSleep(id: session.id, babyID: $0) }))
-
-            if session.isOpen, let snapshot = session.snapshot { openSnapshots.append(snapshot) }
+        for session in sessions where session.isOpen {
+            if let snapshot = session.snapshot { openSnapshots.append(snapshot) }
         }
 
-        timeline.sort { $0.at == $1.at ? $0.id.uuidString < $1.id.uuidString : $0.at > $1.at }
-        self.timeline = timeline
+        self.timeline = ShiftTimeline.entries(
+            for: shift, unit: unit, now: now, editable: true)
         self.names = names
         self.accents = accents
         self.models = models

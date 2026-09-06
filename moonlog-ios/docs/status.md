@@ -23,6 +23,9 @@ Do not run a real shift on that build.
 | Bottom tabs: Tonight / Summary / Settings | done |
 | Summary — per-baby totals for the shift | done |
 | Settings — Deep Night, volume unit, optional kinds, note tags, storage mode | done |
+| Edit / delete a logged entry, and sleep sessions | done |
+| Handoff — plain text, Copy and Share | done |
+| History — past nights, each with its own summary, timeline and handoff | done |
 | Haptics | done |
 | App icon, privacy manifest, export compliance | done |
 | Signing, archive, TestFlight upload | done |
@@ -40,20 +43,18 @@ wired in, and a green suite does not say otherwise.
 
 Each of the first three lets wrong data reach the parents or loses it.
 
-1. **Edit and delete a logged event.** Timeline rows have a tap target with no
-   gesture on it. `CareStore.deleteEvent` exists with no caller and there is no
-   `updateEvent` at all. A feed logged against the wrong twin is permanent.
-2. **History.** Ending a shift makes that night permanently invisible —
-   `RootView` has no path to a closed shift. Combined with (1), the app can capture
-   a night perfectly and then neither show it nor fix it.
-3. **Export / handoff.** Summary is on screen, but there is no way to get it to the
-   parents — no share sheet, no document, no file. And no backup of any kind.
-4. **A confirmable shift end time.** `endShift` reads the clock, contradicting the
-   rule that start and end are set by the doula. Ending 30 minutes late widens the
-   window and credits sleep that was not witnessed.
-5. **A second client family.** `RootView` uses `families.first` and onboarding only
+1. **Undo on writes.** The only recovery is edit/delete after the fact; the PWA
+   offered undo on every write and on the sleep toggle.
+2. **A confirmable shift end time**, and the ability to correct a shift's start.
+   `endShift` reads the clock, contradicting the rule that both are set by the
+   doula. Ending 30 minutes late widens the window and credits sleep nobody saw.
+3. **A second client family.** `RootView` uses `families.first` and onboarding only
    appears when there are none, so the second household is unreachable.
-6. **Wire `TonightView` to `MoonlogCore`** rather than reimplementing it inline.
+4. **Any backup.** No export and no CloudKit — deleting the app deletes every
+   client's records.
+5. **Edit a baby's birth date and the caregiver name.** Both are wrong-forever
+   today, and both appear on the handoff.
+6. The keepsake handoff document (the PWA's themed, printable page).
 
 ## Needs the user
 

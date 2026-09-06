@@ -98,6 +98,30 @@ enum DemoSeed {
         log(.diaper, leo, 35) { $0.diaperContentsRaw = DiaperContents.dirty.rawValue
                                 $0.stoolColorRaw = StoolColor.yellow.rawValue }
 
+        // Two closed shifts from previous nights, so History has something in it.
+        for nightsAgo in 1...2 {
+            guard let start = calendar.date(byAdding: .day, value: -nightsAgo, to: shiftStart),
+                  let end = calendar.date(byAdding: .hour, value: 8, to: start)
+            else { continue }
+            let past = Shift(startedAt: start, endedAt: end, caregiver: "Cat")
+            past.attach(to: family)
+            context.insert(past)
+
+            for (offset, baby) in [(90, mia), (150, leo), (300, mia)] {
+                let feed = LogEvent(
+                    kind: .feed, at: start.addingTimeInterval(Double(offset) * 60))
+                feed.feedMethodRaw = FeedMethod.bottleFormula.rawValue
+                feed.amountMl = 60
+                feed.attach(to: past, baby: baby)
+                context.insert(feed)
+            }
+            let sleep = SleepSession(
+                startAt: start.addingTimeInterval(3600),
+                endAt: start.addingTimeInterval(3600 * 4))
+            sleep.attach(to: past, baby: mia)
+            context.insert(sleep)
+        }
+
         // Mia asleep now; Leo woke a little while ago. The state twins actually
         // spend most of the night in, and the reason the layout shows both.
         let miaAsleep = SleepSession(startAt: minutesAgo(83))

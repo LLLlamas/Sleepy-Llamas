@@ -44,6 +44,13 @@ public enum Fmt {
         duration(max(0, now.timeIntervalSince(date)))
     }
 
+    /// "Thu, 4 Sep" — how a past night is named in a list.
+    public static func nightOf(_ date: Date, timeZone: TimeZone) -> String {
+        var style = Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated)
+        style.timeZone = timeZone
+        return date.formatted(style)
+    }
+
     public static func clock(_ date: Date, timeZone: TimeZone) -> String {
         var style = Date.FormatStyle.dateTime.hour().minute()
         style.timeZone = timeZone

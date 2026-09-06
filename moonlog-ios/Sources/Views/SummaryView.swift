@@ -11,6 +11,11 @@ struct SummaryView: View {
     let family: Family
     let shift: Shift?
 
+    /// Closed shifts, newest first. Bounded — a doula accumulates one per night and
+    /// nobody scrolls a year back on this screen.
+    @Query(filter: #Predicate<Shift> { !$0.isOpen }, sort: \Shift.startedAt, order: .reverse)
+    private var closedShifts: [Shift]
+
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
@@ -22,24 +27,31 @@ struct SummaryView: View {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     content(shift: shift, now: context.date)
                 }
-            } else {
+            } else if pastNights.isEmpty {
                 EmptyStatePlaceholder(
                     emoji: "📋",
                     title: "No shift running",
                     message: "Start a shift and the night's totals appear here.")
+            } else {
+                ScrollView {
+                    PastNightsSection(family: family, shifts: pastNights)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, MoonLayout.tabBarClearance)
+                }
             }
         }
         .background(palette.bg)
         .toolbar {
             if let shift {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ShareLink(item: handoffText(shift: shift, now: Date())) {
+                    ShareLink(item: HandoffComposer.text(family: family, shift: shift, now: Date())) {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        UIPasteboard.general.string = handoffText(shift: shift, now: Date())
+                        UIPasteboard.general.string = HandoffComposer.text(family: family, shift: shift, now: Date())
                         Haptics.success()
                         copied = true
                     } label: {
@@ -55,41 +67,38 @@ struct SummaryView: View {
         }
     }
 
-    /// The night written out for the parents. Built from the same `Totals.compute`
-    /// the cards above show, so the document and the screen cannot disagree.
-    private func handoffText(shift: Shift, now: Date) -> String {
-        Handoff.text(
-            babies: family.activeBabies.map {
-                HandoffBaby(
-                    id: $0.id, name: $0.name,
-                    dayOfLife: DayOfLife.calendarDay(
-                        birthAt: $0.birthAt, forShift: shift.window,
-                        calendar: family.calendar))
-            },
-            shift: shift.window,
-            caregiver: shift.caregiver,
-            events: (shift.events ?? []).compactMap(\.snapshot),
-            sessions: (shift.sleepSessions ?? []).compactMap(\.snapshot),
-            unit: family.volumeUnit,
-            timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
-            asOf: now)
+    /// This family's past nights. Filtering here rather than in the predicate
+    /// because a `@Query` cannot capture `family.id` at declaration.
+    private var pastNights: [Shift] {
+        closedShifts.filter { $0.familyIDRaw == family.id }.prefix(14).map { $0 }
+    }
+
+    /// The per-baby cards alone, so a past night renders through exactly this view
+    /// rather than a parallel copy that could drift.
+    @ViewBuilder
+    func summaryCards(now: Date) -> some View {
+        if let shift {
+            let events = (shift.events ?? []).compactMap(\.snapshot)
+            let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
+            VStack(spacing: 18) {
+                shiftHeader(shift, now: now)
+                ForEach(family.activeBabies) { baby in
+                    babyCard(
+                        baby,
+                        totals: Totals.compute(
+                            events: events, sessions: sessions, forBaby: baby.id,
+                            shift: shift.window, asOf: now),
+                        unit: family.volumeUnit, shift: shift)
+                }
+            }
+        }
     }
 
     private func content(shift: Shift, now: Date) -> some View {
-        let events = (shift.events ?? []).compactMap(\.snapshot)
-        let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
-        let unit = family.volumeUnit
-
-        return ScrollView {
+        ScrollView {
             VStack(spacing: 18) {
-                shiftHeader(shift, now: now)
-
-                ForEach(family.activeBabies) { baby in
-                    let totals = Totals.compute(
-                        events: events, sessions: sessions, forBaby: baby.id,
-                        shift: shift.window, asOf: now)
-                    babyCard(baby, totals: totals, unit: unit, shift: shift)
-                }
+                summaryCards(now: now)
+                PastNightsSection(family: family, shifts: pastNights)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
