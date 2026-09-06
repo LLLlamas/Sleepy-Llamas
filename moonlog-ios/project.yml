@@ -21,7 +21,7 @@ settings:
     # last shipped one. Stamped by ./scripts/archive.sh, which edits THIS file.
     # Do not use agvtool: it writes into the generated .xcodeproj (discarded on the
     # next regenerate) and fails outright because our Info.plist is generated.
-    CURRENT_PROJECT_VERSION: "1788666101"
+    CURRENT_PROJECT_VERSION: "1788708510"
     DEVELOPMENT_TEAM: GYFN949Q5E
 
 targets:
