@@ -192,19 +192,25 @@ final class ShiftTotalsTests: XCTestCase {
         XCTAssertEqual(t.feedSeconds, 720)
     }
 
-    /// Pumping is about the mother, so it carries no baby and must still be counted.
-    func testPumpEventsCountDespiteHavingNoBaby() {
+    /// Pumping is about the mother, so it belongs to the shift and to no baby.
+    /// Counting it per baby double-counted a single session across twins.
+    func testPumpingIsCountedForTheShiftAndNotPerBaby() {
         let events = [
-            EventSnapshot(babyID: babyA, kind: .pump, at: at("2026-09-05 02:00"),
+            EventSnapshot(babyID: UUID(), kind: .pump, at: at("2026-09-05 02:00"),
                           pumpedMl: 120),
             EventSnapshot(babyID: babyB, kind: .feed, at: at("2026-09-05 02:30")),
         ]
-        // Counted for whichever baby's totals are being computed, not duplicated
-        // into a baby's feed figures.
-        let t = Totals.compute(events: events, sessions: [], forBaby: babyA,
-                               shift: shift, asOf: .distantFuture)
-        XCTAssertEqual(t.pumpedMl, 120)
-        XCTAssertEqual(t.feeds, 0, "babyB's feed is not babyA's")
+
+        let household = Totals.household(events: events, shift: shift, asOf: .distantFuture)
+        XCTAssertEqual(household.pumpedMl, 120)
+        XCTAssertEqual(household.pumpSessions, 1)
+
+        // And it appears in neither twin's figures.
+        for baby in [babyA, babyB] {
+            let t = Totals.compute(events: events, sessions: [], forBaby: baby,
+                                   shift: shift, asOf: .distantFuture)
+            XCTAssertEqual(t.feeds, baby == babyB ? 1 : 0)
+        }
     }
 
     func testMedicationAndLatestWeight() {

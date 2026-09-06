@@ -40,7 +40,13 @@ struct DiaperSheet: View {
             at: $at,
             shift: shift,
             saveEnabled: true,
-            onSave: { onSave(DiaperEntry(at: at, contents: contents, stool: stool)) },
+            // Cleared when the contents no longer include stool. Keeping it meant a
+            // corrected wet diaper still put meconium in the handoff.
+            onSave: {
+                onSave(DiaperEntry(
+                    at: at, contents: contents,
+                    stool: contents.countsAsDirty ? stool : nil))
+            },
             onDelete: onDelete
         ) {
             Section("What") {

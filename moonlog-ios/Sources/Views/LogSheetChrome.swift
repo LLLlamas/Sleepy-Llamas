@@ -90,7 +90,8 @@ struct LogSheetChrome<Content: View>: View {
                     }
                     .listRowBackground(palette.raised)
                     .confirmationDialog(
-                        "Delete this entry?", isPresented: $confirmingDelete,
+                        babyName.map { "Delete this entry for \($0)?" } ?? "Delete this entry?",
+                        isPresented: $confirmingDelete,
                         titleVisibility: .visible
                     ) {
                         Button("Delete", role: .destructive) {

@@ -58,14 +58,29 @@ final class HandoffTests: XCTestCase {
         XCTAssertTrue(out.contains("Feeds · 3"), out)
     }
 
-    /// A 2oz bottle must read "2 oz", not "2.0 oz" — it is printed for a parent.
-    func testWholeOuncesHaveNoTrailingDecimal() {
-        let events = [EventSnapshot(babyID: mia, kind: .feed, at: at("2026-09-05 01:00"),
-                                    feedMethod: .bottleFormula, amountMl: 59.15)]
+    /// Two registers, deliberately. An individual bottle is entered on a
+    /// half-ounce grid, so "2 oz" is exact and "2.0 oz" is just noise. A TOTAL is a
+    /// sum that does not sit on that grid, so rounding it to the nearest half
+    /// misstates the figure a parent is most likely to write down.
+    func testIndividualFeedsRoundToHalvesAndTotalsKeepADecimal() {
+        let events = [
+            EventSnapshot(babyID: mia, kind: .feed, at: at("2026-09-05 01:00"),
+                          feedMethod: .bottleFormula, amountMl: 59.15),
+            EventSnapshot(babyID: mia, kind: .feed, at: at("2026-09-05 04:00"),
+                          feedMethod: .bottleFormula, amountMl: 60),
+        ]
         let out = text(babies: [HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)],
                        events: events)
-        XCTAssertTrue(out.contains("2 oz"), out)
-        XCTAssertFalse(out.contains("2.0 oz"), out)
+        XCTAssertTrue(out.contains("bottle, formula — 2 oz"), "per feed: no bare .0")
+        XCTAssertTrue(out.contains("(4.0 oz by bottle)"), "total: keeps its precision")
+    }
+
+    /// A logged feed rendering as "0 oz" in the parents' handoff is the worst output
+    /// this app can produce. Reachable when a family logged in ml then switched.
+    func testASmallAmountNeverRoundsAwayToZero() {
+        XCTAssertEqual(Fmt.amount(ml: 5, unit: .oz), "0.2 oz")
+        XCTAssertEqual(Fmt.amount(ml: 1, unit: .oz), "0.1 oz")
+        XCTAssertFalse(Fmt.amount(ml: 5, unit: .oz).hasPrefix("0 oz"))
     }
 
     func testDiapersAndStoolProgression() {
@@ -81,7 +96,8 @@ final class HandoffTests: XCTestCase {
                        events: events)
         XCTAssertTrue(out.contains("Diapers · 3"), out)
         XCTAssertTrue(out.contains("(2 wet, 2 dirty)"), "both counts as each")
-        XCTAssertTrue(out.contains("meconium → transitional"), out)
+        XCTAssertTrue(out.contains("Meconium → Transitional"),
+                      "same casing as the Summary card")
     }
 
     func testSleepReportsTotalStretchesAndLongest() {

@@ -351,13 +351,12 @@ private extension TonightView {
 
 // MARK: - Derived state
 
-/// Everything the screen needs, built in a **single pass** over the shift's records.
+/// Everything the screen needs, derived from the shift's records.
 ///
-/// The obvious shape — asking each baby to filter the shift's events — is O(babies ×
-/// events) and re-runs on every 30s tick. Bucketing once by baby id makes it
-/// O(events + sessions + babies), with the one unavoidable sort for the timeline.
+/// Bucketed by baby id rather than asking each baby to filter the whole event list,
+/// which would be O(babies × events). Rebuilt when the records change — the screen
+/// no longer ticks; only the live labels inside each card do.
 private struct Tonight {
-    let now: Date
     let timeZone: TimeZone
     let babies: [BabyPresentation]
     let timeline: [TimelineEntry]
@@ -368,7 +367,6 @@ private struct Tonight {
     func model(for id: UUID) -> Baby? { models[id] }
 
     init(family: Family, shift: Shift, now: Date) {
-        self.now = now
         self.timeZone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
 
         let roster = family.activeBabies

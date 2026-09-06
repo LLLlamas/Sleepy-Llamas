@@ -87,7 +87,7 @@ struct SleepSheet: View {
                     HStack {
                         Text("Slept")
                         Spacer()
-                        Text(Fmt.duration(duration))
+                        Text(Fmt.spanned(duration))
                             .font(.body.monospacedDigit())
                             .foregroundStyle(palette.sleep)
                     }

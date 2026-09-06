@@ -45,13 +45,18 @@ struct SummaryView: View {
         .toolbar {
             if let shift {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ShareLink(item: HandoffComposer.text(family: family, shift: shift, now: Date())) {
+                    // Composed at tap time, not at body time: the toolbar is
+                    // outside the tick, so a screen left open for an hour would
+                    // otherwise share an hour-stale document.
+                    ShareLink(item: HandoffComposer.text(
+                        family: family, shift: shift, now: shift.endedAt ?? Date())) {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        UIPasteboard.general.string = HandoffComposer.text(family: family, shift: shift, now: Date())
+                        UIPasteboard.general.string = HandoffComposer.text(
+                            family: family, shift: shift, now: shift.endedAt ?? Date())
                         Haptics.success()
                         copied = true
                     } label: {
@@ -73,36 +78,48 @@ struct SummaryView: View {
         closedShifts.filter { $0.familyIDRaw == family.id }.prefix(14).map { $0 }
     }
 
-    /// The per-baby cards alone, so a past night renders through exactly this view
-    /// rather than a parallel copy that could drift.
-    @ViewBuilder
-    func summaryCards(now: Date) -> some View {
-        if let shift {
-            let events = (shift.events ?? []).compactMap(\.snapshot)
-            let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
-            VStack(spacing: 18) {
-                shiftHeader(shift, now: now)
-                ForEach(family.activeBabies) { baby in
-                    babyCard(
-                        baby,
-                        totals: Totals.compute(
-                            events: events, sessions: sessions, forBaby: baby.id,
-                            shift: shift.window, asOf: now),
-                        unit: family.volumeUnit, shift: shift)
-                }
-            }
-        }
-    }
-
     private func content(shift: Shift, now: Date) -> some View {
         ScrollView {
             VStack(spacing: 18) {
-                summaryCards(now: now)
+                SummaryCards(family: family, shift: shift, now: now)
                 PastNightsSection(family: family, shifts: pastNights)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, MoonLayout.tabBarClearance)
+        }
+    }
+
+}
+
+/// The per-baby cards for one shift.
+///
+/// A real `View`, not a method on `SummaryView`. It used to be the latter, and a
+/// past night's detail called it on a `SummaryView` value that was never installed
+/// in the hierarchy — so its `@Environment` reads returned DEFAULTS and every card
+/// rendered in the Night palette regardless of theme. In Day that is dark maroon
+/// cards on a cream page.
+struct SummaryCards: View {
+    let family: Family
+    let shift: Shift
+    let now: Date
+
+    @Environment(\.palette) private var palette
+    @Environment(\.moonTheme) private var theme
+
+    var body: some View {
+        let events = (shift.events ?? []).compactMap(\.snapshot)
+        let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
+        VStack(spacing: 18) {
+            shiftHeader(shift, now: now)
+            ForEach(family.activeBabies) { baby in
+                babyCard(
+                    baby,
+                    totals: Totals.compute(
+                        events: events, sessions: sessions, forBaby: baby.id,
+                        shift: shift.window, asOf: now),
+                    unit: family.volumeUnit, shift: shift)
+            }
         }
     }
 
@@ -145,17 +162,15 @@ struct SummaryView: View {
 
             statRow([
                 ("Feeds", "\(totals.feeds)", palette.ink),
-                ("Sleep", Fmt.duration(totals.sleepSeconds), palette.sleep),
+                ("Sleep", Fmt.spanned(totals.sleepSeconds), palette.sleep),
                 ("Diapers", "\(totals.diapers)", palette.ink),
             ])
 
             statRow([
-                ("Bottle", totals.feedMl > 0 ? Fmt.amount(ml: totals.feedMl, unit: unit) : "—",
+                ("Bottle", totals.feedMl > 0 ? Fmt.amountTotal(ml: totals.feedMl, unit: unit) : "—",
                  palette.soft),
-                ("At breast", totals.breastSeconds > 0
-                    ? Fmt.duration(totals.breastSeconds) : "—", palette.soft),
-                ("Longest", totals.longestStretchSeconds > 0
-                    ? Fmt.duration(totals.longestStretchSeconds) : "—", palette.soft),
+                ("At breast", Fmt.spanned(totals.breastSeconds), palette.soft),
+                ("Longest", Fmt.spanned(totals.longestStretchSeconds), palette.soft),
             ])
 
             detail("Wet / dirty", "\(totals.wet) / \(totals.dirty)")

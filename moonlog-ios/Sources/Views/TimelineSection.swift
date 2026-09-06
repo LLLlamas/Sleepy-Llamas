@@ -37,7 +37,11 @@ struct TimelineSection: View {
             if entries.isEmpty {
                 empty
             } else {
-                LazyVStack(spacing: 0) {
+                // Eager, deliberately. A LazyVStack reports an estimated height
+                // for unrealized rows, so `.cardSurface`'s fill and border size
+                // against a box that changes while scrolling. The enclosing
+                // ScrollView already defers work, and ~40 HStacks is not a load.
+                VStack(spacing: 0) {
                     ForEach(entries) { entry in
                         if let edit = entry.edit {
                             Button {

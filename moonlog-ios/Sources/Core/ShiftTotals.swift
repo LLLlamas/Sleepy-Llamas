@@ -23,7 +23,6 @@ public struct ShiftTotals: Sendable, Equatable {
     public var notes: Int = 0
 
     // Optional kinds. Zero unless the family has them enabled.
-    public var pumpedMl: Double = 0
     public var medications: Int = 0
     /// Most recent weight in the shift, if one was taken.
     public var latestWeightGrams: Double?
@@ -37,9 +36,30 @@ public struct ShiftTotals: Sendable, Equatable {
     }
 }
 
+public struct HouseholdTotals: Sendable, Equatable {
+    public var pumpedMl: Double = 0
+    public var pumpSessions: Int = 0
+    public var isEmpty: Bool { pumpSessions == 0 }
+}
+
 public enum Totals {
 
     /// Totals for one baby across one shift, everything clipped to the shift window.
+    /// Shift-level figures that belong to nobody in particular. Pumping is about
+    /// the mother, so counting it into each baby's totals double-counted it across
+    /// twins and attributed it to a child besides.
+    public static func household(
+        events: [EventSnapshot], shift: ShiftWindow, asOf now: Date
+    ) -> HouseholdTotals {
+        guard let window = shift.interval(asOf: now) else { return HouseholdTotals() }
+        var totals = HouseholdTotals()
+        for event in events where event.kind == .pump && window.contains(event.at) {
+            totals.pumpedMl += event.pumpedMl ?? 0
+            totals.pumpSessions += 1
+        }
+        return totals
+    }
+
     public static func compute(
         events: [EventSnapshot],
         sessions: [SleepSnapshot],
@@ -51,10 +71,8 @@ public enum Totals {
         guard let window = shift.interval(asOf: now) else { return totals }
 
         // Sorted so `stoolProgression` reflects genuine first appearance.
-        // `pump` is about the mother and carries no baby, so it is counted for the
-        // shift regardless of which baby's totals these are.
         let relevant = events
-            .filter { window.contains($0.at) && ($0.babyID == babyID || $0.kind == .pump) }
+            .filter { window.contains($0.at) && $0.babyID == babyID }
             .sorted { $0.at < $1.at }
 
         for event in relevant {
@@ -79,7 +97,9 @@ public enum Totals {
                     totals.highestTempF = max(totals.highestTempF ?? temp, temp)
                 }
             case .pump:
-                totals.pumpedMl += event.pumpedMl ?? 0
+                // Unreachable per baby — pump carries no baby and is counted by
+                // `household(events:shift:asOf:)` for the shift instead.
+                break
             case .medication:
                 totals.medications += 1
             case .measurement:

@@ -28,7 +28,7 @@ public enum Handoff {
         babies: [HandoffBaby],
         shift: ShiftWindow,
         caregiver: String?,
-        events: [EventSnapshot],
+        events allEvents: [EventSnapshot],
         sessions: [SleepSnapshot],
         unit: VolumeUnit,
         timeZone: TimeZone,
@@ -36,24 +36,51 @@ public enum Handoff {
     ) -> String {
         var lines: [String] = []
         let end = shift.endedAt ?? now
+        // Clipped once, here, so every list below agrees with the totals above it.
+        // Back-dating outside the shift is allowed by design, and the counts have
+        // always excluded it — the lists used not to.
+        let events = shift.interval(asOf: now)
+            .map { window in allEvents.filter { window.contains($0.at) } } ?? []
 
-        lines.append(header(babies: babies, shift: shift, end: end, timeZone: timeZone))
+        lines.append(
+            header(babies: babies, shift: shift, end: end, timeZone: timeZone))
         if let caregiver, !caregiver.isEmpty {
             lines.append("Cared for by \(caregiver)")
         }
 
         for baby in babies {
             let totals = Totals.compute(
-                events: events, sessions: sessions, forBaby: baby.id,
+                events: allEvents, sessions: sessions, forBaby: baby.id,
                 shift: shift, asOf: now)
             lines.append("")
             if babies.count > 1 {
                 lines.append("— \(baby.name) · Day \(baby.dayOfLife) —")
             }
+            // A blank line between blocks: pasted into Messages at 6am, an
+            // unbroken wall of text is not read.
             lines.append(contentsOf: feedBlock(baby, totals, events, unit, timeZone))
+            lines.append("")
             lines.append(contentsOf: diaperBlock(totals))
-            lines.append(contentsOf: sleepBlock(totals))
-            lines.append(contentsOf: noteBlock(baby, events, timeZone))
+            lines.append("")
+            lines.append(contentsOf: sleepBlock(baby, totals, sessions, shift, now, timeZone))
+            let extras = extrasBlock(baby, totals, events, unit, timeZone)
+            if !extras.isEmpty {
+                lines.append("")
+                lines.append(contentsOf: extras)
+            }
+            let notes = noteBlock(baby, events, timeZone)
+            if !notes.isEmpty {
+                lines.append("")
+                lines.append(contentsOf: notes)
+            }
+        }
+
+        let household = Totals.household(events: allEvents, shift: shift, asOf: now)
+        if !household.isEmpty {
+            lines.append("")
+            lines.append("🫙  Pumped · \(Fmt.amountTotal(ml: household.pumpedMl, unit: unit)) "
+                + "over \(household.pumpSessions) session"
+                + (household.pumpSessions == 1 ? "" : "s"))
         }
 
         lines.append("")
@@ -78,15 +105,23 @@ public enum Handoff {
         switch names.count {
         case 0: title = "The night"
         case 1: title = "\(names[0])'s night · Day \(babies[0].dayOfLife)"
-        default: title = "\(names.joined(separator: " & "))'s night"
+        default:
+            let head = names.dropLast().joined(separator: ", ")
+            title = "\(head) & \(names[names.count - 1])'s night"
         }
-        let window = "\(Fmt.clock(shift.startedAt, timeZone: timeZone)) → "
-            + "\(Fmt.clock(end, timeZone: timeZone))"
         let onWatch = Fmt.paddedDuration(end.timeIntervalSince(shift.startedAt))
+        // An open shift must not read as a finished one. The PWA framed this as
+        // "summary through <time>" and that honesty was dropped in the port.
+        let line = shift.isOpen
+            ? "Shift started \(Fmt.clock(shift.startedAt, timeZone: timeZone)) · "
+                + "summary through \(Fmt.clock(end, timeZone: timeZone)) · "
+                + "\(onWatch) so far"
+            : "Shift \(Fmt.clock(shift.startedAt, timeZone: timeZone)) → "
+                + "\(Fmt.clock(end, timeZone: timeZone)) · \(onWatch) on watch"
         return """
         🌙 \(title)
         \(shift.startedAt.formatted(f))
-        Shift \(window) · \(onWatch) on watch
+        \(line)
         """
     }
 
@@ -95,7 +130,8 @@ public enum Handoff {
         _ events: [EventSnapshot], _ unit: VolumeUnit, _ timeZone: TimeZone
     ) -> [String] {
         var out = ["🍼  Feeds · \(totals.feeds)"
-            + (totals.feedMl > 0 ? " (about \(Fmt.amount(ml: totals.feedMl, unit: unit)))" : "")]
+            + (totals.feedMl > 0
+                ? " (\(Fmt.amountTotal(ml: totals.feedMl, unit: unit)) by bottle)" : "")]
         let feeds = events
             .filter { $0.babyID == baby.id && $0.kind == .feed }
             .sorted { $0.at < $1.at }
@@ -147,17 +183,54 @@ public enum Handoff {
             + (totals.diapers > 0 ? "  (\(totals.wet) wet, \(totals.dirty) dirty)" : "")]
         if !totals.stoolProgression.isEmpty {
             out.append("     stool: "
-                + totals.stoolProgression.map(\.rawValue).joined(separator: " → "))
+                + totals.stoolProgression.map(Fmt.stool).joined(separator: " → "))
         }
         return out
     }
 
-    private static func sleepBlock(_ totals: ShiftTotals) -> [String] {
-        guard totals.stretches > 0 else { return ["😴  Sleep · none logged"] }
-        var out = ["😴  Sleep · \(Fmt.duration(totals.sleepSeconds)) "
-            + "over \(totals.stretches) stretch\(totals.stretches == 1 ? "" : "es")"]
-        if totals.longestStretchSeconds > 0 {
-            out.append("     longest was \(Fmt.duration(totals.longestStretchSeconds))")
+    private static func sleepBlock(
+        _ baby: HandoffBaby, _ totals: ShiftTotals, _ sessions: [SleepSnapshot],
+        _ shift: ShiftWindow, _ now: Date, _ timeZone: TimeZone
+    ) -> [String] {
+        var out: [String] = []
+        if totals.stretches > 0 {
+            out.append("😴  Sleep · \(Fmt.spanned(totals.sleepSeconds)) "
+                + "over \(totals.stretches) stretch\(totals.stretches == 1 ? "" : "es")")
+            if totals.longestStretchSeconds > 0 {
+                out.append("     longest was \(Fmt.spanned(totals.longestStretchSeconds))")
+            }
+        } else {
+            out.append("😴  Sleep · none logged")
+        }
+        // The single fact a parent most wants at 6am.
+        if let open = SleepMath.openSession(in: sessions, forBaby: baby.id) {
+            out.append("     still asleep, since "
+                + "\(Fmt.clock(open.startAt, timeZone: timeZone))")
+        }
+        return out
+    }
+
+    /// Medication and weight, when the family logs them. Previously computed and
+    /// then rendered nowhere, so a dose given at 2am never reached the parents.
+    private static func extrasBlock(
+        _ baby: HandoffBaby, _ totals: ShiftTotals,
+        _ events: [EventSnapshot], _ unit: VolumeUnit, _ timeZone: TimeZone
+    ) -> [String] {
+        var out: [String] = []
+        let meds = events
+            .filter { $0.babyID == baby.id && $0.kind == .medication }
+            .sorted { $0.at < $1.at }
+        if !meds.isEmpty {
+            out.append("💊  Medication · \(meds.count)")
+            for med in meds {
+                let what = [med.medicationName, med.doseText]
+                    .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
+                out.append("     \(Fmt.shortClock(med.at, timeZone: timeZone))  "
+                    + (what.isEmpty ? "given" : what))
+            }
+        }
+        if let grams = totals.latestWeightGrams {
+            out.append("⚖️  Weight · \(Fmt.weight(grams: grams, unit: unit))")
         }
         return out
     }
@@ -179,7 +252,7 @@ public enum Handoff {
                 pieces.append(String(format: "%.1f°F", temp)
                     + (temp >= ShiftTotals.feverThresholdF ? " — tell the parents" : ""))
             }
-            line += pieces.joined(separator: " · ")
+            line += pieces.isEmpty ? "note" : pieces.joined(separator: " · ")
             out.append(line)
         }
         return out

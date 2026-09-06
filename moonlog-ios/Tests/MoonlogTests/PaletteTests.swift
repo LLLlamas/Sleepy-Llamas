@@ -4,11 +4,16 @@ import SwiftUI
 
 final class PaletteTests: XCTestCase {
 
-    func testEveryThemeResolves() {
-        for theme in MoonTheme.allCases {
-            _ = Palette.for(theme)
-            XCTAssertFalse(theme.displayName.isEmpty)
-        }
+    /// Caching maps each theme to a `static let`. A transposed pair would be
+    /// invisible to a test that only checks the call does not trap — and
+    /// night/deepNight are the two easiest to swap.
+    func testEachThemeResolvesToItsOwnPalette() {
+        XCTAssertNotEqual(Palette.for(.night).bg, Palette.for(.deepNight).bg)
+        XCTAssertNotEqual(Palette.for(.night).bg, Palette.for(.day).bg)
+        XCTAssertNotEqual(Palette.for(.deepNight).bg, Palette.for(.day).bg)
+        XCTAssertEqual(Palette.for(.night).bg, Color.hex("1a0a0e"))
+        XCTAssertEqual(Palette.for(.deepNight).bg, Color.hex("100508"))
+        XCTAssertEqual(Palette.for(.day).bg, Color.hex("fdf6f4"))
     }
 
     func testDarkThemesReportDarkColorScheme() {

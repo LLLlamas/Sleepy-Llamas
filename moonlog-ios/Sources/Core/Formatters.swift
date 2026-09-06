@@ -23,6 +23,16 @@ public enum Fmt {
         return String(format: "%d:%02d%@", hour12, m, h < 12 ? "a" : "p")
     }
 
+    /// A span, for slots that describe a length of time rather than an age.
+    /// `duration` returns "just now" under a minute, which reads as nonsense under
+    /// a label like "Sleep" — this returns a dash for nothing and minutes otherwise.
+    public static func spanned(_ seconds: TimeInterval) -> String {
+        let total = Int(max(0, seconds).rounded())
+        if total <= 0 { return "—" }
+        if total < 60 { return "under a minute" }
+        return duration(seconds)
+    }
+
     public static func duration(_ seconds: TimeInterval) -> String {
         let total = Int(seconds.rounded())
         guard total >= 60 else { return "just now" }
@@ -64,11 +74,23 @@ public enum Fmt {
             return "\(Int(ml.rounded())) ml"
         case .oz:
             // Nearest half, trailing .0 trimmed — a 2oz bottle reads "2 oz", not
-            // "2.0 oz". This appears in the parents' handoff.
-            let oz = (ml / 29.5735 * 2).rounded() / 2
-            return oz == oz.rounded()
-                ? "\(Int(oz)) oz"
-                : String(format: "%.1f oz", oz)
+            // "2.0 oz". Amounts are entered on a half-ounce grid, so this is
+            // lossless for a single feed. Never round a positive amount to "0 oz":
+            // a logged feed reading as nothing is the worst output this app has.
+            let exact = ml / 29.5735
+            let oz = (exact * 2).rounded() / 2
+            if oz < 0.5 { return String(format: "%.1f oz", max(0.1, exact)) }
+            return oz == oz.rounded() ? "\(Int(oz)) oz" : String(format: "%.1f oz", oz)
+        }
+    }
+
+    /// A summed volume. Sums do not sit on the half-ounce entry grid, so rounding
+    /// one to the nearest half misstates it by up to a quarter ounce — on exactly
+    /// the figure a parent is most likely to write down.
+    public static func amountTotal(ml: Double, unit: VolumeUnit) -> String {
+        switch unit {
+        case .ml: return "\(Int(ml.rounded())) ml"
+        case .oz: return String(format: "%.1f oz", ml / 29.5735)
         }
     }
 

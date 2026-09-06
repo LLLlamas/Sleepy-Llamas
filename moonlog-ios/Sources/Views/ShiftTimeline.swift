@@ -26,7 +26,10 @@ enum ShiftTimeline {
                     icon: event.kind.icon,
                     title: event.timelineTitle(unit: unit),
                     detail: event.timelineDetail(unit: unit),
-                    edit: editable
+                    // Only the three core kinds have edit sheets. Routing a pump or
+                    // a weight here opened a note sheet against it, which could
+                    // write note fields onto a record that never renders them.
+                    edit: editable && EventKind.core.contains(event.kind)
                         ? event.babyIDRaw.map { .editEvent(id: event.id, babyID: $0) }
                         : nil))
         }

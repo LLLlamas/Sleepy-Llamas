@@ -43,7 +43,12 @@ struct FeedSheet: View {
 
     /// Something must have been entered — an empty feed record helps nobody.
     private var hasContent: Bool {
-        method.isBottle ? (amountMl > 0 || bottleMinutes > 0) : (leftMinutes + rightMinutes > 0)
+        switch method {
+        case .bottleBreastmilk, .bottleFormula: return amountMl > 0 || bottleMinutes > 0
+        case .breast: return leftMinutes + rightMinutes > 0
+        // An unrecorded method is already saved; editing its time alone is valid.
+        case .unknown: return true
+        }
     }
 
     var body: some View {
@@ -62,6 +67,10 @@ struct FeedSheet: View {
                     Text("Breast").tag(FeedMethod.breast)
                     Text("Breastmilk").tag(FeedMethod.bottleBreastmilk)
                     Text("Formula").tag(FeedMethod.bottleFormula)
+                    // Only shown for a record that already carries it — a value
+                    // from a newer build must survive an edit rather than being
+                    // silently rewritten to breast.
+                    if editing?.method == .unknown { Text("Unrecorded").tag(FeedMethod.unknown) }
                 }
                 .pickerStyle(.segmented)
             }

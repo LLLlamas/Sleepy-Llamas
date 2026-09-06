@@ -25,7 +25,7 @@ struct ShiftDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                SummaryView(family: family, shift: shift).summaryCards(now: asOf)
+                SummaryCards(family: family, shift: shift, now: asOf)
 
                 TimelineSection(
                     entries: ShiftTimeline.entries(
