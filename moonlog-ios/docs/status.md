@@ -30,14 +30,18 @@ Do not run a real shift on that build.
 | App icon, privacy manifest, export compliance | done |
 | Signing, archive, TestFlight upload | done |
 
-96 tests green.
+112 tests green.
 
 **A caveat worth keeping in view.** Test count is not a proxy for working software
-here. Before Summary existed, `Totals.compute` had no call path from the app at all
-and its 13 tests covered unreachable code. `SleepMath`, `DayBuckets` and `MoonClock`
-still have **zero call sites outside `MoonlogCore`** — `TonightView` reimplements
-their aggregation inline. The logic is right and will be needed; it is not yet
-wired in, and a green suite does not say otherwise.
+here, and this project has proved it twice: `Totals.compute` was fully tested and
+had no call path from the app until Summary existed, and both the Note button and
+the handoff's Copy/Share shipped built-but-unreachable. A green suite says the logic
+is right, not that anyone can get to it.
+
+`Totals`, `SleepMath`, `DayOfLife`, `Handoff` and `SleepReconciler` are now wired in.
+`DayBuckets` and `MoonClock` still have no call sites outside `MoonlogCore` —
+`DayBuckets` is what a multi-night trends view will need, and `Family.calendar`
+duplicates what `MoonClock` exists to provide.
 
 ## Next, in order
 
