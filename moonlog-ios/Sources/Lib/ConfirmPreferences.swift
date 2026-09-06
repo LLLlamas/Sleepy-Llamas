@@ -66,6 +66,9 @@ enum ConfirmableAction: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .endShift: return "End the shift?"
         case .deleteRecord: return "Delete this \(subject)?"
+        // Built at the call site: only the card knows which direction the tap
+        // goes, and "Mia is asleep" as a title reads as a statement of fact above
+        // a button that changes it.
         case .toggleSleep: return subject
         case .moveRecord: return "Move this record to \(subject)?"
         case .deleteNoteTag: return "Delete the \(subject) tag?"
@@ -78,6 +81,9 @@ enum ConfirmableAction: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .endShift: return "End shift"
         case .deleteRecord, .deleteNoteTag: return "Delete"
+        // Overridden at the call site with "Wake" or "Sleep". This is the fallback
+        // and should not be reached — "Change" under "Wake Mia?" is the vaguest
+        // pairing of the set.
         case .toggleSleep: return "Change"
         case .moveRecord: return "Move"
         }

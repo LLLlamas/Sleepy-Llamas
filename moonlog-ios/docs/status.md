@@ -64,14 +64,31 @@ had no call path from the app until Summary existed, and both the Note button an
 the handoff's Copy/Share shipped built-but-unreachable. A green suite says the logic
 is right, not that anyone can get to it.
 
-**Rendered on the iPhone 17 Pro simulator (iOS 26.5) and screenshotted this
-session**, not assumed: Tonight in both Night and Day, Settings, Past nights, Add
-family, Add baby, Summary, the feed sheet, and the Undo banner — produced by a real
-write through the real path, not a faked banner. What was *not* driven by hand,
-because the simulator cannot be tapped from here: tapping the client-family picker
-to actually switch household, tapping Undo, and the contents of Tonight's overflow
-menu. Those are compiled and unit-tested but unwitnessed, and the last two were
-unwitnessed last session too.
+**Rendered on the iPhone 17 Pro simulator (iOS 26.5) and screenshotted**, not
+assumed: Tonight in both Night and Day, Settings, Past nights, Add family, Add baby,
+Summary, the feed sheet, and the Undo banner — produced by a real write through the
+real path, not a faked banner.
+
+**The simulator can now be driven, and that is the change worth carrying forward.**
+`cliclick` and AppleScript are both blocked on this machine (no accessibility
+privileges), which is why previous sessions recorded taps as impossible. What works
+is a throwaway XcodeGen project holding a single UI-testing target, built in `/tmp`,
+driving the *already-installed* app through
+`XCUIApplication(bundleIdentifier: "com.sleepyllamas.moonlog")` — set launch
+arguments, tap by accessibility label, `swipeUp` until a row is hittable, then
+screenshot from the host with `simctl io`. No project file is touched. That is most
+of a UI test target already, which makes item 2 below cheaper than it looks.
+
+Driven by hand on 2026-09-06, each confirmed against the screenshot: the end-shift
+alert and its Cancel (leaving the sheet intact), the delete-a-record alert reached
+through `-moonlogEditFirst`, scrolling Settings to "Ask before", flipping "Wake and
+sleep" on, relaunching **without reinstalling**, and tapping Wake on Mia's card to
+see the alert appear — the end-to-end proof that a Settings toggle changes behaviour
+on another screen across a launch.
+
+Still unwitnessed: tapping the client-family picker to actually switch household,
+tapping Undo, and the contents of Tonight's overflow menu. Compiled and unit-tested,
+never driven — and the harness above could now reach all three.
 
 **A UI test target would close that gap and is the single highest-value piece of
 tooling this project does not have.** Tonight produced the sharpest argument for it

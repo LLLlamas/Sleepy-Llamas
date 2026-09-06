@@ -155,15 +155,14 @@ struct TonightView: View {
                 set: { if !$0 { pendingConfirm = nil } }),
             presenting: pendingConfirm
         ) { prompt in
-            Button(
-                prompt.action.verb,
-                role: prompt.action.isDestructive ? .destructive : nil
-            ) {
+            Button(prompt.verb, role: prompt.action.isDestructive ? .destructive : nil) {
                 Haptics.commit()
                 pendingConfirm = nil
                 prompt.run()
             }
             Button("Cancel", role: .cancel) { pendingConfirm = nil }
+        } message: { prompt in
+            if let message = prompt.message { Text(message) }
         }
         .alert(
             "Couldn't save",
@@ -478,11 +477,24 @@ private extension TonightView {
         // `SleepToggle` reports only an id, so reopening needs the start the session
         // already had. The card knew it before the tap; afterwards nobody does.
         let wasAsleepSince = baby.asleepSince
-        // The question names the change rather than asking it: "Mia is asleep" as a
-        // dialog title reads as a statement of fact, which is the wrong thing to put
-        // above a button that changes it.
+        // The question names the change rather than asking it: "Mia is asleep" as an
+        // alert title reads as a statement of fact, which is the wrong thing to put
+        // above a button that changes it. The verb matches the direction for the same
+        // reason — "Change" under "Wake Mia?" makes you re-read the title.
+        //
+        // The message is how long the state being ended has run, which is the fact
+        // that decides the answer. Absent before this baby has slept, exactly as on
+        // the card, rather than a length nobody knows.
         let question = baby.isAsleep ? "Wake \(baby.name)?" : "\(baby.name) to sleep?"
-        confirming(.toggleSleep, question) {
+        let elapsed = baby.stateSince.map {
+            "\(baby.name) has been \(baby.isAsleep ? "asleep" : "awake") "
+                + "for \(Fmt.ago($0, now: Date()))."
+        }
+        confirming(
+            .toggleSleep, question,
+            verb: baby.isAsleep ? "Wake" : "Sleep",
+            message: elapsed
+        ) {
             write(baby, baby.isAsleep ? "\(baby.name) awake" : "\(baby.name) asleep") { store in
                 switch try await store.toggleSleep(
                     shiftID: shift.id, babyID: baby.id, at: Date()) {
@@ -555,12 +567,18 @@ private extension TonightView {
     func confirming(
         _ action: ConfirmableAction,
         _ subject: String,
+        verb: String? = nil,
+        message: String? = nil,
         _ body: @escaping () -> Void
     ) {
         guard confirms(action) else { return body() }
         Haptics.warn()
         pendingConfirm = ConfirmPrompt(
-            action: action, title: action.question(subject), run: body)
+            action: action,
+            title: action.question(subject),
+            verb: verb ?? action.verb,
+            message: message,
+            run: body)
     }
 
     func confirms(_ action: ConfirmableAction) -> Bool {
@@ -756,6 +774,12 @@ struct ConfirmPrompt: Identifiable {
     let id = UUID()
     let action: ConfirmableAction
     let title: String
+    /// Defaults to the action's own verb. Overridden where one action has two
+    /// directions — waking and settling are the same toggle and want opposite words.
+    let verb: String
+    /// A title-only alert reads thin next to the others, and the fact worth putting
+    /// under this particular question is how long the state being ended has run.
+    let message: String?
     let run: () -> Void
 }
 
