@@ -87,6 +87,19 @@ which is the source of truth and is committed.
   lazy container.** It is not registered until the row containing it has been
   built, so a push that fires first lands on a blank screen with a working back
   button. Put it on the container. Cost when this was learned: one screenshot.
+- **A confirmation belongs on the screen that owns the button, never handed across
+  a sheet that is dismissing.** The end-shift dialog was first raised from
+  `TonightView` off `ShiftHoursSheet`'s callback — which runs while the sheet is
+  still up and immediately before it dismisses. `ShiftHoursSheet` raises it itself.
+  Same family as the rule above: nothing errors, the suite stays green, and the
+  action silently does nothing.
+- **Whether an action asks first is a setting.** `ConfirmableAction` +
+  `ConfirmPreferences`; the list is in Settings under "Ask before". Gate at the call
+  site, not inside `perform`. If the control lives in a sheet, the *sheet* raises the
+  dialog — `LogSheetChrome` for delete and move, `ShiftHoursSheet` for ending.
+  `TonightView.confirming(_:_:_:)` is for controls on Tonight itself. Read the
+  preference through the environment with the action's own default as the fallback,
+  never `bool(forKey:)`.
 
 ## Conventions
 

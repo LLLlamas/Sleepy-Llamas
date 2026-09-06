@@ -45,13 +45,25 @@ struct LogSheetChrome<Content: View>: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
+    @Environment(\.confirmations) private var confirmations
 
     /// The Save button stays hit-testable during the dismiss animation, and the
     /// write is async, so without this a second tap writes a second record.
     @State private var isSaving = false
     @State private var confirmingDelete = false
+    /// The target a "Wrong baby?" choice is waiting on. Raised here rather than by
+    /// `TonightView`, for the same reason the delete is: choosing dismisses this
+    /// sheet, so a dialog set from here and presented back on Tonight would be
+    /// handed across a view that is going away.
+    @State private var confirmingMove: ReassignTarget?
 
     private var isFuture: Bool { at.isMeaningfullyInFuture }
+
+    private func confirms(_ action: ConfirmableAction) -> Bool {
+        confirmations?.confirms(action) ?? action.confirmsByDefault
+    }
+
+    private var confirmsDelete: Bool { confirms(.deleteRecord) }
 
     /// Dismisses on choosing: the record now belongs to another baby, so the name
     /// at the top of this sheet — the whole point of the chip — would be a lie.
@@ -60,9 +72,14 @@ struct LogSheetChrome<Content: View>: View {
         Menu {
             ForEach(reassignment.targets) { target in
                 Button {
-                    Haptics.commit()
-                    reassignment.move(target.id)
-                    dismiss()
+                    guard confirms(.moveRecord) else {
+                        Haptics.commit()
+                        reassignment.move(target.id)
+                        dismiss()
+                        return
+                    }
+                    Haptics.warn()
+                    confirmingMove = target
                 } label: {
                     Label("Move to \(target.name)", systemImage: "arrow.uturn.right")
                 }
@@ -128,6 +145,16 @@ struct LogSheetChrome<Content: View>: View {
                 if let onDelete {
                     Section {
                         Button(role: .destructive) {
+                            // The one delete confirmation in the app, and it is
+                            // inherited by all five log sheets because they all wrap
+                            // this chrome. Off, the delete lands on the first tap and
+                            // the banner's Undo is the safety net instead.
+                            guard confirmsDelete else {
+                                Haptics.commit()
+                                onDelete()
+                                dismiss()
+                                return
+                            }
                             Haptics.warn()
                             confirmingDelete = true
                         } label: {
@@ -151,6 +178,27 @@ struct LogSheetChrome<Content: View>: View {
                         Text("It disappears from the timeline and from the night's totals.")
                     }
                 }
+            }
+            // On the Form, not on the `Menu` that sets it — a menu builds its items
+            // on its own schedule and closes as one is chosen, and this project has
+            // already paid once for a presentation modifier inside a lazy container.
+            .confirmationDialog(
+                confirmingMove.map { ConfirmableAction.moveRecord.question($0.name) } ?? "",
+                isPresented: Binding(
+                    get: { confirmingMove != nil },
+                    set: { if !$0 { confirmingMove = nil } }),
+                titleVisibility: .visible,
+                presenting: confirmingMove
+            ) { target in
+                Button(ConfirmableAction.moveRecord.verb) {
+                    confirmingMove = nil
+                    reassignment?.move(target.id)
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { confirmingMove = nil }
+            } message: { target in
+                Text("It leaves \(babyName ?? "this baby")'s night and joins "
+                     + "\(target.name)'s. Undoable for six seconds.")
             }
             // `scrollContentBackground` clears the Form's own fill; the rows still
             // default to the system grouped colour, so they need the palette too or

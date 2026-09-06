@@ -105,12 +105,22 @@ sleep tile: a 2pt border in `sleep` or `awake`, a fill in the matching faint was
 and the copy "Mia is asleep". A tinted block is legible across a dark room in a
 way a coloured word in a row is not.
 
-Two departures from the web original, both deliberate:
+Its second line says **when the state started, then what the tap does** — "Since
+3:42am · tap to adjust". Both halves are departures from the web original, and both
+are deliberate:
 
-- Its subtitle says **"tap to adjust"**, not "tap when Mia wakes". The web tile
-  toggled when tapped; this one opens the adjust-sleep sheet, and the Wake/Sleep
-  button below is what toggles. Copy that describes the wrong gesture is worse
-  than no copy.
+- **"tap to adjust", not "tap when Mia wakes".** The web tile toggled when tapped;
+  this one opens the adjust-sleep sheet, and the Wake/Sleep button below is what
+  toggles. Copy that describes the wrong gesture is worse than no copy.
+- **The time is on both states, not just asleep.** Awake used to say nothing about
+  when it began, which was the more useful of the two. It comes from the last closed
+  sleep's `endAt`, and is simply absent before the baby has slept — the tile says
+  "Tap to log a sleep you missed" and claims no time it does not have.
+
+The time belongs on that second line and not appended to the state sentence above
+it. Appended, it wrapped inside its own parenthetical; the asleep tile is the tight
+one because it alone carries the elapsed badge on its trailing edge. The state stays
+one short bold line, in `am`/`pm` rather than the handoff's single-letter `3:42a`.
 - Sentence case, not `AWAKE`/`SLEEPING`. The PWA never shouted here either — its
   only uppercase is 10-pixel mono micro-labels.
 
@@ -174,6 +184,27 @@ Tonight, permanently, without offering to change it.
 
 Twins are unaffected: within the one family, both babies still render a card each
 with their own buttons, and there is still no active-baby selector.
+
+## Asking before acting
+
+Whether an action confirms is a setting, listed one row per action under **"Ask
+before"** in Settings, app-wide rather than per family — it is how the doula wants
+the app to behave, not a fact about the household.
+
+**Most of them default to off, and Undo is why.** Every action on the list except
+ending a shift leaves an Undo on the banner for six seconds. A confirmation is worth
+its interruption only where the action is hard to take back or easy to fire by
+mistake; everywhere else it costs something real, because at 3am an unnecessary
+dialog trains the thumb to dismiss dialogs unread. So ending a shift and the two
+deletes ask by default; the sleep toggle and moving a record to the other twin do
+not.
+
+Opening a log sheet is not on the list and should not be added to it. A sheet is a
+form, not a question, and a form you can cancel already is its own confirmation.
+
+Each dialog **names the consequence** rather than asking "Are you sure?", and its
+button carries a verb — "End shift", "Delete", "Move" — so nobody has to re-read
+the title to work out which button they want.
 
 ## Discoverability
 

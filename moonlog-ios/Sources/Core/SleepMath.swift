@@ -71,4 +71,24 @@ public enum SleepMath {
                     : lhs.startAt < rhs.startAt
             }
     }
+
+    /// When this baby last woke: the latest `endAt` across their closed sessions.
+    ///
+    /// There is no awake session to read — awake is the absence of an open sleep —
+    /// so the only honest answer is the end of the last sleep. `nil` when they have
+    /// not slept in `sessions` at all, which is the ordinary state at the start of a
+    /// shift. The caller shows nothing rather than naming a time it is guessing:
+    /// the doula arrives mid-evening and has no idea when this baby last woke.
+    ///
+    /// An open session is skipped rather than treated as ending now. If one is open
+    /// the baby is asleep, and `openSession` is the question being asked.
+    public static func lastWake(
+        in sessions: [SleepSnapshot],
+        forBaby babyID: UUID
+    ) -> Date? {
+        sessions
+            .filter { $0.babyID == babyID }
+            .compactMap(\.endAt)
+            .max()
+    }
 }

@@ -205,6 +205,36 @@ re-inserts with the original `id`, `createdAt` and source.
 dragged a live one backwards in time. Both restores return early if the id is already
 present, so a second tap on Undo cannot duplicate.
 
+### Asking first
+
+Whether an action confirms is a user preference, so the gate is a wrapper around the
+call site rather than a step inside `perform`. `TonightView.confirming(_:_:_:)` either
+runs the closure now or parks it on a `ConfirmPrompt` for the one
+`.confirmationDialog` the screen owns; the question and the button verb come off
+`ConfirmableAction`, so adding a confirmable action does not mean adding a dialog to
+keep in step.
+
+In practice only the sleep toggle comes through it. **The other three are raised by
+the sheet that owns the control**, and that is not a stylistic preference — each of
+those controls dismisses its sheet as it acts, so a dialog set from the callback and
+presented back on Tonight would be handed across a view that is going away, and a
+confirmation that fails to appear is an action that silently does nothing.
+
+- **Deleting a record** → `LogSheetChrome`, which all five log sheets inherit at
+  once, so one gate covers every delete. Gating it in `perform` as well would stack
+  two dialogs.
+- **Moving a record to the other twin** → `LogSheetChrome` again; the "Wrong baby?"
+  menu dismisses on choosing.
+- **Ending a shift** → `ShiftHoursSheet`, on the button that commits. Its `onSave`
+  runs while the sheet is still presented and `dismiss()` is the next line.
+
+See `docs/decisions.md`.
+
+`ConfirmPreferences` is an `@Observable` object in the environment beside
+`careStore`, holding its values in memory and writing through to `UserDefaults` —
+one key per action, so a case added later falls back to its own default rather than
+being read as off by every install that stored the set before it existed.
+
 ### What re-reads the screen
 
 `CareStore` is a `@ModelActor` writing through its own context, so the main context's

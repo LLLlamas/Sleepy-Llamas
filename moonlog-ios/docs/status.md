@@ -49,10 +49,13 @@ verification table and the command-line upload path.
 | **Baby status as a bordered, state-tinted tile, ported from the PWA** | done |
 | **One client family at a time — the switcher moved to Settings** | done |
 | **History as its own screen, reachable during a shift** | done |
+| **The status tile says when the state started, awake as well as asleep** | done |
+| **"Ask before" — per-action confirmation preferences** | done |
 
-166 tests green (83 in `MoonlogCoreTests`, 83 in `MoonlogTests`). Three of those
-are new tonight and all three are the palette contrast tests. This line read 159,
-which was four stale in `MoonlogCoreTests`; the count going into tonight was 163.
+181 tests green (91 in `MoonlogCoreTests`, 90 in `MoonlogTests`), up from 166.
+Fifteen new: five in a new `FormattersTests` pinning both 12-hour clock formats at
+midnight and noon, three on `SleepMath.lastWake`, and seven in a new
+`ConfirmPreferencesTests`.
 
 **A caveat worth keeping in view.** Test count is not a proxy for working software
 here, and this project has proved it twice: `Totals.compute` was fully tested and
@@ -93,6 +96,11 @@ duplicates what `MoonClock` exists to provide.
    `navigationDestination` bug is the freshest argument for it: a whole screen
    rendered empty, and only a screenshot said so.
 3. `SummaryView`'s archived-baby gap (known issue 6 below).
+4. **Four Swift 6 `Sendable` warnings.** `FeedEntry`, `DiaperEntry`, `NoteEntry` and
+   `ExtraEntry` conform at the bottom of `TonightView.swift` rather than beside the
+   structs, which is a warning today and an error in the Swift 6 language mode. Cheap
+   to fix, and `docs/testflight.md` claimed a warning-free Release build until this
+   was measured on 2026-09-06.
 
 **Dropped on 2026-09-05, deliberately:**
 

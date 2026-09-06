@@ -15,12 +15,30 @@ public enum Fmt {
 
     /// Compact clock for dense rows: "3:12a".
     public static func shortClock(_ date: Date, timeZone: TimeZone) -> String {
+        let (hour12, minute, isAM) = twelveHour(date, timeZone: timeZone)
+        return String(format: "%d:%02d%@", hour12, minute, isAM ? "a" : "p")
+    }
+
+    /// The same clock spelled out: "3:12am". For the one place a time is read at a
+    /// glance across a dark room rather than scanned in a column — the status tile's
+    /// "since". `shortClock`'s single letter is a column-width economy that buys
+    /// nothing there, and `clock` follows the locale, which puts a space and capitals
+    /// in the middle of a sentence.
+    public static func clockAmPm(_ date: Date, timeZone: TimeZone) -> String {
+        let (hour12, minute, isAM) = twelveHour(date, timeZone: timeZone)
+        return String(format: "%d:%02d%@", hour12, minute, isAM ? "am" : "pm")
+    }
+
+    /// Hand-rolled rather than via `DateFormatter` so the two clock formats above
+    /// cannot drift on the hour-12 rollover, which is the part that gets it wrong.
+    private static func twelveHour(
+        _ date: Date, timeZone: TimeZone
+    ) -> (hour12: Int, minute: Int, isAM: Bool) {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = timeZone
         let h = cal.component(.hour, from: date)
         let m = cal.component(.minute, from: date)
-        let hour12 = h % 12 == 0 ? 12 : h % 12
-        return String(format: "%d:%02d%@", hour12, m, h < 12 ? "a" : "p")
+        return (h % 12 == 0 ? 12 : h % 12, m, h < 12)
     }
 
     /// A span, for slots that describe a length of time rather than an age.

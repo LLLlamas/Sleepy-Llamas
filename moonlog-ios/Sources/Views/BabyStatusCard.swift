@@ -9,10 +9,17 @@ struct BabyPresentation: Identifiable, Equatable {
     let accent: BabyAccent
     let dayOfLife: Int
     let asleepSince: Date?
+    /// When they last woke — the end of their most recent sleep. `nil` when they
+    /// have not slept this shift, in which case nothing is claimed about how long
+    /// they have been up. Only meaningful while `asleepSince` is `nil`.
+    let awakeSince: Date?
     let lastFeedAt: Date?
     let lastDiaperAt: Date?
 
     var isAsleep: Bool { asleepSince != nil }
+
+    /// The instant the current state began, whichever state that is.
+    var stateSince: Date? { asleepSince ?? awakeSince }
 
     /// Whether the feed is overdue as of `now`. Computed here rather than baked in,
     /// so the value can refresh on the clock without invalidating the whole screen.
@@ -147,16 +154,39 @@ struct BabyStatusCard: View {
         .contentShape(shape)
     }
 
-    /// Names the tap target. "Since 3:40a" is the fact; "tap to adjust" is what
-    /// this control actually does, which is not what the PWA's version did.
+    /// "Since 3:42am · tap to adjust" — when this state began, then what the tap does.
+    ///
+    /// The time sits on this line rather than trailing the state sentence above it,
+    /// which is where it was first put. Appended there it wrapped, and it wrapped
+    /// *inside* the parenthetical — "(since" ending one line and "10:12am)" alone on
+    /// the next — because the asleep tile also carries the elapsed badge on its
+    /// trailing edge. That is the state where the line is tightest and the only one
+    /// where the badge exists, and any name longer than "Mia" makes it worse. The
+    /// state stays one short bold line; the clock time is the supporting fact.
+    ///
+    /// Both states carry it now. Awake used to say nothing about when it started,
+    /// which was the more useful of the two — "she has been up since 4:20" is what
+    /// decides whether to try a feed.
     private var subtitle: String {
-        guard let since = baby.asleepSince else { return "Tap to log a sleep you missed" }
-        return "Since \(Fmt.shortClock(since, timeZone: timeZone)) · tap to adjust"
+        let hint = baby.isAsleep ? "tap to adjust" : "tap to log a sleep you missed"
+        guard let since = baby.stateSince else {
+            // Before this baby has slept, there is no honest answer. Say nothing
+            // rather than name the shift's start as though it were a wake.
+            return hint.prefix(1).uppercased() + hint.dropFirst()
+        }
+        return "Since \(Fmt.clockAmPm(since, timeZone: timeZone)) · \(hint)"
     }
 
+    /// VoiceOver gets the elapsed time rather than the clock time. The visible tile
+    /// shows both — the counter on the right is only rendered while asleep — and a
+    /// spoken "asleep for 40m" answers the question the doula is actually asking
+    /// faster than a spoken "asleep since 3:42am" does.
     private func accessibleStatus(now: Date) -> String {
-        guard let since = baby.asleepSince else { return "\(baby.name) awake" }
-        return "\(baby.name) asleep for \(Fmt.ago(since, now: now))"
+        if let since = baby.asleepSince {
+            return "\(baby.name) asleep for \(Fmt.ago(since, now: now))"
+        }
+        guard let woke = baby.awakeSince else { return "\(baby.name) awake" }
+        return "\(baby.name) awake for \(Fmt.ago(woke, now: now))"
     }
 
     private func lastSeen(now: Date) -> some View {

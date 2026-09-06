@@ -19,6 +19,7 @@ struct TonightView: View {
     @Environment(\.palette) private var palette
     @Environment(\.modelContext) private var modelContext
     @Environment(\.careStore) private var store
+    @Environment(\.confirmations) private var confirmations
 
     @State private var sheet: LogSheet?
     @State private var editingBaby: Baby?
@@ -40,6 +41,11 @@ struct TonightView: View {
     @State private var refreshToken = 0
     /// Non-nil presents the shift-hours sheet, for correcting the start or ending.
     @State private var hoursSheet: ShiftHoursSheet.Purpose?
+    /// Non-nil presents the "are you sure" for whichever action asked for one. One
+    /// dialog for all of them rather than one per call site — the question and the
+    /// button label come off `ConfirmableAction`, so a new confirmable action does
+    /// not mean a new `.confirmationDialog` to keep in step.
+    @State private var pendingConfirm: ConfirmPrompt?
 
     var body: some View {
         // Deliberately NOT wrapped in a periodic TimelineView. Nothing on this
@@ -140,6 +146,24 @@ struct TonightView: View {
         // in reach of the thumb already holding the phone — and at the top it sat
         // over the very card it was naming, for the six seconds Undo stays up.
         .overlay(alignment: .bottom) { confirmationBanner }
+        .confirmationDialog(
+            pendingConfirm?.title ?? "",
+            isPresented: Binding(
+                get: { pendingConfirm != nil },
+                set: { if !$0 { pendingConfirm = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingConfirm
+        ) { prompt in
+            Button(
+                prompt.action.verb,
+                role: prompt.action.isDestructive ? .destructive : nil
+            ) {
+                Haptics.commit()
+                pendingConfirm = nil
+                prompt.run()
+            }
+            Button("Cancel", role: .cancel) { pendingConfirm = nil }
+        }
         .alert(
             "Couldn't save",
             isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
@@ -366,6 +390,8 @@ private extension TonightView {
         ) { targetID in
             guard let target = data.babies.first(where: { $0.id == targetID }) else { return }
             let from = baby.id
+            // The "are you sure" for this is raised by `LogSheetChrome`, which owns
+            // the menu it is chosen from. See the note on `endShift`.
             write(target, "Moved to \(target.name)") { store in
                 try await store.reassignEvent(id, toBaby: targetID)
                 return { try await $0.reassignEvent(id, toBaby: from) }
@@ -417,6 +443,12 @@ private extension TonightView {
     /// Both times come from the sheet, never from the clock. Correcting the start
     /// and ending are one write path because ending is the last chance to fix the
     /// start, and the two are read off the same two pickers.
+    ///
+    /// The "are you sure" for ending lives inside `ShiftHoursSheet`, on the button
+    /// that commits — not here. Raising it here would mean setting a dialog while
+    /// the sheet that triggered it is still presented and then dismissing out from
+    /// under it, and a confirmation that fails to appear is an end-shift that
+    /// silently does nothing.
     func endShift(startedAt: Date, endedAt: Date?) {
         let shiftID = shift.id
         let wasStartedAt = shift.startedAt
@@ -445,16 +477,22 @@ private extension TonightView {
         // `SleepToggle` reports only an id, so reopening needs the start the session
         // already had. The card knew it before the tap; afterwards nobody does.
         let wasAsleepSince = baby.asleepSince
-        write(baby, baby.isAsleep ? "\(baby.name) awake" : "\(baby.name) asleep") { store in
-            switch try await store.toggleSleep(
-                shiftID: shift.id, babyID: baby.id, at: Date()) {
-            case .opened(let id):
-                // It began a moment ago, so removing it is exactly the state before.
-                return { try await $0.deleteSleepSession(id) }
-            case .closed(let id):
-                guard let wasAsleepSince else { return nil }
-                return {
-                    try await $0.updateSleepSession(id, startAt: wasAsleepSince, endAt: nil)
+        // The question names the change rather than asking it: "Mia is asleep" as a
+        // dialog title reads as a statement of fact, which is the wrong thing to put
+        // above a button that changes it.
+        let question = baby.isAsleep ? "Wake \(baby.name)?" : "\(baby.name) to sleep?"
+        confirming(.toggleSleep, question) {
+            write(baby, baby.isAsleep ? "\(baby.name) awake" : "\(baby.name) asleep") { store in
+                switch try await store.toggleSleep(
+                    shiftID: shift.id, babyID: baby.id, at: Date()) {
+                case .opened(let id):
+                    // It began a moment ago, so removing it is exactly the state before.
+                    return { try await $0.deleteSleepSession(id) }
+                case .closed(let id):
+                    guard let wasAsleepSince else { return nil }
+                    return {
+                        try await $0.updateSleepSession(id, startAt: wasAsleepSince, endAt: nil)
+                    }
                 }
             }
         }
@@ -503,6 +541,29 @@ private extension TonightView {
             success.contains(baby.name) ? success : "\(success) · \(baby.name)",
             busyFor: baby.id,
             action)
+    }
+
+    /// Asks first, or does not, according to Settings.
+    ///
+    /// Wraps the call rather than living inside `perform`, because most confirmable
+    /// actions are not raised from this screen at all — deleting and moving a record
+    /// belong to `LogSheetChrome` and ending a shift to `ShiftHoursSheet`, each of
+    /// which owns the control being pressed and, crucially, is a sheet that dismisses
+    /// on the way out. Only the sleep toggle is pressed on Tonight itself, so only it
+    /// comes through here. The machinery is general because the next one might.
+    func confirming(
+        _ action: ConfirmableAction,
+        _ subject: String,
+        _ body: @escaping () -> Void
+    ) {
+        guard confirms(action) else { return body() }
+        Haptics.warn()
+        pendingConfirm = ConfirmPrompt(
+            action: action, title: action.question(subject), run: body)
+    }
+
+    func confirms(_ action: ConfirmableAction) -> Bool {
+        confirmations?.confirms(action) ?? action.confirmsByDefault
     }
 
     /// The one path every write takes. Failures surface as an alert — a care log
@@ -627,7 +688,7 @@ private struct Tonight {
         var accents: [UUID: BabyAccent] = [:]
         var lastFeed: [UUID: Date] = [:]
         var lastDiaper: [UUID: Date] = [:]
-        var openSnapshots: [SleepSnapshot] = []
+        var snapshots: [SleepSnapshot] = []
 
         models.reserveCapacity(roster.count)
         for baby in roster {
@@ -652,8 +713,10 @@ private struct Tonight {
             }
         }
 
-        for session in sessions where session.isOpen {
-            if let snapshot = session.snapshot { openSnapshots.append(snapshot) }
+        // All of them, not just the open ones: "awake since" is the end of the last
+        // closed session, so the closed ones are no longer discardable here.
+        for session in sessions {
+            if let snapshot = session.snapshot { snapshots.append(snapshot) }
         }
 
         self.timeline = ShiftTimeline.entries(
@@ -672,7 +735,8 @@ private struct Tonight {
                     birthAt: baby.birthAt, forShift: shift.window, calendar: calendar),
                 // Through Core, which breaks an equal-start tie on id so every
                 // device resolves a synced duplicate the same way.
-                asleepSince: SleepMath.openSession(in: openSnapshots, forBaby: baby.id)?.startAt,
+                asleepSince: SleepMath.openSession(in: snapshots, forBaby: baby.id)?.startAt,
+                awakeSince: SleepMath.lastWake(in: snapshots, forBaby: baby.id),
                 lastFeedAt: lastFeed[baby.id],
                 lastDiaperAt: lastDiaper[baby.id])
         }
@@ -681,6 +745,18 @@ private struct Tonight {
 }
 
 // MARK: - Sheet routing
+
+/// A question waiting to be answered, and what to do if it is answered yes.
+///
+/// Carries the work rather than an enum the dialog switches on, so the gate can sit
+/// at the call site — where the captured payload for the Undo already is — instead
+/// of every confirmable write having to be reconstructible from a case.
+struct ConfirmPrompt: Identifiable {
+    let id = UUID()
+    let action: ConfirmableAction
+    let title: String
+    let run: () -> Void
+}
 
 enum LogSheet: Identifiable, Equatable {
     case feed(babyID: UUID), diaper(babyID: UUID), sleep(babyID: UUID), note(babyID: UUID)

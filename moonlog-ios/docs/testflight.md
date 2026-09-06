@@ -60,13 +60,21 @@ packaged:
 | Check | Result |
 |---|---|
 | Debug-only markers in the Release binary | **0** — all six launch-argument hooks compiled out |
-| Release build warnings | none |
+| Release build warnings | none *at the time* — see the correction below |
 | `CFBundleShortVersionString` / `CFBundleVersion` | `0.1.0` / `1788666101` |
 | `ITSAppUsesNonExemptEncryption` | `false`, so export compliance never prompts |
 | iCloud / CloudKit entitlement | **absent** — local-only, as decided, so the launch-crash trap cannot fire |
 
 Unlike build 1788644622, this one carries no demo seed and is safe to run a real
 shift on.
+
+**Correction, 2026-09-06.** A Release build now emits four warnings, and they are
+not new to today's work — `FeedEntry`, `DiaperEntry`, `NoteEntry` and `ExtraEntry`
+declare `Sendable` conformance at the bottom of `TonightView.swift`, away from the
+structs themselves, which Swift 6 will make an error. The "none" above was true when
+it was written and is no longer a claim to rely on. Not fixed, because moving four
+conformances is not a change to make in the same pass as a feature; it is on the
+list in `docs/status.md`.
 
 ### How it was uploaded, for next time
 

@@ -4,6 +4,88 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## Confirmations are per action, and most of them default to off
+**2026-09-06**
+
+A setting for whether an action asks before it happens, as a list of toggles under
+"Ask before" in Settings — `ConfirmableAction` (five cases) plus `ConfirmPreferences`,
+an `@Observable` object in the environment alongside `careStore`.
+
+**Per action rather than one global switch.** A single "confirm destructive actions"
+toggle forces one answer onto two different questions. Ending a shift cannot be
+undone; the sleep toggle is pressed forty times a night and *can* be undone. Anyone
+setting a global switch is choosing which of those to get wrong.
+
+**Undo is what picks the defaults.** Four of the five return a reversing write and
+leave an Undo on the banner for six seconds, and an Undo you already have beats a
+dialog you have to read — so `toggleSleep` and `moveRecord` start off, and only the
+irreversible ending and the two deletes start on. The cost of an unnecessary
+confirmation is not zero: at 3am it trains the thumb to dismiss dialogs without
+reading them, which is how the one that mattered gets tapped through.
+
+**One key per action, not one encoded set.** `moonlog.confirm.<case>`, read with
+`object(forKey:)` and not `bool(forKey:)`. `bool` returns `false` for a key nobody
+has written, which is indistinguishable from a user who switched it off — every
+default of `true` would have shipped as `false`. A CSV of the on-set, which is what
+`Family.optionalKindsRaw` does, has the matching flaw one level up: a case added
+later is absent from every stored string and reads as off for existing installs.
+
+**The gate wraps the call site; it is not inside `perform`.** The delete
+confirmation belongs to `LogSheetChrome`, which owns the sheet the delete is pressed
+in and which five log sheets inherit at once. Gating deletes in `perform` as well
+would put two dialogs on top of each other.
+
+**A dialog is raised by whichever view owns the control.** The end-shift
+confirmation was first written in `TonightView`, gating `ShiftHoursSheet`'s `onSave`
+callback. That callback runs while the sheet is still presented and `dismiss()` is
+the next line, so the dialog would have been handed across a view that is going away
+— and a confirmation that fails to appear is an end-shift that silently does nothing.
+Moving it into the sheet fixed it, and then the same reading found the same bug in
+"Wrong baby?", whose menu also dismisses on choosing; that one would only have bitten
+someone who switched it on, since it defaults off. Both now live in the sheet.
+`TonightView.confirming` is left for controls actually on Tonight, which is just the
+sleep toggle. Same family of bug as the `navigationDestination` in a `Section`, and
+found by reasoning about the ordering — the suite stayed green throughout.
+
+Opening a log sheet is deliberately not on the list. A sheet is a form, not a
+question, and a form you can cancel already is its own confirmation.
+
+*Reverses if:* the list grows past about six rows, at which point "Ask before"
+stops being a setting anyone reads and wants grouping or a sensible-defaults reset.
+
+---
+
+## The status tile says when the state started, awake as well as asleep
+**2026-09-06**
+
+`Fmt.clockAmPm` ("3:42am") next to the existing `shortClock` ("3:42a"), a new
+`SleepMath.lastWake(in:forBaby:)`, and `awakeSince` on `BabyPresentation`.
+
+The tile already named a time, but only while asleep — awake said "Tap to log a
+sleep you missed" and nothing about when being awake began. That was the more useful
+half: "she has been up since 4:20" is what decides whether to try a feed. There is no
+awake session to read, since awake is the absence of an open sleep, so the answer is
+the latest `endAt` across the closed sessions. `nil` when the baby has not slept yet,
+and the tile then says nothing rather than naming the shift's start as if it were a
+wake.
+
+**A second clock format rather than changing the one that existed.** `shortClock`'s
+single letter is a column-width economy that earns nothing in a sentence, but it is
+pasted into eight places in the plain-text and keepsake handoffs, which the parents
+read — so it was left alone and both now share one hour-12 computation, pinned by
+`FormattersTests` at midnight and noon.
+
+**The time sits on the tile's second line, not trailing the state sentence.** It was
+put on the state line first, as "Mia is asleep (since 10:12am)", and the screenshot
+showed it wrapping *inside* the parenthetical — "(since" ending one line and
+"10:12am)" alone on the next. The asleep tile is the tight one, because it is the
+only state carrying the elapsed badge on its trailing edge, and any name longer than
+"Mia" makes it worse. The state stays one short bold line.
+
+*Reverses if:* the elapsed badge goes away, which is what makes the first line tight.
+
+---
+
 ## One client family at a time, chosen in Settings
 **2026-09-06**
 

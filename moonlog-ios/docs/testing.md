@@ -63,6 +63,23 @@ legibility threshold, not a comparison, and only the real curve says where 4.5:1
 falls. Using the cheap measure there would have kept the Day theme's five real failures
 invisible; `docs/design.md` records which pairs they were.
 
+## Preferences that change behaviour
+
+`ConfirmPreferencesTests` covers the one failure mode a screenshot cannot: a
+confirmation that stops appearing is invisible until the night it was needed, and one
+that appears where it should not trains the thumb to dismiss dialogs unread.
+
+The test that earns its place is `testFreshInstallUsesEachActionsOwnDefault`. Reading
+with `bool(forKey:)` returns `false` for a key nobody has written, which is
+indistinguishable from a user who switched it off — so every action defaulting to
+*on* would have shipped defaulting to off, silently, on every fresh install. The
+storage keys are asserted literally for the same reason enum raw values are: renaming
+one resets that setting for everyone who had already changed it.
+
+Tests inject a scratch `UserDefaults(suiteName:)` and tear down its persistent
+domain. Never `.standard` — the simulator keeps it between runs, so one test's write
+would decide the next test's defaults.
+
 ## Mutation testing
 
 Assert that a test can fail. It has repeatedly paid off here:

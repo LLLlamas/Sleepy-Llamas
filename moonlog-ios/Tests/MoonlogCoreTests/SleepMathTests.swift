@@ -187,6 +187,53 @@ final class SleepMathTests: XCTestCase {
         }
     }
 
+    // MARK: - When the baby last woke
+
+    /// The status tile says "awake (since 4:20am)". That time is the end of the last
+    /// sleep, and "last" has to mean latest end, not latest start or last appended —
+    /// a back-dated correction arrives after the record it corrects.
+    func testLastWakeIsTheLatestEndRegardlessOfOrder() {
+        let base = makeDate("2026-09-04 22:00", Zone.newYork)
+        let early = SleepSnapshot(
+            babyID: babyA, startAt: base, endAt: base.addingTimeInterval(1800))
+        let late = SleepSnapshot(
+            babyID: babyA,
+            startAt: base.addingTimeInterval(3600),
+            endAt: base.addingTimeInterval(7200))
+
+        for ordering in [[early, late], [late, early]] {
+            XCTAssertEqual(
+                SleepMath.lastWake(in: ordering, forBaby: babyA),
+                base.addingTimeInterval(7200))
+        }
+    }
+
+    /// An open session means the baby is asleep — `openSession` is the question then.
+    /// Counting it as a wake would have the tile claim they woke when they did not.
+    func testLastWakeIgnoresAnOpenSession() {
+        let base = makeDate("2026-09-04 22:00", Zone.newYork)
+        let sessions = [
+            SleepSnapshot(
+                babyID: babyA, startAt: base, endAt: base.addingTimeInterval(1800)),
+            SleepSnapshot(babyID: babyA, startAt: base.addingTimeInterval(3600)),
+        ]
+        XCTAssertEqual(
+            SleepMath.lastWake(in: sessions, forBaby: babyA),
+            base.addingTimeInterval(1800))
+    }
+
+    /// The ordinary state at the start of a shift, and the whole reason the tile's
+    /// parenthetical is optional: nobody knows when this baby last woke.
+    func testLastWakeIsNilWhenTheyHaveNotSlept() {
+        let base = makeDate("2026-09-04 22:00", Zone.newYork)
+        let sessions = [
+            SleepSnapshot(
+                babyID: babyB, startAt: base, endAt: base.addingTimeInterval(1800)),
+        ]
+        XCTAssertNil(SleepMath.lastWake(in: sessions, forBaby: babyA))
+        XCTAssertNil(SleepMath.lastWake(in: [], forBaby: babyA))
+    }
+
     // MARK: - DST
 
     /// Duration is physical time, so a stretch spanning "fall back" really is three

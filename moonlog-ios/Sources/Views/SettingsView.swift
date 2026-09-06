@@ -26,10 +26,15 @@ struct SettingsView: View {
     /// own routing so there is exactly one way in — a screenshot run can set it,
     /// which a `NavigationLink` cannot be made to do without a second route.
     @State private var showingHistory = false
+    /// The tags a swipe is asking to delete. Deleting a tag has no Undo — it is not a
+    /// `CareStore` write with a reversing twin, it goes through `StoreWrite` — so
+    /// this is the one place in Settings that can ask first.
+    @State private var deletingTags: [NoteTagPreset]?
 
     @Environment(\.careStore) private var store
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
+    @Environment(\.confirmations) private var confirmations
 
     /// Nil before onboarding — Appearance and Data still apply.
     private var family: Family? { roster.current }
@@ -46,9 +51,29 @@ struct SettingsView: View {
             }
 
             appearanceSection
+            confirmSection
             dataSection
         }
         .moonForm(palette)
+        // On the Form for the same reason the destination below is: the row that
+        // triggered this is the row being deleted, and a dialog declared on a row
+        // that is going away is a dialog with nowhere to be.
+        .confirmationDialog(
+            deletingTags.map { ConfirmableAction.deleteNoteTag.question(tagSubject($0)) } ?? "",
+            isPresented: Binding(
+                get: { deletingTags != nil },
+                set: { if !$0 { deletingTags = nil } }),
+            titleVisibility: .visible,
+            presenting: deletingTags
+        ) { tags in
+            Button("Delete", role: .destructive) {
+                deletingTags = nil
+                deleteTags(tags)
+            }
+            Button("Cancel", role: .cancel) { deletingTags = nil }
+        } message: { _ in
+            Text("Notes already written keep the tag. It stops being offered as a chip.")
+        }
         // On the Form, never inside the Section that triggers it. A
         // `navigationDestination` declared inside a lazy container is only
         // registered once that row has been built, and pushing it before then
@@ -248,8 +273,9 @@ struct SettingsView: View {
                 Text(tag.label)
             }
             .onDelete { offsets in
-                let ids = offsets.map { tags[$0].id }
-                run { store in for id in ids { try await store.deleteNoteTag(id) } }
+                let doomed = offsets.map { tags[$0] }
+                guard confirms(.deleteNoteTag) else { return deleteTags(doomed) }
+                deletingTags = doomed
             }
             HStack {
                 TextField("Add a tag", text: $newTag)
@@ -284,6 +310,31 @@ struct SettingsView: View {
         .listRowBackground(palette.raised)
     }
 
+    /// App-wide, not per family. This is how the doula wants the app to behave, and
+    /// it does not change because tonight is a different household.
+    private var confirmSection: some View {
+        Section {
+            ForEach(ConfirmableAction.allCases) { action in
+                Toggle(isOn: confirmBinding(action)) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(action.label)
+                        Text(action.note)
+                            .font(.caption)
+                            .foregroundStyle(palette.faint)
+                    }
+                }
+                .sensoryFeedback(.selection, trigger: confirms(action))
+            }
+        } header: {
+            Text("Ask before")
+        } footer: {
+            Text("On, the app asks first. Off, it just does it. Anything undoable "
+                 + "leaves an Undo on the banner for six seconds either way — which "
+                 + "is why most of these start off.")
+        }
+        .listRowBackground(palette.raised)
+    }
+
     private var dataSection: some View {
         Section {
             LabeledContent("Storage", value: storageLabel)
@@ -299,6 +350,29 @@ struct SettingsView: View {
     }
 
     // MARK: - Bindings
+
+    /// A swipe deletes one row, but `onDelete` hands over an `IndexSet` and a
+    /// multi-select edit can hand over several. Naming them is better than "these".
+    private func tagSubject(_ tags: [NoteTagPreset]) -> String {
+        tags.count == 1 ? "\(tags[0].label)" : "\(tags.count) note"
+    }
+
+    private func deleteTags(_ tags: [NoteTagPreset]) {
+        let ids = tags.map(\.id)
+        run { store in for id in ids { try await store.deleteNoteTag(id) } }
+    }
+
+    private func confirms(_ action: ConfirmableAction) -> Bool {
+        confirmations?.confirms(action) ?? action.confirmsByDefault
+    }
+
+    /// No `run` and no `StoreWrite`: this one is `UserDefaults`, not the store, so
+    /// there is no actor round-trip and nothing that can fail to save.
+    private func confirmBinding(_ action: ConfirmableAction) -> Binding<Bool> {
+        Binding(
+            get: { confirms(action) },
+            set: { confirmations?.setConfirms($0, for: action) })
+    }
 
     private func unitBinding(_ family: Family) -> Binding<VolumeUnit> {
         Binding(

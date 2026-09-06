@@ -31,9 +31,16 @@ struct ShiftHoursSheet: View {
     /// The confirm button stays hit-testable through the dismiss animation, and the
     /// write is async — the same guard the log sheets need.
     @State private var isSaving = false
+    /// The end-shift "are you sure", raised here rather than by `TonightView`.
+    /// Ending is the only action in the app with no Undo, and the confirmation has
+    /// to live on the same screen as the button that commits it — set from here and
+    /// presented back on Tonight, it would be a dialog handed across a sheet that is
+    /// dismissing, and an end-shift that silently does nothing.
+    @State private var confirmingEnd = false
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
+    @Environment(\.confirmations) private var confirmations
 
     init(
         purpose: Purpose,
@@ -112,16 +119,52 @@ struct ShiftHoursSheet: View {
                     // and the pair read as a stutter side by side.
                     Button(isEnding ? "End" : "Save") {
                         guard canSave else { return }
-                        isSaving = true
-                        Haptics.commit()
-                        onSave(startedAt, isEnding ? endedAt : nil)
-                        dismiss()
+                        // Only the ending asks. This same button also just corrects
+                        // the start of a running shift, which is undoable and not
+                        // what anyone means by "are you sure".
+                        guard isEnding, confirmsEnd else { return commit() }
+                        Haptics.warn()
+                        confirmingEnd = true
                     }
                     .disabled(!canSave)
                 }
             }
+            // On the content, not on the toolbar button that sets it. A toolbar is
+            // another container that builds its items on its own schedule, and this
+            // project has already paid once for a presentation modifier declared
+            // inside one.
+            .confirmationDialog(
+                ConfirmableAction.endShift.question(""),
+                isPresented: $confirmingEnd,
+                titleVisibility: .visible
+            ) {
+                Button(ConfirmableAction.endShift.verb, role: .destructive, action: commit)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(endWarning)
+            }
         }
         .tint(palette.accent)
+    }
+
+    private var confirmsEnd: Bool {
+        confirmations?.confirms(.endShift) ?? ConfirmableAction.endShift.confirmsByDefault
+    }
+
+    /// Names who is still asleep, because that is the fact most likely to change the
+    /// answer — the totals clip to the window, so ending now stops counting them.
+    private var endWarning: String {
+        let base = "The shift closes for good. This cannot be undone."
+        guard !asleep.isEmpty else { return base }
+        return "\(asleep.joined(separator: " and ")) "
+            + (asleep.count == 1 ? "is" : "are") + " still asleep. " + base
+    }
+
+    private func commit() {
+        isSaving = true
+        Haptics.commit()
+        onSave(startedAt, isEnding ? endedAt : nil)
+        dismiss()
     }
 
     /// Icon as well as colour, so the warning survives a colour-blind reader and a

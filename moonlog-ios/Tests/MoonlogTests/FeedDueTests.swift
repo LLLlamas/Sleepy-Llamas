@@ -9,7 +9,8 @@ final class FeedDueTests: XCTestCase {
     private func baby(lastFeed: Date?) -> BabyPresentation {
         BabyPresentation(
             id: UUID(), name: "Mia", accent: .gold, dayOfLife: 6,
-            asleepSince: nil, lastFeedAt: lastFeed, lastDiaperAt: nil)
+            asleepSince: nil, awakeSince: nil,
+            lastFeedAt: lastFeed, lastDiaperAt: nil)
     }
 
     private let now = Date(timeIntervalSince1970: 1_788_000_000)
