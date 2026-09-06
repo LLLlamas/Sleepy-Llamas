@@ -52,6 +52,21 @@ Babies, along with the client-family switcher — see `docs/decisions.md`.
   parents rather than something the app can read back.
 - **NFC.** Backlog. Needs the entitlement on the App ID and has no UI yet.
 
+## Shipped — 0.1.0 (1788712279), 2026-09-06
+
+The current build, and the one to test on. Archive verified clean of debug markers
+by `scripts/archive.sh`, uploaded by the command-line path below.
+
+What is in it that 1788666101 was not: the maroon page gradient and night header, the
+client-family switcher moved into Settings, History as its own screen, the status
+tile's "since" time on both states, "Ask before" confirmation preferences, every
+confirmation converted from `confirmationDialog` to `alert` (the old ones had no
+Cancel button — see `docs/status.md`), the status tile toggling wake/sleep on tap,
+and the tile tinted by the baby's own colour.
+
+An intermediate build, **1788708510**, was uploaded earlier the same day and carries
+only the first three of those.
+
 ## Shipped — 0.1.0 (1788666101), the first build safe to work a shift on
 
 Archived and **uploaded 2026-09-05**. Verified on the exact archive that was
