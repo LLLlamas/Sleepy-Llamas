@@ -163,10 +163,14 @@ struct LogSheetChrome<Content: View>: View {
                         }
                     }
                     .listRowBackground(palette.raised)
-                    .confirmationDialog(
+                    // Was a `confirmationDialog` and had the popover bug the whole
+                    // time: inside a sheet it presented as a popover, and a popover
+                    // drops the cancel action — so the app's one "are you sure?"
+                    // offered a red Delete and no way out but tapping beside it.
+                    // Shipped that way; found while adding the others.
+                    .alert(
                         babyName.map { "Delete this entry for \($0)?" } ?? "Delete this entry?",
-                        isPresented: $confirmingDelete,
-                        titleVisibility: .visible
+                        isPresented: $confirmingDelete
                     ) {
                         Button("Delete", role: .destructive) {
                             Haptics.commit()
@@ -182,12 +186,14 @@ struct LogSheetChrome<Content: View>: View {
             // On the Form, not on the `Menu` that sets it — a menu builds its items
             // on its own schedule and closes as one is chosen, and this project has
             // already paid once for a presentation modifier inside a lazy container.
-            .confirmationDialog(
+            // An `alert` rather than a `confirmationDialog` for the reason spelled
+            // out in `ShiftHoursSheet`: inside a sheet the dialog presents as a
+            // popover, and a popover has no cancel button.
+            .alert(
                 confirmingMove.map { ConfirmableAction.moveRecord.question($0.name) } ?? "",
                 isPresented: Binding(
                     get: { confirmingMove != nil },
                     set: { if !$0 { confirmingMove = nil } }),
-                titleVisibility: .visible,
                 presenting: confirmingMove
             ) { target in
                 Button(ConfirmableAction.moveRecord.verb) {

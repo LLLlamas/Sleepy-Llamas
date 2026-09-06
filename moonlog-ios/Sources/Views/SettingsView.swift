@@ -56,14 +56,14 @@ struct SettingsView: View {
         }
         .moonForm(palette)
         // On the Form for the same reason the destination below is: the row that
-        // triggered this is the row being deleted, and a dialog declared on a row
-        // that is going away is a dialog with nowhere to be.
-        .confirmationDialog(
+        // triggered this is the row being deleted, and a modifier declared on a row
+        // that is going away has nowhere to be. An `alert` rather than a
+        // `confirmationDialog` for the reason spelled out in `ShiftHoursSheet`.
+        .alert(
             deletingTags.map { ConfirmableAction.deleteNoteTag.question(tagSubject($0)) } ?? "",
             isPresented: Binding(
                 get: { deletingTags != nil },
                 set: { if !$0 { deletingTags = nil } }),
-            titleVisibility: .visible,
             presenting: deletingTags
         ) { tags in
             Button("Delete", role: .destructive) {

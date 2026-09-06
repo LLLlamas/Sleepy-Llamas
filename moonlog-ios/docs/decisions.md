@@ -47,6 +47,15 @@ someone who switched it on, since it defaults off. Both now live in the sheet.
 sleep toggle. Same family of bug as the `navigationDestination` in a `Section`, and
 found by reasoning about the ordering — the suite stayed green throughout.
 
+**They are alerts, and this is the second bug the screenshots found.** Written as
+`confirmationDialog`, the end-shift confirmation rendered as a *popover* — tail
+pointing at the sheet's grabber, floating over Tonight, obscuring the sheet's own
+Cancel — and iOS drops the cancel action in a popover presentation. So "this cannot
+be undone" offered one red button and no visible way out. Checking the rest found the
+app's **pre-existing** delete confirmation had shipped with exactly that flaw, in
+every log sheet, since it was written. All five are alerts now: centred, modal, both
+buttons, every time.
+
 Opening a log sheet is deliberately not on the list. A sheet is a form, not a
 question, and a form you can cancel already is its own confirmation.
 

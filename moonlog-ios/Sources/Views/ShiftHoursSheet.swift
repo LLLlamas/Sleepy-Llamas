@@ -129,14 +129,15 @@ struct ShiftHoursSheet: View {
                     .disabled(!canSave)
                 }
             }
-            // On the content, not on the toolbar button that sets it. A toolbar is
-            // another container that builds its items on its own schedule, and this
-            // project has already paid once for a presentation modifier declared
-            // inside one.
-            .confirmationDialog(
+            // An `alert`, not a `confirmationDialog`. Attached to content inside a
+            // sheet, a confirmation dialog presented as a *popover* — and in that
+            // presentation iOS drops the cancel action, so the only way out of "this
+            // cannot be undone" was tapping outside it. It also anchored its tail to
+            // the sheet's grabber and floated over Tonight. An alert is centred,
+            // modal, and always renders both buttons. Verified by screenshot.
+            .alert(
                 ConfirmableAction.endShift.question(""),
-                isPresented: $confirmingEnd,
-                titleVisibility: .visible
+                isPresented: $confirmingEnd
             ) {
                 Button(ConfirmableAction.endShift.verb, role: .destructive, action: commit)
                 Button("Cancel", role: .cancel) {}

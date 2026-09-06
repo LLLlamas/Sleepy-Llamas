@@ -87,6 +87,12 @@ which is the source of truth and is committed.
   lazy container.** It is not registered until the row containing it has been
   built, so a push that fires first lands on a blank screen with a working back
   button. Put it on the container. Cost when this was learned: one screenshot.
+- **Use `.alert` for a confirmation, never `.confirmationDialog`.** Inside a sheet
+  a confirmation dialog presents as a **popover**, and a popover drops the cancel
+  action — so "are you sure?" renders with a destructive button and no way out but
+  tapping beside it. It also anchors its tail to whatever it is attached to and
+  floats over the screen behind. The app's one delete confirmation shipped like this.
+  An alert is centred, modal, and always renders both buttons.
 - **A confirmation belongs on the screen that owns the button, never handed across
   a sheet that is dismissing.** The end-shift dialog was first raised from
   `TonightView` off `ShiftHoursSheet`'s callback — which runs while the sheet is

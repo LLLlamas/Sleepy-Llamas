@@ -202,9 +202,15 @@ not.
 Opening a log sheet is not on the list and should not be added to it. A sheet is a
 form, not a question, and a form you can cancel already is its own confirmation.
 
-Each dialog **names the consequence** rather than asking "Are you sure?", and its
+Each one **names the consequence** rather than asking "Are you sure?", and its
 button carries a verb — "End shift", "Delete", "Move" — so nobody has to re-read
 the title to work out which button they want.
+
+They are **alerts, not confirmation dialogs**. A `confirmationDialog` presented from
+inside a sheet renders as a popover, and iOS drops the cancel action in that
+presentation — the app's one delete confirmation had shipped offering a red Delete
+and no visible way out. It also anchored its tail to the wrong thing and floated over
+the screen behind. Verified by screenshot, both before and after.
 
 ## Discoverability
 

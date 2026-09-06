@@ -44,7 +44,7 @@ struct TonightView: View {
     /// Non-nil presents the "are you sure" for whichever action asked for one. One
     /// dialog for all of them rather than one per call site — the question and the
     /// button label come off `ConfirmableAction`, so a new confirmable action does
-    /// not mean a new `.confirmationDialog` to keep in step.
+    /// not mean a new alert to keep in step.
     @State private var pendingConfirm: ConfirmPrompt?
 
     var body: some View {
@@ -146,12 +146,13 @@ struct TonightView: View {
         // in reach of the thumb already holding the phone — and at the top it sat
         // over the very card it was naming, for the six seconds Undo stays up.
         .overlay(alignment: .bottom) { confirmationBanner }
-        .confirmationDialog(
+        // An `alert`, for the reason spelled out in `ShiftHoursSheet` — a
+        // confirmation dialog loses its cancel button when it presents as a popover.
+        .alert(
             pendingConfirm?.title ?? "",
             isPresented: Binding(
                 get: { pendingConfirm != nil },
                 set: { if !$0 { pendingConfirm = nil } }),
-            titleVisibility: .visible,
             presenting: pendingConfirm
         ) { prompt in
             Button(

@@ -51,6 +51,7 @@ verification table and the command-line upload path.
 | **History as its own screen, reachable during a shift** | done |
 | **The status tile says when the state started, awake as well as asleep** | done |
 | **"Ask before" — per-action confirmation preferences** | done |
+| **Confirmations are alerts, so they have a Cancel button** | fixed |
 
 181 tests green (91 in `MoonlogCoreTests`, 90 in `MoonlogTests`), up from 166.
 Fifteen new: five in a new `FormattersTests` pinning both 12-hour clock formats at
@@ -130,6 +131,12 @@ keepsake — is a document for the parents, not something this app can read back
 
 Carried over and re-audited on 2026-09-06. The five that could put wrong data in
 front of the parents are fixed; what is left is listed honestly below.
+
+**Found and fixed on 2026-09-06, and it had shipped:** the app's one confirmation —
+"Delete this entry for Mia?" — was a `confirmationDialog` inside a sheet, which iOS
+presents as a **popover**, and a popover has no cancel action. It offered a red
+Delete and no visible way out. Nothing failed, nothing was logged, and the suite was
+green; it took driving the UI to see it. All confirmations are alerts now.
 
 **Fixed since the last audit**
 
