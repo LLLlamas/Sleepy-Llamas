@@ -8,10 +8,10 @@ twin night), because `DEBUG` was defined in the Release configuration. Fixed
 afterwards, and `scripts/archive.sh` now fails an archive that carries debug code.
 Do not run a real shift on that build.
 
-**A clean archive now exists**: 0.1.0 (1788666101), 2026-09-05, verified by
-`scripts/archive.sh` to contain no debug-only code. It has **not been uploaded** —
-it is sitting in Organizer waiting for a decision. It is local-only by design
-(CloudKit deferred) and carries everything below.
+**0.1.0 (1788666101) was uploaded to TestFlight on 2026-09-05** and is the first
+build safe to work a real shift on: no demo seed, no debug hooks, no warnings, no
+CloudKit entitlement. It carries everything below. See `docs/testflight.md` for the
+verification table and the command-line upload path.
 
 ## Built
 

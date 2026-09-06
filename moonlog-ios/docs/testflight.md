@@ -51,19 +51,44 @@ end shift. Add-baby and end-shift live in the Tonight toolbar.
   parents rather than something the app can read back.
 - **NFC.** Backlog. Needs the entitlement on the App ID and has no UI yet.
 
-## Ready to test — 0.1.0 (1788666101)
+## Shipped — 0.1.0 (1788666101), the first build safe to work a shift on
 
-Archived 2026-09-05 and **not yet uploaded**. The guard passed: no `moonlogSeedDemo`,
-`moonlogOpenSheet`, `moonlogEditFirst`, `moonlogShiftHours`, `moonlogDemoWrite` or
-`moonlogDumpHandoff` in the Release binary, so the demo seed and every screenshot
-hook are compiled out. The Release build is also warning-free.
+Archived and **uploaded 2026-09-05**. Verified on the exact archive that was
+packaged:
 
-Unlike the first build, this one is safe to run a real shift on. It is local-only —
-that is the decision, not an omission — and the store persists across launches and
-is carried by the phone's own backup.
+| Check | Result |
+|---|---|
+| Debug-only markers in the Release binary | **0** — all six launch-argument hooks compiled out |
+| Release build warnings | none |
+| `CFBundleShortVersionString` / `CFBundleVersion` | `0.1.0` / `1788666101` |
+| `ITSAppUsesNonExemptEncryption` | `false`, so export compliance never prompts |
+| iCloud / CloudKit entitlement | **absent** — local-only, as decided, so the launch-crash trap cannot fire |
 
-To put it on a device: Xcode → Window → Organizer → Archives → the 23.41 archive →
-Distribute App → TestFlight.
+Unlike build 1788644622, this one carries no demo seed and is safe to run a real
+shift on.
+
+### How it was uploaded, for next time
+
+Not through Organizer. `xcodebuild -exportArchive` with `destination: upload` in the
+export options does the same thing from the command line and authenticates with the
+same Xcode account session, so cloud-managed distribution signing works exactly as
+it does in the GUI — no App Store Connect API key is needed, and there is none on
+this machine.
+
+```bash
+xcodebuild -exportArchive \
+  -archivePath "$HOME/Library/Developer/Xcode/Archives/<day>/<name>.xcarchive" \
+  -exportOptionsPlist ExportOptions.plist \
+  -exportPath /tmp/export -allowProvisioningUpdates
+```
+
+`ExportOptions.plist` needs `method: app-store-connect`, `destination: upload`,
+`teamID: GYFN949Q5E`, and — load-bearing —
+**`manageAppVersionAndBuildNumber: false`**. Left true, Xcode rewrites the build
+number and breaks the Unix-timestamp scheme `stamp-build.sh` depends on.
+
+With `destination: upload` no `.ipa` is left on disk, so verify the archive's own
+binary rather than looking for an export.
 
 ## The archive ritual
 

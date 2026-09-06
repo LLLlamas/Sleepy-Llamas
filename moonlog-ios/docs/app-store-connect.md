@@ -74,6 +74,10 @@ signing is tied to the Xcode account session rather than to anything on disk.
 
 ## Step 4 — TestFlight ✅
 
+> Second upload, 2026-09-05: **0.1.0 (1788666101)**. Done from the command line
+> rather than Organizer — see `docs/testflight.md`. Same cloud-managed signing, no
+> API key involved.
+
 1. App Store Connect → your app → **TestFlight**
 2. The build appears after processing (a few minutes; you get an email)
 3. **Internal Testing** → add yourself as a tester
