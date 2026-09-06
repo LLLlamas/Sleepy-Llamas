@@ -90,6 +90,11 @@ public enum StoolColor: String, Sendable, CaseIterable {
 }
 
 public struct EventSnapshot: Sendable, Hashable, Identifiable {
+    /// Stands in for "no baby" on a `pump`, which belongs to the shift rather than
+    /// to a child. Fixed so it can never collide with a real baby and never varies
+    /// between builds of the same record.
+    public static let noBaby = UUID(uuidString: "00000000-0000-0000-0000-00000000BABE")!
+
     public let id: UUID
     public let babyID: UUID
     public let kind: EventKind

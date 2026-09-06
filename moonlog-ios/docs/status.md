@@ -60,6 +60,43 @@ Each of the first three lets wrong data reach the parents or loses it.
    today, and both appear on the handoff.
 6. The keepsake handoff document (the PWA's themed, printable page).
 
+## Known issues, from two audits (2026-09-05)
+
+Recorded rather than fixed. None currently produces wrong data, but the first two
+would if the surrounding code moved.
+
+1. **Tonight's refresh rests on an accident.** The screen no longer ticks, so it
+   depends entirely on SwiftData observation — and `CareStore` is a `@ModelActor`
+   writing through its own context, so the main context's relationship arrays
+   refresh only once the cross-context merge lands. What actually forces the
+   re-read today is the confirmation banner's `@State` mutation ~2s after a write.
+   If that banner is removed or made non-`@State`, the timeline silently stops
+   updating after a log. **And once CloudKit is on, a change from another device
+   has no trigger at all.** Wants an explicit invalidation before sync goes live.
+2. **`CareStore` validates no times.** Future-blocking and outside-the-shift
+   advisories live only in `LogSheetChrome`, so any non-view caller bypasses them.
+   `CLAUDE.md` says invariants live in the actor precisely because a stray write
+   elsewhere bypasses them; the time rules are not there. A sleep session can also
+   be dragged wholly outside the shift, where it shows in the timeline with a
+   duration but contributes nothing to the totals or the handoff.
+3. **`reassignEvent` is unreachable.** Its own docstring calls it the remedy for a
+   wrong-twin tap — the app's named failure mode — and nothing calls it. The actual
+   remedy is delete-and-re-log, which loses `createdAt` and the NFC source fields.
+4. **Pump, medication and weight have no create or edit path.** They can be enabled
+   in Settings and logged by nothing. Their timeline rows are deliberately not
+   tappable, because the only sheet they used to route to was the note sheet.
+5. **An archived baby's records vanish from the handoff.** The roster comes from
+   `activeBabies`, so archiving mid-shift silently removes everything already
+   logged against that baby. There is no unattributed catch-all section.
+6. Smaller: the handoff lists feed and note times but not diaper times; it mixes
+   two clock registers (`9:00 PM` in the header, `3:12a` in rows);
+   `Fmt.paddedDuration` has no day rollover past 24h and clamps negatives silently;
+   `OnboardingView`'s `.navigationTitle("Welcome")` is dead, overridden by the tab's
+   stack.
+7. `DayBuckets` and `MoonClock` still have no call sites outside `MoonlogCore`.
+   `DayBuckets` is what a multi-night trends view will need; `Family.calendar`
+   duplicates what `MoonClock` exists to provide.
+
 ## Needs the user
 
 | What | When | Why |

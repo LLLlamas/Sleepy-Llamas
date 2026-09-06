@@ -137,7 +137,11 @@ final class LogEvent {
     /// The value type `MoonlogCore` works on. Its absence is why `Totals.compute`
     /// had no reachable call path from the app.
     var snapshot: EventSnapshot? {
-        guard let babyID = babyIDRaw ?? (kind == .pump ? UUID() : nil) else { return nil }
+        // A stable sentinel, not a fresh UUID. `pump` carries no baby, and minting
+        // one per snapshot build meant any code grouping by babyID would see a new
+        // phantom baby on every render.
+        guard let babyID = babyIDRaw ?? (kind == .pump ? EventSnapshot.noBaby : nil)
+        else { return nil }
         return EventSnapshot(
             id: id, babyID: babyID, kind: kind, at: at,
             feedMethod: feedMethod, amountMl: amountMl,
