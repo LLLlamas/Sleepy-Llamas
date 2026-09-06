@@ -111,7 +111,14 @@ which is the source of truth and is committed.
 
 - Amounts stored in millilitres, durations in seconds. Round once, at display.
 - Enum raw values are CloudKit wire format. Add cases; never rename one.
-- Colour is never the only signal. See `docs/design.md`.
+- Colour is never the only signal. See `docs/design.md`. This is a rule the code
+  has broken twice by omission — check the *warning* state as well as the resting
+  one when adding anything that changes colour to mean something.
+- **A control declared on a view is not a control that renders.** `BabyStatusCard`
+  took an `onNote` closure, `TonightView` passed one, and the action row listed
+  three buttons — so notes, note tags, temperature and the fever badge were built,
+  tested and unreachable through two TestFlight builds. A green suite cannot see
+  this and neither can a compiler. Drive the screen.
 - **The status tile is tinted by the baby's accent, not by the state.** Hue is
   identity, depth of fill is state. The blend factors in `BabyAccent.wash(for:asleep:)`
   are measured, not chosen — change one and `PaletteTests` fails. Washes are computed

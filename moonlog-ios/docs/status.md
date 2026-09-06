@@ -54,11 +54,21 @@ verification table and the command-line upload path.
 | **Confirmations are alerts, so they have a Cancel button** | fixed |
 | **The status tile toggles on tap, at the time you tapped** | done |
 | **The tile wears the baby's colour, contrast-pinned per accent** | done |
+| **The Note button, which was declared and never rendered** | fixed |
+| **Edit a baby's birth date, from her card and from Settings** | done |
+| **Remove a baby — `archiveBaby` had no call site at all** | fixed |
+| **Appearance is Follow phone / Night / Deep Night, not one toggle** | done |
+| **Summary keeps the night just ended, with Copy and Share** | done |
+| **Summary's cards use the handoff's roster rule, not `activeBabies`** | fixed |
+| **Feed minutes step by 5; Undo's tap target is a real target** | done |
 
-184 tests green (91 in `MoonlogCoreTests`, 93 in `MoonlogTests`), up from 166.
-Fifteen new: five in a new `FormattersTests` pinning both 12-hour clock formats at
-midnight and noon, three on `SleepMath.lastWake`, and seven in a new
-`ConfirmPreferencesTests`.
+188 tests green (91 in `MoonlogCoreTests`, 97 in `MoonlogTests`), up from 184.
+Four new, all in `CareStoreTests`: correcting a birth date, rejecting a future one
+on both `updateBaby` and `addBaby`, and a shift's roster keeping a baby archived
+mid-night while leaving out one discharged with nothing logged.
+
+**The Release build has no warnings again**, measured rather than claimed: the four
+`Sendable` conformances moved beside their structs.
 
 **A caveat worth keeping in view.** Test count is not a proxy for working software
 here, and this project has proved it twice: `Totals.compute` was fully tested and
@@ -118,23 +128,51 @@ The suite stayed green. It was caught by looking at a screenshot.
 `DayBuckets` is what a multi-night trends view will need, and `Family.calendar`
 duplicates what `MoonClock` exists to provide.
 
+## The UX audit of 2026-09-06
+
+A read-only agent audited the whole app against the actual use case — one doula, a
+dark nursery, one hand, twins, 3am. **Its first finding was that the Note button
+did not exist.** `BabyStatusCard` declared `onNote`, `TonightView` passed it a
+closure, and the action row rendered three buttons. Free-text notes, the note tags
+in Settings, the temperature field and the fever badge were all built, tested and
+unreachable, and had shipped that way in every TestFlight build. It is the third
+time this app has shipped a feature with no route to it, and the sharpest argument
+yet for the UI test target below.
+
+**Acted on:** the Note button; feed minutes stepping by 5 (fifteen taps for a
+fifteen-minute breastfeed); the appearance picker; `archiveBaby` reached at last;
+Undo's tap target; the colour-only overdue warning; "Wrong baby?" reading as a
+caption; the three-deep medication menu; Summary keeping the night just ended; the
+onboarding line that said "later" without saying where.
+
+**Raised and not done**, in its order:
+
+- **Every log sheet ends with a stretch to the top-right.** Save is in
+  `.confirmationAction` and the log sheets are presented full-height, so the most
+  repeated confirm of the night is ~800pt from the thumb — while the *destructive*
+  Delete in the same sheet is a comfortable full-width row at the bottom. Not
+  taken: `.presentationDetents([.medium, .large])` risks hiding fields behind the
+  keyboard, and a bottom Save row duplicates a control. It wants a real look at
+  the sheets rather than a one-line change.
+- **Summary's Copy sits in the top-*left* corner** — the least reachable point for
+  a right thumb, for an action performed while packing up. Moving it into the share
+  menu on the right costs a tap; leaving it costs the reach. Undecided.
+- **There is no way to remove a client family**, only a baby. `OnboardingView`
+  already admits this in a comment.
+
 ## Next, in order
 
 **CloudKit is deferred, not next** — see the correction below and `docs/cloudkit.md`.
 **NFC is backlog**, scoped in `docs/next-features.md` and not being built.
 
-1. **Edit a baby's birth date.** Wrong-forever today, and it drives day-of-life on
-   both the handoff and the keepsake page.
-2. **A UI test target.** See the caveat above — it is the one piece of tooling that
-   would close the gap this project keeps falling into. Tonight's blank-screen
-   `navigationDestination` bug is the freshest argument for it: a whole screen
-   rendered empty, and only a screenshot said so.
-3. `SummaryView`'s archived-baby gap (known issue 6 below).
-4. **Four Swift 6 `Sendable` warnings.** `FeedEntry`, `DiaperEntry`, `NoteEntry` and
-   `ExtraEntry` conform at the bottom of `TonightView.swift` rather than beside the
-   structs, which is a warning today and an error in the Swift 6 language mode. Cheap
-   to fix, and `docs/testflight.md` claimed a warning-free Release build until this
-   was measured on 2026-09-06.
+1. **A UI test target**, now the only item left from the old list and the one piece
+   of tooling this project does not have. Three changes this session were driven
+   and screenshotted through a throwaway project in `/tmp` — the Note button
+   opening its sheet, the baby editor carrying a birth date, and picking Night
+   holding through a tab change on a phone in Light appearance. That throwaway is
+   most of the target already; it needs moving in and pointing at the real one.
+2. The reach problem on the log sheets — first bullet above.
+3. Known issue 8, `EventKind` having no `unknown` case.
 
 **Dropped on 2026-09-05, deliberately:**
 
@@ -215,19 +253,17 @@ green; it took driving the UI to see it. All confirmations are alerts now.
    union of active babies and every baby this shift has records for, plus an
    "unattributed" catch-all for orphaned records.
 
-**Still open**
+**Fixed on 2026-09-06, second pass**
 
-6. **`SummaryView` still derives its cards from `activeBabies`.** Untouched today.
-   Archiving a baby mid-shift removes her totals from the Summary tab and from a
-   past night's summary cards, exactly as it used to from the handoff. Moving
-   History out of `SummaryView` changed the route to the second half of that and
-   nothing else: `SummaryCards` has two call sites still, `SummaryView` for the
-   running shift and `ShiftDetailView` for a past night, now reached through
-   Settings › Past nights instead of down the Summary tab. Not the two-line fix the
-   timeline was: including archived babies unconditionally would put an empty card
-   on tonight's summary for every discharged baby, so it needs the same
-   "has records in this shift" rule the handoff roster uses. `ShiftDetailView`'s
-   timeline name/colour lookup **was** fixed.
+6. ~~`SummaryView` derives its cards from `activeBabies`~~ — it calls
+   `Shift.roster(of:)` now, and `Handoff.roster` is generic over a `RosterMember`
+   protocol that both `HandoffBaby` and the `Baby` model conform to. The cards and
+   the parents' document apply one rule, which is the point: this bug had already
+   been fixed in the document and left in the cards. `ShiftDetailView`'s own copy
+   of the rule is gone. It was never the two-line fix the timeline was — including
+   archived babies unconditionally would put an empty card on tonight's summary for
+   every discharged baby, so it needed the handoff's "has records in this shift"
+   rule, which is exactly what it now shares.
 7. Smaller: the handoff lists feed and note times but not diaper times; it mixes
    two clock registers (`9:00 PM` in the header, `3:12a` in rows);
    `Fmt.paddedDuration` has no day rollover past 24h and clamps negatives silently;
@@ -257,13 +293,13 @@ green; it took driving the UI to see it. All confirmations are alerts now.
     `ShiftDetailView`, which captures its `Family` model object and would go on
     rendering the previous household's night. Written down in
     `SettingsView.clientSection` as well; nothing in the code enforces it.
-12. **The ported status tile only carries a time for one of the two states it
-    names.** `BabyPresentation` has `asleepSince` and nothing for the waking half,
-    so an asleep baby's tile reads "Since 11:17p · tap to adjust" with the elapsed
-    time on the trailing edge, and an awake baby's reads "Tap to log a sleep you
-    missed" with no since-time and no elapsed at all. Found while porting it, not
-    fixed: an awake-since would have to come from the last ended session's `endAt`,
-    which the presentation does not carry and `TonightView` does not compute.
+**Still open**
+
+12. ~~The ported status tile only carries a time for one of the two states it
+    names.~~ Stale entry, caught by the audit: `awakeSince` is computed in
+    `TonightView` and rendered by `BabyStatusCard.stateSince`, so an awake baby's
+    tile has read "Since 5:29pm · tap to sleep" since the tile work landed. It was
+    written as open in the same session that closed it.
 
 ## Needs the user
 

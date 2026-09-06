@@ -52,9 +52,34 @@ Babies, along with the client-family switcher — see `docs/decisions.md`.
   parents rather than something the app can read back.
 - **NFC.** Backlog. Needs the entitlement on the App ID and has no UI yet.
 
+## Shipped — 0.1.0 (1788733948), 2026-09-06
+
+The current build, and the one to test on. Archive verified clean of debug markers,
+uploaded by the command-line path below, and the Release build has **no warnings**
+again — the four `Sendable` conformances moved beside their structs.
+
+**The one thing to test first: the Note button on each baby's card.** It did not
+exist in any earlier build. `BabyStatusCard` declared `onNote`, `TonightView`
+passed it a closure, and the action row rendered three buttons — so notes, the note
+tags in Settings, the temperature field and the fever badge were all unreachable in
+1788712279 and everything before it.
+
+Also new since 1788712279, all of it from a UX audit against the real use case:
+
+| What | Where to look |
+|---|---|
+| Note button | Each baby's card, fourth control |
+| Appearance: Follow phone / Night / Deep Night | Settings › Appearance. Set your phone to Light and pick Night — the app stays dark, which it could not before |
+| Feed minutes step by 5 | Feed sheet, breast and bottle duration |
+| Edit a baby's birth date | Tap her card on Tonight, or Settings › Babies › tap her |
+| Remove a baby | Same sheet, from Settings only |
+| The night stays on Summary after you end the shift | End a shift, then look at Summary — Copy and Share are still there |
+| "Wrong baby?" looks like a control | Any edit sheet |
+| Overdue feed says "· due" and changes glyph | A baby's chips, once a feed is overdue |
+
 ## Shipped — 0.1.0 (1788712279), 2026-09-06
 
-The current build, and the one to test on. Archive verified clean of debug markers
+The previous build. Archive verified clean of debug markers
 by `scripts/archive.sh`, uploaded by the command-line path below.
 
 What is in it that 1788666101 was not: the maroon page gradient and night header, the
