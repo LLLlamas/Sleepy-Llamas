@@ -52,8 +52,10 @@ verification table and the command-line upload path.
 | **The status tile says when the state started, awake as well as asleep** | done |
 | **"Ask before" — per-action confirmation preferences** | done |
 | **Confirmations are alerts, so they have a Cancel button** | fixed |
+| **The status tile toggles on tap, at the time you tapped** | done |
+| **The tile wears the baby's colour, contrast-pinned per accent** | done |
 
-181 tests green (91 in `MoonlogCoreTests`, 90 in `MoonlogTests`), up from 166.
+184 tests green (91 in `MoonlogCoreTests`, 93 in `MoonlogTests`), up from 166.
 Fifteen new: five in a new `FormattersTests` pinning both 12-hour clock formats at
 midnight and noon, three on `SleepMath.lastWake`, and seven in a new
 `ConfirmPreferencesTests`.

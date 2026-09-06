@@ -100,10 +100,46 @@ The family name is there for a second reason — see "One family at a time" belo
 
 ## Baby status
 
-The awake/asleep state is a bordered, state-tinted tile, ported from the PWA's
-sleep tile: a 2pt border in `sleep` or `awake`, a fill in the matching faint wash,
-and the copy "Mia is asleep". A tinted block is legible across a dark room in a
-way a coloured word in a row is not.
+The awake/asleep state is a bordered, tinted tile, ported from the PWA's sleep tile:
+a 2pt border, a fill, and the copy "Mia is asleep". A tinted block is legible across
+a dark room in a way a coloured word in a row is not.
+
+**Tapping it toggles**, at the time you tapped. It is the biggest target on the card
+and the thing done most often at 3am, so it takes no configuration and asks nothing —
+the same write the Wake/Sleep button below makes. It used to open the adjust-sleep
+sheet, which meant the largest control on the screen asked a question instead of
+answering one. Correcting a time afterwards lives where the record is: the sleep row
+in tonight's timeline, which is tappable for a running session as well as a finished
+one.
+
+### The tile wears the baby's colour, not the state's
+
+Both states are tinted by **that baby's accent**. The border and the moon/sun glyph
+are the accent itself; the fill is the accent blended most of the way back to the
+card, and **asleep is the same colour faded further** — which reads as darker on the
+night themes and as more transparent by day, because both mean "closer to the card".
+
+It used to be sage for asleep and gold for awake, the same two colours on every card.
+With twins that meant the two tiles could swap hues without changing which baby was
+which, and hue said nothing about whose card you were looking at.
+
+So hue is identity now and depth of fill is state. **That is a deliberate demotion of
+colour as a state signal**, and it is only defensible because state was never carried
+by colour alone here: the glyph is a moon or a sun, the sentence says "Mia is asleep"
+in words, and the elapsed counter appears only while asleep. Colour stays the third
+signal — it has changed what it is third *for*.
+
+**The blend factors were measured, not chosen.** 0.82 on Night, 0.85 on Deep Night,
+0.74 on Day: the deepest fill each card allows while keeping `ink` and `faint` at
+4.5:1 on it and the accent outline at 3:1, for all five accents. The outline and glyph
+are held to 3:1 rather than 4.5 because they are UI components, not text — WCAG 1.4.11.
+Holding them to 4.5 was tried and forced the accent 44% of the way to `ink`, bleaching
+out the one thing the tile's colour now exists to say.
+
+**The honest limit:** on Deep Night the awake and asleep fills are only 1.17:1 apart,
+and no tuning fixes it — a near-black card flattens whatever is blended into it. The
+fill is a supporting signal there, not the one carrying the state. `PaletteTests`
+asserts it at that number rather than pretending otherwise.
 
 Its second line says **when the state started, then what the tap does** — "Since
 3:42am · tap to adjust". Both halves are departures from the web original, and both

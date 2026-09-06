@@ -4,6 +4,68 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## The status tile toggles on tap, and wears the baby's colour
+**2026-09-06**
+
+Two changes to the same control, asked for together.
+
+**Tapping toggles, at the time you tapped.** The tile is the biggest target on the
+card and the thing done most often at 3am; it now makes the same write the
+Wake/Sleep button makes, with no form and no question. It used to open the
+adjust-sleep sheet — the largest control on the screen asking a question instead of
+answering one. This restores the PWA's gesture, and with it the PWA's copy: "tap to
+wake" is true again.
+
+Correcting a time moves to the sleep row in tonight's timeline. **That was checked
+before the route was removed, not assumed** — `ShiftTimeline.entries` iterates all
+sessions with no open/closed filter, so a *running* sleep has a tappable row and its
+start stays correctable. Had it filtered, this change would have made a running
+sleep uncorrectable until it ended.
+
+Two things went with it. `LogSheet.sleep` and its `-moonlogOpenSheet sleep` hook had
+no caller left, so they are gone rather than left as a route nothing reaches — this
+project has shipped built-but-unreachable code three times. And `SleepSheet.editing`
+is now required: with it optional the sheet had a second personality, manual entry,
+that nothing could open, including a title ternary that could no longer be false.
+
+**What is lost, deliberately:** logging a sleep that was never recorded at all, for a
+baby who is currently awake. The recovery is to toggle on, toggle off, and edit the
+row. `CareStore.recordSleep`'s insert branch is kept despite having no caller — it is
+store API, the surface the Watch app on the parallel branch builds against, and
+deleting it to satisfy a tidiness rule would be a merge conflict for no gain.
+
+**The tile is the baby's accent in both states, the fill quietened when asleep.** It
+was sage-for-asleep and gold-for-awake: the same two colours on every card, so with
+twins the tiles could swap hues without changing which baby was which. Hue is
+identity now; depth of fill is state.
+
+That demotes colour as a state signal, which is worth naming rather than glossing.
+It survives the "colour is never the only signal" rule because state was never on
+colour alone here — the glyph is a moon or a sun, the sentence says "is asleep" in
+words, and the elapsed counter only exists while asleep. But it is a real trade, and
+the mirror of the reasoning that removed the sixth "clay" accent: two things a tired
+person can confuse are worse than one fewer.
+
+**The blend factors are measured.** 0.82 / 0.85 / 0.74 toward the card, per theme —
+the deepest each card allows while `ink` and `faint` hold 4.5:1 on the fill and the
+accent outline holds 3:1, across five accents and both states. They differ per theme
+because the cards do: near-white by day, near-black on Deep Night.
+
+**The outline is held to 3:1, not 4.5.** It is a 2pt border and a glyph — UI
+components under WCAG 1.4.11, not text. Holding them to 4.5 was tried: the solver
+pushed the accent 44% of the way to `ink`, bleaching out the one thing the tile's
+colour now exists to say. The two text roles on the fill are still held to 4.5, and
+`faint` on a fill is a pair nothing checked before — not for the old washes either.
+
+**And it does not fully work on Deep Night.** The two fills are 1.17:1 apart there
+and no tuning fixes it; a near-black card flattens anything blended into it. The test
+asserts that number rather than a flattering one, and the code says why.
+
+*Reverses if:* the twins layout ever gains a stronger identity signal than hue — a
+photo, say — at which point the tile could go back to meaning state.
+
+---
+
 ## Confirmations are per action, and most of them default to off
 **2026-09-06**
 

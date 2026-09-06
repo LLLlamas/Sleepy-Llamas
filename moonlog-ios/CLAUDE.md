@@ -112,6 +112,10 @@ which is the source of truth and is committed.
 - Amounts stored in millilitres, durations in seconds. Round once, at display.
 - Enum raw values are CloudKit wire format. Add cases; never rename one.
 - Colour is never the only signal. See `docs/design.md`.
+- **The status tile is tinted by the baby's accent, not by the state.** Hue is
+  identity, depth of fill is state. The blend factors in `BabyAccent.wash(for:asleep:)`
+  are measured, not chosen — change one and `PaletteTests` fails. Washes are computed
+  opaque via `Color.blend`; never `.opacity()`, which no contrast test can measure.
 - **Every palette value is pinned by a WCAG contrast test.** Adding a role or
   changing a surface means `PaletteTests` has to pass first — the previous
   "contrast-checked" claim was documentation, not enforcement, and the Day theme
