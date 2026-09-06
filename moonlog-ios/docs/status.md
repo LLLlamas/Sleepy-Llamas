@@ -88,9 +88,23 @@ sleep" on, relaunching **without reinstalling**, and tapping Wake on Mia's card 
 see the alert appear — the end-to-end proof that a Settings toggle changes behaviour
 on another screen across a launch.
 
+Driven again after the tile changes, with pixels sampled from the screenshots rather
+than eyeballed: the tile toggling on tap (no dialog, Undo banner, time = the tap), the
+fills in Night and Day at both states, the subtitle's contrast on each fill, and the
+sleep row in the timeline opening the editor.
+
+**The export was driven end to end**, which matters because it has shipped
+built-but-unreachable before. Summary's Copy puts the full plain-text handoff on the
+pasteboard — read back and checked, not assumed. "Send the page" opens a real share
+sheet on `Mia & Leo — Sun, Sep 6.html`. `-moonlogDumpHandoff` writes a 7.7KB HTML file
+carrying the parent note, per-baby stats, feeds, stool colours and the sign-off.
+Nothing stubbed anywhere on that path.
+
 Still unwitnessed: tapping the client-family picker to actually switch household,
-tapping Undo, and the contents of Tonight's overflow menu. Compiled and unit-tested,
-never driven — and the harness above could now reach all three.
+tapping Undo, the contents of Tonight's overflow menu, and **Deep Night** — which is a
+Settings toggle rather than an OS appearance, so an appearance-switching run never
+reaches it. Its tile fills are therefore the only two of the eight that are asserted
+but not seen.
 
 **A UI test target would close that gap and is the single highest-value piece of
 tooling this project does not have.** Tonight produced the sharpest argument for it
@@ -145,6 +159,22 @@ replaced phone restores it.
 What is genuinely still exposed is narrower: **deleting the app** on a working phone,
 and having no *re-importable* export of your own history. The handoff — text or
 keepsake — is a document for the parents, not something this app can read back.
+
+## What the tile change does not do
+
+Measured on device, worth knowing before it is called finished:
+
+- **Sage loses its hue in the dark-theme fill.** A sage baby's awake fill samples
+  `#4F4C4B` — very nearly grey. Sage is a muted green and the card is maroon, so the
+  blend cancels most of the chroma; gold survives it, sage does not. The border, the
+  glyph and the elapsed badge still carry sage, so identity holds — but for that
+  accent, in that theme, the fill is contributing lightness and not colour. Fixing it
+  means blending with chroma preserved rather than component-wise, which is a bigger
+  change than the one asked for.
+- **Day's asleep fill has no margin.** It measures 1.1998:1 against the card — over
+  the 1.18 the test demands, under the 1.20 the other seven clear. It reads as a quiet
+  cream-tan block rather than the blank white it was, but it is the weakest of the
+  eight and any future deepening of Day's surfaces will eat it.
 
 ## Known issues
 
