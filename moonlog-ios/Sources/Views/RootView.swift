@@ -30,7 +30,6 @@ struct RootView: View {
 
     @State private var error: String?
     @State private var tab = "tonight"
-    @State private var addingFamily = false
 
     private var theme: MoonTheme {
         if deepNightEnabled { return .deepNight }
@@ -81,7 +80,15 @@ struct RootView: View {
                 .tabItem { Label("Summary", systemImage: "list.bullet.rectangle") }
                 .tag("summary")
 
-            stack("Settings") { SettingsView(family: family) { error = $0 } }
+            stack("Settings") {
+                SettingsView(
+                    roster: FamilyRoster(
+                        current: family,
+                        all: families,
+                        select: { currentFamilyIDRaw = $0.uuidString },
+                        create: createFamily),
+                    onError: { error = $0 })
+            }
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag("settings")
         }
@@ -104,10 +111,10 @@ struct RootView: View {
     ) -> some View {
         NavigationStack {
             content()
-                .background(palette.bg)
+                .moonBackground(palette)
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbarBackground(palette.bg, for: .navigationBar)
+                .toolbarBackground(palette.bgLift, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
         }
     }
@@ -133,56 +140,14 @@ struct RootView: View {
             // across the change, and a half-filled log sheet would still be
             // holding the previous family's baby id.
             .id(family.id)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { familyMenu(family) }
-            }
-            .sheet(isPresented: $addingFamily) {
-                AddFamilySheet(onAdd: createFamily)
-            }
         } else {
             OnboardingView(onCreate: createFamily)
         }
     }
 
-    /// The switcher, on Tonight rather than in Settings: it is the screen the doula
-    /// is on all night, and the label doubles as a standing answer to "whose night
-    /// am I logging?" — the mistake this guards against is logging a feed against
-    /// the wrong household, which Settings, two taps away, would not prevent.
-    private func familyMenu(_ current: Family) -> some View {
-        Menu {
-            // A Picker, so the current household carries a checkmark. Colour is
-            // never the only signal.
-            Picker("Client family", selection: familyBinding(current)) {
-                ForEach(families) { family in
-                    Text(family.name).tag(family.id)
-                }
-            }
-            Divider()
-            Button("Add client family", systemImage: "person.2.badge.plus") {
-                addingFamily = true
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Text(current.name).font(.subheadline.weight(.semibold)).lineLimit(1)
-                Image(systemName: "chevron.down").font(.caption2)
-            }
-        }
-        .accessibilityLabel("Client family, \(current.name)")
-    }
-
-    private func familyBinding(_ current: Family) -> Binding<UUID> {
-        Binding(
-            get: { current.id },
-            set: { id in
-                guard id != current.id else { return }
-                Haptics.tap()
-                currentFamilyIDRaw = id.uuidString
-            })
-    }
-
-    /// Shared by first-run onboarding and the later add-family sheet — the same
-    /// three writes, in the same order, so a second household is set up exactly
-    /// like the first.
+    /// Shared by first-run onboarding and the add-family sheet in Settings — the
+    /// same three writes, in the same order, so a second household is set up
+    /// exactly like the first.
     private func createFamily(
         _ familyName: String, _ babyName: String, _ birthAt: Date, _ unit: VolumeUnit
     ) {
@@ -192,7 +157,8 @@ struct RootView: View {
             _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
             // Select what was just created. `families` is sorted oldest-first, so
             // without this a newly added household would open behind the one
-            // already on screen.
+            // already on screen — and since the switcher now lives in Settings,
+            // the doula would not be looking at the screen that shows it.
             currentFamilyIDRaw = familyID.uuidString
         }
     }

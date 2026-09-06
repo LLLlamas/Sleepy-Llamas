@@ -13,7 +13,9 @@ final class PaletteTests: XCTestCase {
         XCTAssertNotEqual(Palette.for(.deepNight).bg, Palette.for(.day).bg)
         XCTAssertEqual(Palette.for(.night).bg, Color.hex("1a0a0e"))
         XCTAssertEqual(Palette.for(.deepNight).bg, Color.hex("100508"))
-        XCTAssertEqual(Palette.for(.day).bg, Color.hex("fdf6f4"))
+        // Moved one step warmer from the PWA's `fdf6f4` when the maroon was
+        // pushed forward; the dark themes' anchors did not move.
+        XCTAssertEqual(Palette.for(.day).bg, Color.hex("fdf4f1"))
     }
 
     func testDarkThemesReportDarkColorScheme() {
@@ -82,6 +84,82 @@ final class PaletteTests: XCTestCase {
                         + "luminance to the background")
             }
         }
+    }
+
+    /// The palette's whole claim is that it was contrast-checked against real
+    /// surfaces. Nothing enforced that, so a surface could be darkened — or the
+    /// maroon pushed forward — and the `faint` values, which are the tightest,
+    /// would fail silently in the one room this app is used in.
+    ///
+    /// WCAG 2.1 relative luminance, not the crude weighted sum the accent tests
+    /// use: that one compares two accents to each other, where a rough distance is
+    /// enough. Text against a surface is a legibility threshold and needs the real
+    /// curve. AA is 4.5:1 for body text and 3:1 for large; every role here is read
+    /// at footnote size or above, so `faint` is held to 4.5 like the rest.
+    func testTextRolesHoldAAAgainstEverySurfaceTheySitOn() {
+        for theme in MoonTheme.allCases {
+            let p = Palette.for(theme)
+            let surfaces = [("bg", p.bg), ("bgLift", p.bgLift), ("raised", p.raised),
+                            ("raised2", p.raised2), ("chip", p.chip)]
+            let text = [("ink", p.ink), ("soft", p.soft), ("faint", p.faint),
+                        ("sleep", p.sleep), ("awake", p.awake), ("warn", p.warn),
+                        ("stop", p.stop)]
+            for (surfaceName, surface) in surfaces {
+                for (textName, colour) in text {
+                    let ratio = contrast(colour, surface)
+                    XCTAssertGreaterThanOrEqual(
+                        ratio, 4.5,
+                        "\(theme.displayName): \(textName) on \(surfaceName) is "
+                            + String(format: "%.2f:1", ratio))
+                }
+            }
+        }
+    }
+
+    /// A state tint on its own faint wash — the pill treatment. These pairs exist
+    /// precisely to be used together, so they are the pair most likely to be
+    /// reached for without checking.
+    func testStateTintsHoldAAOnTheirOwnFaintWash() {
+        for theme in MoonTheme.allCases {
+            let p = Palette.for(theme)
+            let pairs = [("sleep", p.sleep, p.sleepFaint), ("awake", p.awake, p.awakeFaint),
+                         ("warn", p.warn, p.warnFaint), ("stop", p.stop, p.stopFaint),
+                         ("accent", p.accent, p.accentFaint)]
+            for (name, tint, wash) in pairs {
+                let ratio = contrast(tint, wash)
+                XCTAssertGreaterThanOrEqual(
+                    ratio, 4.5,
+                    "\(theme.displayName): \(name) on \(name)Faint is "
+                        + String(format: "%.2f:1", ratio))
+            }
+        }
+    }
+
+    /// Text drawn *on* the accent fill — the confirmation banner, which carries the
+    /// Undo button and is the only feedback that a write landed.
+    func testAccentInkHoldsAAOnTheAccentFill() {
+        for theme in MoonTheme.allCases {
+            let p = Palette.for(theme)
+            let ratio = contrast(p.accentInk, p.accent)
+            XCTAssertGreaterThanOrEqual(
+                ratio, 4.5,
+                "\(theme.displayName): accentInk on accent is "
+                    + String(format: "%.2f:1", ratio))
+        }
+    }
+
+    /// WCAG 2.1: `(lighter + 0.05) / (darker + 0.05)`, on linearised sRGB.
+    private func contrast(_ a: Color, _ b: Color) -> CGFloat {
+        let la = relativeLuminance(components(a))
+        let lb = relativeLuminance(components(b))
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    private func relativeLuminance(_ c: (CGFloat, CGFloat, CGFloat)) -> CGFloat {
+        func channel(_ v: CGFloat) -> CGFloat {
+            v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(c.0) + 0.7152 * channel(c.1) + 0.0722 * channel(c.2)
     }
 
     private func components(_ color: Color) -> (CGFloat, CGFloat, CGFloat) {

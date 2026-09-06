@@ -2,10 +2,26 @@ import SwiftUI
 
 /// Sleepy Llamas maroon identity, ported from `moonlog/src/styles/tokens.css`.
 ///
-/// The hex values are carried over verbatim — they were contrast-checked against
-/// real surfaces in the web app, including the `--faint` values which are the
-/// tightest. Call sites refer to *roles* (`.sleep`, `.warn`, `.ink`), never to raw
-/// hex, because those roles carry meaning the UI depends on.
+/// Call sites refer to *roles* (`.sleep`, `.warn`, `.ink`), never to raw hex,
+/// because those roles carry meaning the UI depends on.
+///
+/// The values were ported from the PWA's `tokens.css` and are **no longer verbatim**.
+/// Two things were wrong with treating them as settled:
+///
+/// 1. The claim that they were contrast-checked did not survive being checked.
+///    `PaletteTests` now measures every text role against every surface at WCAG
+///    2.1, and the Day theme failed five pairs — `sleep` on `chip` at 3.71:1 was
+///    the worst. Those values are corrected here.
+/// 2. The maroon read as near-black on a phone. The web ramp leans on a very
+///    quiet `bg`→`raised` step, which a monitor flatters and an OLED panel in a
+///    dark nursery does not, so the surfaces above `bg` are lifted toward maroon
+///    and `bgLift` carries the identity at the top of the page.
+///
+/// `bg` is unchanged in Night and Deep Night — it is the brand anchor, the PWA's
+/// `theme-color`, and the value every screenshot so far was taken against. Day's
+/// `bg` moves one step warmer (`fdf6f4` → `fdf4f1`), because a cream page cannot
+/// be made more maroon by lifting only what sits on top of it. Anything added
+/// here has to pass the contrast test before it can be looked at.
 public enum MoonTheme: String, CaseIterable, Sendable {
     /// Default dark. Deep maroon-black for a 3am nursery.
     case night
@@ -34,6 +50,15 @@ public enum MoonTheme: String, CaseIterable, Sendable {
 public struct Palette: Sendable {
     // Surfaces, back to front
     public let bg: Color
+    /// The maroon the page fades *from*, at the top where the clock sits.
+    ///
+    /// `bg` stays the brand anchor — it is the PWA's `theme-color` and the value
+    /// every screenshot of this app has been taken against. The identity was
+    /// reading as near-black on a phone, though, because `bg`→`raised` is a
+    /// six-thousandths luminance step that a bright monitor flatters and an OLED
+    /// panel in a dark room does not. This is the lift, and it is a role rather
+    /// than an inline gradient stop so the contrast test covers text drawn on it.
+    public let bgLift: Color
     public let raised: Color
     public let raised2: Color
     public let chip: Color
@@ -88,8 +113,8 @@ public struct Palette: Sendable {
         switch theme {
         case .night:
             return Palette(
-                bg: .hex("1a0a0e"), raised: .hex("241016"),
-                raised2: .hex("2e151c"), chip: .hex("361a22"),
+                bg: .hex("1a0a0e"), bgLift: .hex("2e1019"), raised: .hex("2d1219"),
+                raised2: .hex("3a1822"), chip: .hex("43202b"),
                 ink: .hex("f7ece9"), soft: .hex("d9bcbd"), faint: .hex("bb979c"),
                 line: .hex("3f2129"), lineStrong: .hex("532a34"),
                 accent: .hex("d9a96b"), accentDeep: .hex("bd8748"),
@@ -102,8 +127,8 @@ public struct Palette: Sendable {
             )
         case .deepNight:
             return Palette(
-                bg: .hex("100508"), raised: .hex("190a0f"),
-                raised2: .hex("221017"), chip: .hex("2a141b"),
+                bg: .hex("100508"), bgLift: .hex("220b12"), raised: .hex("210d14"),
+                raised2: .hex("2c121b"), chip: .hex("351822"),
                 ink: .hex("efdedb"), soft: .hex("c8a9ab"), faint: .hex("ab8c91"),
                 line: .hex("341a21"), lineStrong: .hex("46232c"),
                 accent: .hex("cc9a5e"), accentDeep: .hex("ab7740"),
@@ -116,16 +141,16 @@ public struct Palette: Sendable {
             )
         case .day:
             return Palette(
-                bg: .hex("fdf6f4"), raised: .hex("fffaf5"),
-                raised2: .hex("f7e6e2"), chip: .hex("f3ddd6"),
-                ink: .hex("2a1418"), soft: .hex("6b4a4f"), faint: .hex("7e5c61"),
+                bg: .hex("fdf4f1"), bgLift: .hex("f6e4df"), raised: .hex("fffaf7"),
+                raised2: .hex("f9ebe7"), chip: .hex("f5e2dc"),
+                ink: .hex("2a1418"), soft: .hex("6b4a4f"), faint: .hex("6f5056"),
                 line: .hex("3d0f17", opacity: 0.12), lineStrong: .hex("3d0f17", opacity: 0.24),
                 accent: .hex("a83246"), accentDeep: .hex("6b1a28"),
                 accentFaint: .hex("f7e6e2"), accentInk: .hex("fffaf5"),
-                sleep: .hex("3f7d68"), sleepFaint: .hex("e1f0e9"),
+                sleep: .hex("2f6753"), sleepFaint: .hex("e4f1eb"),
                 awake: .hex("a83246"), awakeFaint: .hex("f7e6e2"),
                 warn: .hex("9c3a54"), warnFaint: .hex("f7e0e6"),
-                stop: .hex("b8324a"), stopFaint: .hex("fbe6ea"),
+                stop: .hex("a82a42"), stopFaint: .hex("fbe6ea"),
                 backdrop: .hex("3d0f17", opacity: 0.32)
             )
         }

@@ -25,7 +25,8 @@ look-and-feel build, not one to run a real shift on.
 | 5 | ~~Start shift / end shift / add baby~~ | **done** |
 
 A cold start now walks: create family + first baby + unit → start shift → log →
-end shift. Add-baby and end-shift live in the Tonight toolbar.
+end shift. "End shift" is in Tonight's overflow menu; add-baby moved to Settings ›
+Babies, along with the client-family switcher — see `docs/decisions.md`.
 
 ## Should do before a real night, not strictly blocking
 
@@ -33,8 +34,8 @@ end shift. Add-baby and end-shift live in the Tonight toolbar.
 |---|---|---|
 | 6 | ~~Export compliance~~ | **done** — `ITSAppUsesNonExemptEncryption` declared. |
 | 7 | Edit / delete from the timeline | me — a mis-logged entry still cannot be corrected. **The one I would want before a real night.** |
-| 8 | ~~Family settings~~ | **done** — Settings tab covers Deep Night, volume unit, optional kinds, note tags and storage mode. |
-| 9 | History and a shareable handoff | me — Summary exists on screen, but ending a shift hides the night forever and there is no way to send it to the parents. |
+| 8 | ~~Family settings~~ | **done** — Settings tab covers the client family, babies, past nights, Deep Night, volume unit, optional kinds, note tags and storage mode. |
+| 9 | ~~History and a shareable handoff~~ | **done** — past nights are their own screen under Settings › Past nights, reachable during a shift as well as after one, and each carries the handoff to share. |
 
 ## Deliberately still off
 

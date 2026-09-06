@@ -10,7 +10,7 @@ App          Sources/App/     Entry point + ModelContainerFactory (the CloudKit 
 Models       Sources/Models/  @Model types. CloudKit-shaped by construction.
 CareStore    Sources/Lib/     @ModelActor. The only writer, and the time rules.
 Views        Sources/Views/   SwiftUI. Reads via @Query, writes via CareStore.
-Theme        Sources/Theme/   Palette, accents.
+Theme        Sources/Theme/   Palette, accents, and the page wash.
 ```
 
 **Why `MoonlogCore` is a separate target, not a folder.** A framework cannot import
@@ -67,7 +67,9 @@ one added or dropped fails a test rather than silently stopping syncing.
   `FamilySelection.resolve(storedID:among:)`, a pure rule with its own tests: an id
   naming a family the query can no longer see falls back to the oldest active one
   rather than leaving the doula on an empty screen. Tonight and Summary carry
-  `.id(family.id)`, so per-family `@State` cannot leak across a switch.
+  `.id(family.id)`, so per-family `@State` cannot leak across a switch. Choosing a
+  different household is a Settings act, not something reachable from Tonight — see
+  the screens below.
 - **One shift covers all of a family's babies.** A caregiver works one shift; the
   babies within it are separate subjects, not separate shifts.
 - **Sleep is per baby.** With twins, "is she asleep" is a per-baby question. The web
@@ -128,6 +130,56 @@ clock. A shift ends by leaving the baby with the parents, so:
   sleep session outside it. A closed shift deliberately **cannot be reopened** here:
   `close(at:)` is the only thing keeping `isOpen` honest, and there is no `reopen()`
   to pair with it.
+
+## The screens
+
+Three tabs, each in its own `NavigationStack`, all assembled by `RootView`:
+
+| Screen | File | What it holds |
+|---|---|---|
+| Tonight | `Views/TonightView.swift` | the running shift — header, baby cards, timeline, every log sheet |
+| Summary | `Views/SummaryView.swift` | the running shift's totals and the handoff. Nothing else |
+| Settings | `Views/SettingsView.swift` | the household picker, the baby roster, per-family prefs, appearance, data |
+| Past nights | `Views/HistoryView.swift` | one household's closed shifts, pushed from Settings |
+
+`RootView` owns everything app-wide: the theme, `moonlog.currentFamilyID`, and two
+of the app's three `@Query`s — active families, and open shifts. It resolves the
+current `Family` and its open `Shift?` and hands both down; Tonight and Summary
+never query for them. The third and last `@Query` is `HistoryView`'s closed shifts.
+Four queries scattered across four screens is how the web version ended up with
+four different answers to "which shift is this".
+
+Settings takes a **`FamilyRoster`** — `SettingsView(roster:onError:)`, the roster
+carrying `current`, `all`, `select` and `create`. One value rather than four
+arguments because two of them are `Family`-shaped and two are closures, which is
+exactly the initialiser where the wrong thing gets bound and the compiler agrees.
+`RootView` still owns the stored id; the roster only hands Settings a way to set it.
+
+**One client family is on screen at a time, and switching is deliberate.** The
+switcher was a toolbar menu on Tonight, one tap from the log buttons — a control
+that changes *whose night you are logging* does not belong next to the controls
+that log it. It is now an inline picker in Settings' first section. That menu was
+also serving as the standing answer to "whose night is this?", so `NightHeader`
+prints the family name above the clock; moving the switcher without that would have
+traded two taps of convenience for the mis-logging risk the menu was guarding
+against.
+
+**Past nights lives on its own screen.** `PastNightsSection` used to render under
+tonight's totals on Summary, but only in the branch where no shift was open — so it
+was unreachable during a shift, which is the one moment "how long did she go last
+night?" gets asked. It moved to `HistoryView` with the closed-shift query, and now
+has exactly one call site. Summary's empty state points at Settings › Past nights.
+
+The push is a `.navigationDestination(isPresented:)` declared on Settings' **`Form`**,
+never inside the `Section` holding the row. A `navigationDestination` inside a lazy
+container is not registered until that row has been built, and pushing before then
+lands on a blank screen. No test catches this; it was found by screenshot.
+
+**One page base.** `.moonBackground(_:)` in `Theme/MoonStyles.swift` is the only
+thing any screen sets as its background — a `MoonBackground` gradient from
+`palette.bgLift` down to `palette.bg`, described once so the identity cannot drift
+between screens the way tab-bar clearance did before it became a constant. The
+navigation bar uses `bgLift` to meet it. Nothing calls `.background(palette.bg)`.
 
 ## The write path
 

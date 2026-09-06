@@ -83,12 +83,22 @@ which is the source of truth and is committed.
   mint a lookalike.
 - **Calendar arithmetic for calendar quantities, `TimeInterval` for physical
   durations, never multiply to cross a day boundary.** See `docs/testing.md`.
+- **Never declare `.navigationDestination` inside a `Form`, `List` or any other
+  lazy container.** It is not registered until the row containing it has been
+  built, so a push that fires first lands on a blank screen with a working back
+  button. Put it on the container. Cost when this was learned: one screenshot.
 
 ## Conventions
 
 - Amounts stored in millilitres, durations in seconds. Round once, at display.
 - Enum raw values are CloudKit wire format. Add cases; never rename one.
 - Colour is never the only signal. See `docs/design.md`.
+- **Every palette value is pinned by a WCAG contrast test.** Adding a role or
+  changing a surface means `PaletteTests` has to pass first — the previous
+  "contrast-checked" claim was documentation, not enforcement, and the Day theme
+  had been failing five pairs the whole time.
+- **The page base is `.moonBackground(_:)`, never `.background(palette.bg)`.**
+  One gradient, described once.
 - Comments explain *why*, especially where the code looks odd — most oddities here
   are a CloudKit constraint or a bug being designed out.
 
@@ -105,3 +115,11 @@ which is the source of truth and is committed.
 | `docs/testflight.md` | Release readiness and what shipped |
 | `docs/app-store-connect.md` | The one-off App Store Connect setup (done) |
 | `docs/next-features.md` | NFC and Apple Watch — scope, open questions, what needs the user |
+
+## One client family at a time
+
+The app has a single selected household. **Switching it, adding one, and adding a
+baby all live in Settings**, not on Tonight — Tonight is for logging, and a mode
+change does not belong next to the buttons pressed forty times a night. The
+client-family picker must stay at the **root** of the Settings stack; see the
+constraint in `docs/design.md`.

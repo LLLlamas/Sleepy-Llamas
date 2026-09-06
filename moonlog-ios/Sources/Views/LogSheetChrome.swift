@@ -156,7 +156,7 @@ struct LogSheetChrome<Content: View>: View {
             // default to the system grouped colour, so they need the palette too or
             // the sheet reads as a different app from the cards behind it.
             .scrollContentBackground(.hidden)
-            .background(palette.bg)
+            .moonBackground(palette)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -295,6 +295,6 @@ struct EmptyStatePlaceholder: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(32)
-        .background(palette.bg)
+        .moonBackground(palette)
     }
 }

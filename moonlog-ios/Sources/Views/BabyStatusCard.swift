@@ -31,6 +31,10 @@ struct BabyPresentation: Identifiable, Equatable {
 /// states are visible at once and neither set of buttons can act on the wrong baby.
 struct BabyStatusCard: View {
     let baby: BabyPresentation
+    /// The shift's zone, not the device's. Every other clock on this screen is
+    /// rendered in it, and a family in another timezone would otherwise get a
+    /// status line disagreeing with the timeline row directly beneath it.
+    let timeZone: TimeZone
 
     /// A write is in flight for this baby; actions are inert until it lands.
     var isBusy: Bool
@@ -46,6 +50,9 @@ struct BabyStatusCard: View {
 
     private var accentColor: Color { baby.accent.color(for: theme) }
     private var stateColor: Color { baby.isAsleep ? palette.sleep : palette.awake }
+    /// The wash the state tint is legible on. These pairs were ported together and
+    /// are pinned to 4.5:1 by `PaletteTests` — do not substitute an opacity.
+    private var stateWash: Color { baby.isAsleep ? palette.sleepFaint : palette.awakeFaint }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -82,8 +89,16 @@ struct BabyStatusCard: View {
         .accessibilityLabel("\(baby.name), day \(baby.dayOfLife). Edit name and colour.")
     }
 
-    // The button toggles instantly — that is the 3am path. This opens the sheet
-    // for a back-dated or corrected time, visibly rather than behind a long-press.
+    // The Wake/Sleep button toggles instantly — that is the 3am path. This tile
+    // opens the sheet for a back-dated or corrected time, visibly rather than
+    // behind a long-press.
+    //
+    // Ported from the PWA's sleep tile, which is the one piece of that design
+    // worth keeping literally: a bordered, state-tinted block reading "Mia is
+    // asleep" is legible across a dark room in a way a coloured word in a row is
+    // not. What is deliberately NOT ported is its copy — the web tile said "tap
+    // when Mia wakes" because tapping it toggled. Tapping this one opens the
+    // adjust sheet, so it says so.
     private func status(now: Date) -> some View {
         Button(action: { Haptics.tap(); onAdjustSleep() }) {
             statusContent(now: now)
@@ -94,23 +109,49 @@ struct BabyStatusCard: View {
     }
 
     private func statusContent(now: Date) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let shape = RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous)
+        return HStack(alignment: .center, spacing: 12) {
             Image(systemName: baby.isAsleep ? "moon.zzz.fill" : "sun.max.fill")
-                .font(.subheadline)
-            Text(baby.isAsleep ? "Asleep" : "Awake").font(.title3.weight(.semibold))
+                .font(.title3)
+                .foregroundStyle(stateColor)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(baby.name) is \(baby.isAsleep ? "asleep" : "awake")")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(palette.ink)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(palette.faint)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+
+            Spacer(minLength: 8)
+
             if let since = baby.asleepSince {
                 // Monospaced so the number doesn't jitter as digit widths change.
                 Text(Fmt.ago(since, now: now))
-                    .font(.title3.monospacedDigit())
-                    .foregroundStyle(palette.soft)
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(stateColor)
+                    .lineLimit(1)
             }
-            Image(systemName: "slider.horizontal.3")
-                .font(.caption2)
-                .foregroundStyle(palette.faint)
-            Spacer()
         }
-        .foregroundStyle(stateColor)
-        .contentShape(Rectangle())
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(stateWash, in: shape)
+        // Two points, not one: the tint is the third signal here, behind the name
+        // in the copy and the icon, and a hairline would disappear against the
+        // wash it sits on.
+        .overlay(shape.stroke(stateColor, lineWidth: 2))
+        .contentShape(shape)
+    }
+
+    /// Names the tap target. "Since 3:40a" is the fact; "tap to adjust" is what
+    /// this control actually does, which is not what the PWA's version did.
+    private var subtitle: String {
+        guard let since = baby.asleepSince else { return "Tap to log a sleep you missed" }
+        return "Since \(Fmt.shortClock(since, timeZone: timeZone)) · tap to adjust"
     }
 
     private func accessibleStatus(now: Date) -> String {

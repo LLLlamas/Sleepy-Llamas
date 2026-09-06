@@ -102,7 +102,14 @@ public enum HandoffHTML {
     }
 
     private static let stylesheet = """
-    /* Day palette, ported from the app's own tokens rather than picked again. */
+    /* Day palette, copied from the app's tokens. It is a COPY, not a shared
+       source: `Palette` lives in the app target and this file is in Core, which
+       cannot import it. The two diverged on 2026-09-06, when the app's Day
+       `faint`, `sleep` and `stop` were darkened to hold AA against `chip` and
+       `raised2` — surfaces this document does not have. Every pair used here was
+       measured at WCAG 2.1 and holds: faint on bg 5.48:1, faint on raised 5.65:1,
+       sleep on bg 4.53:1, soft on bg 7.24:1, accent on bg 6.13:1. Re-measure
+       before changing one; `PaletteTests` does not cover this file. */
     :root {
       --bg: #fdf6f4; --raised: #fffaf8; --ink: #2a1418; --soft: #6b4a4f;
       --faint: #7e5c61; --line: rgba(61,15,23,0.12); --accent: #a83246;

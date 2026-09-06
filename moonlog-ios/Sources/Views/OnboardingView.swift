@@ -58,7 +58,7 @@ struct OnboardingView: View {
 
             Section {
                 // `isCreating` matters: a second tap creates a second Family.
-                // That is no longer a trap door — the family menu on Tonight can
+                // That is no longer a trap door — Settings › Client family can
                 // reach it — but there is still no in-app delete.
                 Button("Create") {
                     guard !isCreating else { return }
@@ -71,7 +71,7 @@ struct OnboardingView: View {
             .listRowBackground(palette.raised)
         }
         .scrollContentBackground(.hidden)
-        .background(palette.bg)
+        .moonBackground(palette)
         .navigationTitle("Welcome")
     }
 }
@@ -133,12 +133,12 @@ struct StartShiftView: View {
             .listRowBackground(palette.raised)
         }
         .scrollContentBackground(.hidden)
-        .background(palette.bg)
+        .moonBackground(palette)
         .onAppear { startedAt = Date() }
     }
 }
 
-/// Adding a twin later, from the Tonight toolbar.
+/// Adding a twin later, from Settings › Babies.
 struct AddBabySheet: View {
     let familyName: String
     let onAdd: (String, Date) -> Void
@@ -163,7 +163,7 @@ struct AddBabySheet: View {
                 .listRowBackground(palette.raised)
             }
             .scrollContentBackground(.hidden)
-            .background(palette.bg)
+            .moonBackground(palette)
             .navigationTitle("Add baby")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -185,7 +185,7 @@ struct AddBabySheet: View {
     }
 }
 
-/// Taking on another client household, from the family menu on Tonight.
+/// Taking on another client household, from Settings › Client family.
 ///
 /// Not `OnboardingView` in a sheet: onboarding is the first-run screen, it has no
 /// way out, and its copy welcomes someone who has already been welcomed. The
@@ -232,7 +232,7 @@ struct AddFamilySheet: View {
                 .listRowBackground(palette.raised)
             }
             .scrollContentBackground(.hidden)
-            .background(palette.bg)
+            .moonBackground(palette)
             .navigationTitle("Add family")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

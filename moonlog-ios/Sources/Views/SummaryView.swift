@@ -2,19 +2,18 @@ import SwiftUI
 import SwiftData
 import MoonlogCore
 
-/// The night as the parents will read it.
+/// Tonight, as the parents will read it.
 ///
 /// This is what the app is for, and it is the first screen to actually call
 /// `Totals.compute` — the totals layer was fully tested and completely unreachable
 /// until `LogEvent` gained a snapshot projection.
+///
+/// Scoped to the running shift only. Past nights moved to `HistoryView`, reached
+/// from Settings: they were rendered here in the no-open-shift branch, which meant
+/// history was visible exactly when it was least wanted and hidden all night.
 struct SummaryView: View {
     let family: Family
     let shift: Shift?
-
-    /// Closed shifts, newest first. Bounded — a doula accumulates one per night and
-    /// nobody scrolls a year back on this screen.
-    @Query(filter: #Predicate<Shift> { !$0.isOpen }, sort: \Shift.startedAt, order: .reverse)
-    private var closedShifts: [Shift]
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
@@ -30,21 +29,15 @@ struct SummaryView: View {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     content(shift: shift, now: context.date)
                 }
-            } else if pastNights.isEmpty {
+            } else {
                 EmptyStatePlaceholder(
                     emoji: "📋",
                     title: "No shift running",
-                    message: "Start a shift and the night's totals appear here.")
-            } else {
-                ScrollView {
-                    PastNightsSection(family: family, shifts: pastNights)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, MoonLayout.tabBarClearance)
-                }
+                    message: "Start a shift and the night's totals appear here. "
+                        + "Finished nights are under Settings › Past nights.")
             }
         }
-        .background(palette.bg)
+        .moonBackground(palette)
         .toolbar {
             if let shift {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -133,18 +126,9 @@ struct SummaryView: View {
         }
     }
 
-    /// This family's past nights. Filtering here rather than in the predicate
-    /// because a `@Query` cannot capture `family.id` at declaration.
-    private var pastNights: [Shift] {
-        closedShifts.filter { $0.familyIDRaw == family.id }.prefix(14).map { $0 }
-    }
-
     private func content(shift: Shift, now: Date) -> some View {
         ScrollView {
-            VStack(spacing: 18) {
-                SummaryCards(family: family, shift: shift, now: now)
-                PastNightsSection(family: family, shifts: pastNights)
-            }
+            SummaryCards(family: family, shift: shift, now: now)
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, MoonLayout.tabBarClearance)

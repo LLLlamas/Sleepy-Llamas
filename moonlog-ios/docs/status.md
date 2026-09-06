@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-09-05.
+Updated 2026-09-06.
 
 **First TestFlight build shipped** — 0.1.0 (1788644622). Two caveats on that
 specific build: it is local-only, and it **contains the DEBUG demo seed** (a fake
@@ -43,8 +43,16 @@ verification table and the command-line upload path.
 | **Archived babies keep their records in the handoff** | done |
 | **The keepsake handoff — responsive HTML for the parents** | done |
 | **A note to the parents, written and editable per shift** | done |
+| **Maroon lifted forward — `bgLift`, a page gradient, warmer surfaces** | done |
+| **The palette contrast-checked for real, and five failures fixed** | done |
+| **A clock at the top of Tonight, with whose night it is** | done |
+| **Baby status as a bordered, state-tinted tile, ported from the PWA** | done |
+| **One client family at a time — the switcher moved to Settings** | done |
+| **History as its own screen, reachable during a shift** | done |
 
-159 tests green (79 in `MoonlogCoreTests`, 80 in `MoonlogTests`).
+166 tests green (83 in `MoonlogCoreTests`, 83 in `MoonlogTests`). Three of those
+are new tonight and all three are the palette contrast tests. This line read 159,
+which was four stale in `MoonlogCoreTests`; the count going into tonight was 163.
 
 **A caveat worth keeping in view.** Test count is not a proxy for working software
 here, and this project has proved it twice: `Totals.compute` was fully tested and
@@ -52,14 +60,21 @@ had no call path from the app until Summary existed, and both the Note button an
 the handoff's Copy/Share shipped built-but-unreachable. A green suite says the logic
 is right, not that anyone can get to it.
 
-Everything in the bold rows above was **rendered on the iPhone 17 Pro simulator and
-screenshotted**, not assumed: the Undo banner (produced by a real write through the
-real path, not a faked banner), the "Wrong baby?" control, the pump and weight
-sheets, the shift-hours sheet, and the family switcher. What was *not* driven by
-hand, because the simulator cannot be tapped from here: the toolbar menu's contents,
-the reassign menu expanded, and the effect of actually tapping Undo. Those are
-compiled and unit-tested but unwitnessed. **A UI test target would close that gap
-and is the single highest-value piece of tooling this project does not have.**
+**Rendered on the iPhone 17 Pro simulator (iOS 26.5) and screenshotted this
+session**, not assumed: Tonight in both Night and Day, Settings, Past nights, Add
+family, Add baby, Summary, the feed sheet, and the Undo banner — produced by a real
+write through the real path, not a faked banner. What was *not* driven by hand,
+because the simulator cannot be tapped from here: tapping the client-family picker
+to actually switch household, tapping Undo, and the contents of Tonight's overflow
+menu. Those are compiled and unit-tested but unwitnessed, and the last two were
+unwitnessed last session too.
+
+**A UI test target would close that gap and is the single highest-value piece of
+tooling this project does not have.** Tonight produced the sharpest argument for it
+yet: pushing History from Settings landed on a **blank screen**, because the
+`.navigationDestination` was declared inside a `Section`, and a `navigationDestination`
+in a lazy container is not registered until that row has been built. Nothing failed.
+The suite stayed green. It was caught by looking at a screenshot.
 
 `Totals`, `SleepMath`, `DayOfLife`, `Handoff` and `SleepReconciler` are wired in.
 `DayBuckets` and `MoonClock` still have no call sites outside `MoonlogCore` —
@@ -74,7 +89,9 @@ duplicates what `MoonClock` exists to provide.
 1. **Edit a baby's birth date.** Wrong-forever today, and it drives day-of-life on
    both the handoff and the keepsake page.
 2. **A UI test target.** See the caveat above — it is the one piece of tooling that
-   would close the gap this project keeps falling into.
+   would close the gap this project keeps falling into. Tonight's blank-screen
+   `navigationDestination` bug is the freshest argument for it: a whole screen
+   rendered empty, and only a screenshot said so.
 3. `SummaryView`'s archived-baby gap (known issue 6 below).
 
 **Dropped on 2026-09-05, deliberately:**
@@ -103,7 +120,7 @@ keepsake — is a document for the parents, not something this app can read back
 
 ## Known issues
 
-Carried over and re-audited on 2026-09-05. The five that could put wrong data in
+Carried over and re-audited on 2026-09-06. The five that could put wrong data in
 front of the parents are fixed; what is left is listed honestly below.
 
 **Fixed since the last audit**
@@ -136,9 +153,13 @@ front of the parents are fixed; what is left is listed honestly below.
 
 **Still open**
 
-6. **`SummaryView` still derives its cards from `activeBabies`.** Archiving a baby
-   mid-shift removes her totals from the Summary tab and from a past night's
-   summary cards, exactly as it used to from the handoff. Not the two-line fix the
+6. **`SummaryView` still derives its cards from `activeBabies`.** Untouched today.
+   Archiving a baby mid-shift removes her totals from the Summary tab and from a
+   past night's summary cards, exactly as it used to from the handoff. Moving
+   History out of `SummaryView` changed the route to the second half of that and
+   nothing else: `SummaryCards` has two call sites still, `SummaryView` for the
+   running shift and `ShiftDetailView` for a past night, now reached through
+   Settings › Past nights instead of down the Summary tab. Not the two-line fix the
    timeline was: including archived babies unconditionally would put an empty card
    on tonight's summary for every discharged baby, so it needs the same
    "has records in this shift" rule the handoff roster uses. `ShiftDetailView`'s
@@ -155,15 +176,30 @@ front of the parents are fixed; what is left is listed honestly below.
    turned out to be `.logDiaper`. Closing this one means adding a case to several
    exhaustive switches, which is why it is recorded rather than done.
 9. `DayBuckets` and `MoonClock` still have no call sites outside `MoonlogCore`.
-10. **Undo has three deliberate gaps**, each commented at its call site: recording a
-   sleep from the sheet (`recordSleep` corrects-or-inserts and does not report
-   which, so there is no single move to reverse), adding a baby (archiving is not
-   the same thing as never having added her), and ending a shift (`updateShift`
-   will not reopen a closed one, because `close(at:)` is the only thing keeping
-   `isOpen` honest).
-11. **Switching families with a past night pushed on the Summary tab is untested.**
-    `SummaryView` carries `.id(family.id)`, which should tear the pushed detail
-    down, but nobody has watched it happen.
+10. **Undo has three deliberate gaps.** Two are still commented at their call sites
+   in `TonightView.perform`: recording a sleep from the sheet (`recordSleep`
+   corrects-or-inserts and does not report which, so there is no single move to
+   reverse) and ending a shift (`updateShift` will not reopen a closed one, because
+   `close(at:)` is the only thing keeping `isOpen` honest). The third — adding a
+   baby, where archiving is not the same thing as never having added her — is now
+   commented nowhere: Add baby moved to `SettingsView`, which writes through
+   `StoreWrite.run` and has no Undo to decline. Same gap, no longer visible at the
+   call site.
+11. ~~Switching families with a past night pushed on the Summary tab~~ — retired
+    rather than fixed. Summary no longer pushes anything, and the switcher is no
+    longer on that tab. The constraint it was guarding is real and now reads:
+    **the client-family picker must stay at the root of the Settings stack.** A
+    switcher reachable from a pushed screen could change the family under a
+    `ShiftDetailView`, which captures its `Family` model object and would go on
+    rendering the previous household's night. Written down in
+    `SettingsView.clientSection` as well; nothing in the code enforces it.
+12. **The ported status tile only carries a time for one of the two states it
+    names.** `BabyPresentation` has `asleepSince` and nothing for the waking half,
+    so an asleep baby's tile reads "Since 11:17p · tap to adjust" with the elapsed
+    time on the trailing edge, and an awake baby's reads "Tap to log a sleep you
+    missed" with no since-time and no elapsed at all. Found while porting it, not
+    fixed: an awake-since would have to come from the last ended session's `endAt`,
+    which the presentation does not carry and `TonightView` does not compute.
 
 ## Needs the user
 
@@ -199,9 +235,20 @@ xcrun simctl launch <device> com.sleepyllamas.moonlog \
   -moonlogOpenSheet feed|diaper|sleep|note|pump|medication|weight \
   -moonlogEditFirst YES \                      # edit sheet for the newest record
   -moonlogShiftHours end|correct \             # the shift-hours sheet
+  -moonlogSettingsSheet family|baby|history \  # the surfaces that moved into Settings
   -moonlogDemoWrite YES \                      # one real write, for the Undo banner
   -moonlogDumpHandoff YES                      # writes the keepsake page to Documents
 ```
+
+`-moonlogSettingsSheet` fires from a `.task` on `SettingsView`, so it needs
+`-moonlogTab settings` alongside it or the screen it lives on is never built. The
+three surfaces it reaches — Add family, Add baby, Past nights — all moved off
+Tonight and Summary this session, and tapping is otherwise the only way to them.
+
+**Every new hook has to be added to `scripts/archive.sh` as well.** The greps for
+debug markers in the Release binary are a hand-maintained alternation on line 37;
+`moonlogSettingsSheet` was added to it. A hook missing from that list is a hook the
+archive guard will happily ship.
 
 `-moonlogDumpHandoff` is how the keepsake page gets looked at, since a string
 assertion cannot tell you whether a document is legible. Pull it off the simulator
@@ -218,3 +265,8 @@ demo seed carries a sample note so the note section is reachable.
 
 The demo seed enables all three optional kinds so they are reachable in a
 screenshot run. They stay off by default in a real family.
+
+It also seeds a **second household — "Okafor", one baby "Ada", no shift** — so the
+client-family picker in Settings has somewhere to switch to. Between visits is the
+normal state for a family you are not with tonight, and it is what the picker will
+most often be switching *to*, so it deliberately carries no shift.

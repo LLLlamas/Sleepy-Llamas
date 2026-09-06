@@ -52,6 +52,16 @@ there.
 - **Reconciliation is order-independent** — `reconcile(shuffled) == reconcile(sorted)`.
 - **Schema stays CloudKit-compatible**, asserted mechanically over `Schema.entities`.
 - **Accents stay mutually distinct** in every theme.
+- **Every text role holds AA** against every surface it is drawn on, in all three themes.
+
+Those last two are measured differently and the difference is load-bearing. Accent
+distinctness uses a crude weighted sum of the raw sRGB channels: it only asks whether two
+babies' dots can be told apart, where a rough distance is enough. The palette contrast
+tests use real WCAG 2.1 relative luminance — each channel linearised before it is
+weighted, then `(lighter + 0.05) / (darker + 0.05)` — because text on a surface is a
+legibility threshold, not a comparison, and only the real curve says where 4.5:1 actually
+falls. Using the cheap measure there would have kept the Day theme's five real failures
+invisible; `docs/design.md` records which pairs they were.
 
 ## Mutation testing
 
@@ -79,9 +89,16 @@ xcrun simctl launch <device> com.sleepyllamas.moonlog -moonlogSeedDemo YES
 store. It is never "seed when empty" alone, because an empty store is a legitimate
 first-run state.
 
-`-moonlogTab summary|settings` and `-moonlogOpenSheet feed|diaper|sleep|note` open a
-specific screen for screenshotting. It seeds a twin night with
-one baby asleep and one awake, which is the state that exercises the layout.
+`-moonlogTab summary|settings`, `-moonlogOpenSheet feed|diaper|sleep|note` and
+`-moonlogSettingsSheet family|baby|history` open a specific screen for screenshotting. It
+seeds a twin night with one baby asleep and one awake, which is the state that exercises
+the layout, plus a second household — Okafor, one baby, no shift — so the client-family
+picker has something to switch to.
+
+Being `#if DEBUG` is only half the guard. `scripts/archive.sh` greps the Release binary
+for these hooks by name, from an alternation it hard-codes, so a new hook that is not
+added to that alternation ships unguarded *and* the archive still reports clean. Adding
+one means editing that grep in the same change; `moonlogSettingsSheet` is in it.
 
 Some bugs only appear when the thing runs: the CloudKit launch crash and the theme
 latch were both invisible to the test suite.

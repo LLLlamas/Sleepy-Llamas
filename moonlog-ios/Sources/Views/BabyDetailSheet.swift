@@ -43,7 +43,7 @@ struct BabyDetailSheet: View {
                 .listRowBackground(palette.raised)
             }
             .scrollContentBackground(.hidden)
-            .background(palette.bg)
+            .moonBackground(palette)
             .navigationTitle("Baby")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

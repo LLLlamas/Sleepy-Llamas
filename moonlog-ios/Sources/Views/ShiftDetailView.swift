@@ -49,7 +49,7 @@ struct ShiftDetailView: View {
             .padding(.top, 8)
             .padding(.bottom, MoonLayout.tabBarClearance)
         }
-        .background(palette.bg)
+        .moonBackground(palette)
         .navigationTitle(Fmt.nightOf(shift.startedAt, timeZone: zone))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -220,12 +220,10 @@ struct PastNightsSection: View {
 
     var body: some View {
         if !shifts.isEmpty {
+            // No heading of its own: its one caller is `HistoryView`, whose
+            // navigation title already says "Past nights", and two of them stacked
+            // read as two lists.
             VStack(alignment: .leading, spacing: 10) {
-                Text("Past nights")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(palette.faint)
-                    .padding(.horizontal, 4)
-
                 VStack(spacing: 0) {
                     ForEach(Array(shifts.enumerated()), id: \.element.id) { index, shift in
                         NavigationLink {

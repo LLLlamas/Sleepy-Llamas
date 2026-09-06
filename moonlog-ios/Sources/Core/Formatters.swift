@@ -61,6 +61,18 @@ public enum Fmt {
         return date.formatted(style)
     }
 
+    /// "Saturday, September 6" — the date under the header clock.
+    ///
+    /// Written out rather than abbreviated. The PWA used "Sat, Sep 6" in an
+    /// 11-pixel line nobody read; this one is the answer to "what night is this?",
+    /// which is a question worth a whole word at 4am when two nights have run
+    /// together.
+    public static func longDate(_ date: Date, timeZone: TimeZone) -> String {
+        var style = Date.FormatStyle.dateTime.weekday(.wide).month(.wide).day()
+        style.timeZone = timeZone
+        return date.formatted(style)
+    }
+
     public static func clock(_ date: Date, timeZone: TimeZone) -> String {
         var style = Date.FormatStyle.dateTime.hour().minute()
         style.timeZone = timeZone

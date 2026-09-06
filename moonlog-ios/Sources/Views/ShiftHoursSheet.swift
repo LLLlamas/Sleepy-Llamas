@@ -100,7 +100,7 @@ struct ShiftHoursSheet: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(palette.bg)
+            .moonBackground(palette)
             .navigationTitle(isEnding ? "End shift" : "Shift times")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

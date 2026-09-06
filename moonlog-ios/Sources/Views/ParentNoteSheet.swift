@@ -45,7 +45,7 @@ struct ParentNoteSheet: View {
                 .listRowBackground(palette.raised)
             }
             .scrollContentBackground(.hidden)
-            .background(palette.bg)
+            .moonBackground(palette)
             .navigationTitle("Note to parents")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

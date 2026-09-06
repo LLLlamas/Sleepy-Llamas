@@ -38,7 +38,6 @@ struct TonightView: View {
     /// Bumped after every write. See the note in `body` — this is what re-derives
     /// the screen, and it used to be an accident.
     @State private var refreshToken = 0
-    @State private var addingBaby = false
     /// Non-nil presents the shift-hours sheet, for correcting the start or ending.
     @State private var hoursSheet: ShiftHoursSheet.Purpose?
 
@@ -79,9 +78,15 @@ struct TonightView: View {
     private func content(_ data: Tonight) -> some View {
         ScrollView {
             VStack(spacing: 14) {
+                NightHeader(
+                    familyName: family.name,
+                    startedAt: shift.startedAt,
+                    timeZone: data.timeZone)
+
                 ForEach(data.babies) { presentation in
                     BabyStatusCard(
                         baby: presentation,
+                        timeZone: data.timeZone,
                         isBusy: busy.contains(presentation.id),
                         onFeed: { sheet = .feed(babyID: presentation.id) },
                         onDiaper: { sheet = .diaper(babyID: presentation.id) },
@@ -104,11 +109,10 @@ struct TonightView: View {
             // Clears the floating tab bar, which overlays the scroll content.
             .padding(.bottom, MoonLayout.tabBarClearance)
         }
-        .background(palette.bg)
+        .moonBackground(palette)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Add baby", systemImage: "person.badge.plus") { addingBaby = true }
                     extraButtons(data)
                     Button("Shift times", systemImage: "clock.arrow.circlepath") {
                         hoursSheet = .correct
@@ -121,17 +125,6 @@ struct TonightView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
-        }
-        .sheet(isPresented: $addingBaby) {
-            AddBabySheet(familyName: family.name) { name, birthAt in
-                perform("\(name) added") { store in
-                    _ = try await store.addBaby(to: family.id, name: name, birthAt: birthAt)
-                    // No Undo: archiving is the only reversal and it is not the
-                    // same thing — the baby would stay in every past handoff.
-                    return nil
-                }
-            }
-            .presentationDetents([.medium])
         }
         .sheet(item: $hoursSheet) { purpose in
             ShiftHoursSheet(

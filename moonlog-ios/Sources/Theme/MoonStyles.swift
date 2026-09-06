@@ -9,8 +9,19 @@ extension View {
         self
             .scrollContentBackground(.hidden)
             .contentMargins(.bottom, MoonLayout.tabBarClearance, for: .scrollContent)
-            .background(palette.bg)
+            .moonBackground(palette)
             .tint(palette.accent)
+    }
+
+    /// The page base. One call site per screen, so the identity cannot drift the
+    /// way `tabBarClearance` did before it was a constant.
+    ///
+    /// A wash rather than a flat fill: the maroon is strongest at the top, under
+    /// the clock, and settles to `bg` by the time it reaches the timeline. Flat
+    /// `bg` on an OLED panel in a dark room reads as black, which is how the brand
+    /// went missing from a screen named after it.
+    func moonBackground(_ palette: Palette) -> some View {
+        background(MoonBackground(palette: palette))
     }
 
     /// The raised card treatment: fill plus a hairline border.
@@ -19,6 +30,30 @@ extension View {
         return self
             .background(palette.raised, in: shape)
             .overlay(shape.stroke(palette.line, lineWidth: 1))
+    }
+}
+
+/// The page wash. Its own `View` so the gradient is described once and every
+/// screen gets the same one — and so `.ignoresSafeArea()` sits here rather than
+/// being remembered at each call site.
+struct MoonBackground: View {
+    let palette: Palette
+
+    var body: some View {
+        LinearGradient(
+            // Three stops, not two: a straight two-stop ramp puts the midpoint
+            // halfway down the screen, which tints the timeline rows and makes the
+            // cards behind them look inconsistently lit. This lands on `bg` at
+            // 45% and holds it.
+            stops: [
+                .init(color: palette.bgLift, location: 0),
+                .init(color: palette.bg, location: 0.45),
+                .init(color: palette.bg, location: 1),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
     }
 }
 

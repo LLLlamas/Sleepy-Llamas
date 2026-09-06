@@ -4,6 +4,124 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## One client family at a time, chosen in Settings
+**2026-09-06**
+
+The doula works one household a shift, so the app assumes one and the switcher moved to
+Settings' first section. `RootView` loses `familyMenu`, `familyBinding`, the
+`addingFamily` state and the `.topBarLeading` toolbar item; `SettingsView` now takes a
+`FamilyRoster` value (`current`, `all`, `select`, `create`) and its signature is
+`SettingsView(roster:onError:)`. "Add baby" moved with it. The sections read Client
+family, Babies, Past nights, the per-family preferences, note tags, Appearance, Data —
+who this is, who is in it, what has already happened, then settings proper.
+
+What the superseded entry got right is the only reason this was not a free move. The
+switcher's label was doing a second job: standing answer to "whose night am I logging?"
+Deleting the control without replacing that answer would have traded a convenience for
+the exact mis-logging risk the placement existed to prevent. `NightHeader` gives the
+answer now. `docs/design.md` carries the rest of the placement rules, including why the
+picker has to stay at the root of the Settings stack.
+
+Selection itself is unchanged. `moonlog.currentFamilyID` is still owned and resolved in
+`RootView` and `FamilySelection.resolve` was not touched — the picker can only offer a
+family that exists, but the stale-id fallback still has to survive one being deleted.
+
+*Supersedes* "The client-family switcher is on Tonight, not in Settings" (2026-09-05).
+
+*Reverses if:* the doula ever covers two households in one night, at which point
+switching becomes a mid-shift act again.
+
+---
+
+## The maroon is lifted forward, and "contrast-checked" is now a test
+**2026-09-06**
+
+Two problems with the palette, and only one of them was visible.
+
+The invisible one: the values were ported from the PWA's `tokens.css` and these documents
+called them contrast-checked. Nothing had checked them. Measured at WCAG AA the Day theme
+failed five pairs, so Day's `faint` `7e5c61`→`6f5056`, `sleep` `3f7d68`→`2f6753`,
+`sleepFaint` `e1f0e9`→`e4f1eb` and `stop` `b8324a`→`a82a42`. The decision is what
+replaced the claim rather than the corrections: three tests in `PaletteTests`, so the
+palette is measured on every run and a colour added to it cannot be looked at until it
+passes. `docs/design.md` records which pairs failed and by how much.
+
+The visible one: the identity read as near-black on a phone. `bg`→`raised` is a
+six-thousandths luminance step, which a bright monitor flatters and an OLED panel in a
+dark nursery does not. The surfaces above `bg` are lifted toward maroon, and a new role
+`bgLift` carries the maroon at the top of the page — a role rather than an inline
+gradient stop, precisely so the contrast test covers text drawn on it.
+
+Night and Deep Night `bg` did not move, and that is the decision inside the decision: it
+is the brand anchor, the PWA's `theme-color`, and the value every screenshot of this app
+so far was taken against. Day's `bg` moved one step warmer, because a cream page cannot
+be made more maroon by lifting only what sits on top of it.
+
+---
+
+## The clock is the largest thing on Tonight
+**2026-09-06**
+
+`NightHeader` is new at the top of Tonight and answers two questions at once: what time
+is it, and whose night is this. The first is the question behind every log this app takes
+— "when did that happen, relative to now" — and the PWA answered it in a 19-pixel line
+beside the wordmark. The second was being answered by the switcher that has just moved to
+Settings.
+
+It ticks on its own `TimelineView(.periodic(by: 30))`, a subtree rather than the screen.
+The rule that the rest of Tonight re-renders on writes and not on the clock is unchanged,
+and this is what keeping it costs: a live clock has to be its own island. The layout is
+in `docs/design.md`.
+
+---
+
+## The baby's status is a tinted tile, and the port stops at the copy
+**2026-09-06**
+
+`BabyStatusCard.statusContent` is the PWA's sleep tile — a bordered, state-tinted block
+reading "Mia is asleep" — because a tinted block is legible across a dark room in a way a
+coloured word in a row is not.
+
+The subtitle is where the port deliberately stops. The web tile said "tap when Mia wakes"
+because tapping it toggled. Tapping this one opens the adjust-sleep sheet, so it says
+"tap to adjust". Carrying the words over with the layout, when the gesture underneath has
+changed, ships a promise the app does not keep. The behaviour is what did not change here:
+the Wake/Sleep button is still the toggle.
+
+`BabyStatusCard` took a `timeZone` parameter in the same change. It would otherwise have
+formatted its one time in `.current` while every other clock on the screen reads the
+shift's zone.
+
+---
+
+## Past nights are their own screen, reachable during the shift
+**2026-09-06**
+
+`HistoryView` is pushed from Settings, and `SummaryView` is now strictly the running
+shift's totals.
+
+Worth recording because it was made for a bug rather than for tidiness. `PastNightsSection`
+only rendered in Summary's *no open shift* branch, so from the moment a shift started
+until it ended, last night was unreachable — and mid-shift is exactly when "how long did
+she go last night?" gets asked. Splitting the two screens along now-versus-before makes
+that structural instead of a branch someone has to remember to check.
+
+---
+
+## `navigationDestination` goes on the `Form`, not inside the `Section`
+**2026-09-06**
+
+Declared inside the `Section` whose row triggers it, the push to `HistoryView` landed on a
+blank screen: a `navigationDestination` inside a lazy container is not registered until
+that row has been built. It is declared on the `Form`.
+
+Recorded as a decision rather than a fix because it is the rule for every push added from
+a `Form` or a `List` from here on. Nothing in the suite would have caught it — there are
+no view-layer tests and no UI test target — and it was found by screenshotting the pushed
+screen and seeing nothing on it.
+
+---
+
 ## No JSON export, and the caregiver is named once
 
 **2026-09-05**
@@ -315,6 +433,9 @@ refused outright when it would strand an already-logged sleep session outside it
 
 ## The client-family switcher is on Tonight, not in Settings
 **2026-09-05**
+
+*Superseded 2026-09-06 by "One client family at a time, chosen in Settings."* The
+mis-logging risk below is real and still guarded; only the control moved.
 
 Tonight is the screen the doula is on all night, so the switcher sits on its leading
 toolbar and its label doubles as a standing answer to "whose night am I logging?" The

@@ -62,6 +62,13 @@ enum DemoSeed {
         UserDefaults.standard.bool(forKey: "moonlogDumpHandoff")
     }
 
+    /// `-moonlogSettingsSheet family|baby|history` — presents one of the surfaces
+    /// that moved off Tonight and Summary into Settings. Without this they are
+    /// only reachable by tapping, which is what `-moonlogShiftHours` exists to fix.
+    static var requestedSettingsSheet: String? {
+        UserDefaults.standard.string(forKey: "moonlogSettingsSheet")
+    }
+
     /// `-moonlogDemoWrite YES` — performs one real write through the app's own path
     /// on appear, so the confirmation banner and its Undo can be screenshotted.
     /// Deliberately the real `write`, not a faked banner: the thing worth seeing is
@@ -180,6 +187,21 @@ enum DemoSeed {
         let leoEarlier = SleepSession(startAt: minutesAgo(195), endAt: minutesAgo(58))
         leoEarlier.attach(to: shift, baby: leo)
         context.insert(leoEarlier)
+
+        // A second household, so the client-family picker in Settings has more
+        // than one row to render. It carries no shift: between visits is the
+        // normal state for a family you are not with tonight, and it is what the
+        // picker will most often be switching *to*.
+        let other = Family(name: "Okafor")
+        other.volumeUnitRaw = VolumeUnit.ml.rawValue
+        let ada = Baby(
+            name: "Ada",
+            birthAt: calendar.date(byAdding: .day, value: -19, to: now) ?? now,
+            sortOrder: 0,
+            accent: .lilac)
+        ada.family = other
+        context.insert(other)
+        context.insert(ada)
 
         try? context.save()
     }
