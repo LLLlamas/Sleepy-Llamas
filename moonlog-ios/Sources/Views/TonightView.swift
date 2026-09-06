@@ -98,8 +98,7 @@ struct TonightView: View {
                         onDiaper: { sheet = .diaper(babyID: presentation.id) },
                         onToggleSleep: { toggleSleep(presentation) },
                         onNote: { sheet = .note(babyID: presentation.id) },
-                        onEditBaby: { editingBaby = data.model(for: presentation.id) },
-                        onAdjustSleep: { sheet = .sleep(babyID: presentation.id) }
+                        onEditBaby: { editingBaby = data.model(for: presentation.id) }
                     )
                 }
 
@@ -226,22 +225,6 @@ private extension TonightView {
                 NoteSheet(baby: baby, shift: shift.window, presetTags: presetTags) {
                     logNew(.note, baby: baby, $0, said: "Note saved")
                 }
-            case .sleep:
-                SleepSheet(
-                    baby: baby, shift: shift.window, openSince: baby.asleepSince
-                ) { entry in
-                    write(baby, entry.endAt == nil ? "Sleep updated" : "Sleep logged") { store in
-                        try await store.recordSleep(
-                            shiftID: shift.id, babyID: baby.id,
-                            startAt: entry.startAt, endAt: entry.endAt)
-                        // No Undo: `recordSleep` either corrects the running session
-                        // or inserts one, and does not report which, so there is no
-                        // single move to reverse. The row is editable in the
-                        // timeline, which is the recovery here.
-                        return nil
-                    }
-                }
-
             case .editSleep(let id, _):
                 editSleepSheet(id: id, baby: baby)
 
@@ -407,7 +390,7 @@ private extension TonightView {
             let shiftID = shift.id
             let babyID = baby.id
             SleepSheet(
-                baby: baby, shift: shift.window, openSince: nil,
+                baby: baby, shift: shift.window,
                 editing: before,
                 onDelete: {
                     write(baby, "Sleep deleted") { store in
@@ -784,7 +767,7 @@ struct ConfirmPrompt: Identifiable {
 }
 
 enum LogSheet: Identifiable, Equatable {
-    case feed(babyID: UUID), diaper(babyID: UUID), sleep(babyID: UUID), note(babyID: UUID)
+    case feed(babyID: UUID), diaper(babyID: UUID), note(babyID: UUID)
     /// One of the kinds Settings can enable. `pump` is about the mother, which is
     /// why the baby here — and on `editEvent` — is optional.
     case extra(kind: EventKind, babyID: UUID?)
@@ -794,7 +777,7 @@ enum LogSheet: Identifiable, Equatable {
 
     var babyID: UUID? {
         switch self {
-        case .feed(let id), .diaper(let id), .sleep(let id), .note(let id): return id
+        case .feed(let id), .diaper(let id), .note(let id): return id
         case .editSleep(_, let babyID): return babyID
         case .extra(_, let babyID), .editEvent(_, let babyID): return babyID
         }
@@ -816,7 +799,7 @@ enum LogSheet: Identifiable, Equatable {
         switch self {
         case .feed: return "Feed"
         case .diaper: return "Diaper"
-        case .sleep, .editSleep: return "Sleep"
+        case .editSleep: return "Sleep"
         case .note: return "Note"
         case .extra(let kind, _): return kind.noun
         case .editEvent: return "Edit"

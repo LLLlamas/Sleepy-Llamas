@@ -1,13 +1,16 @@
 import SwiftUI
 import MoonlogCore
 
-/// Manual sleep entry, and the correction path when a toggle was mistimed.
+/// The correction path when a toggle was mistimed, reached from the sleep row in
+/// tonight's timeline.
+///
+/// It is only ever an editor now. It used to double as manual entry, opened by
+/// tapping the status tile — but the tile toggles instead, so there is no longer a
+/// route that creates a session from here. `editing` is required for that reason:
+/// with it optional the sheet had a whole second personality that nothing reached.
 struct SleepSheet: View {
     let baby: BabyPresentation
     let shift: ShiftWindow
-    /// The session already running, if any — the sheet then edits it rather than
-    /// opening a second one.
-    let openSince: Date?
     let onSave: (SleepEntry) -> Void
     var onDelete: (() -> Void)?
 
@@ -21,20 +24,19 @@ struct SleepSheet: View {
     init(
         baby: BabyPresentation,
         shift: ShiftWindow,
-        openSince: Date?,
-        editing: SleepEntry? = nil,
+        editing: SleepEntry,
         onDelete: (() -> Void)? = nil,
         onSave: @escaping (SleepEntry) -> Void
     ) {
         self.baby = baby
         self.shift = shift
-        self.openSince = openSince
         self.onDelete = onDelete
         self.onSave = onSave
-        let now = Date()
-        _startAt = State(initialValue: editing?.startAt ?? openSince ?? now.addingTimeInterval(-30 * 60))
-        _endAt = State(initialValue: editing?.endAt ?? now)
-        _stillAsleep = State(initialValue: editing.map { $0.endAt == nil } ?? (openSince != nil))
+        _startAt = State(initialValue: editing.startAt)
+        // A running session has no end yet; the picker still needs a value, and now
+        // is the only defensible one to show behind a disabled control.
+        _endAt = State(initialValue: editing.endAt ?? Date())
+        _stillAsleep = State(initialValue: editing.endAt == nil)
     }
 
     /// End must be strictly after start. The web version added 24 hours instead of
@@ -53,7 +55,7 @@ struct SleepSheet: View {
 
     var body: some View {
         LogSheetChrome(
-            title: openSince == nil ? "Sleep" : "Edit sleep",
+            title: "Edit sleep",
             babyName: baby.name,
             accent: baby.accent.color(for: theme),
             at: $startAt,

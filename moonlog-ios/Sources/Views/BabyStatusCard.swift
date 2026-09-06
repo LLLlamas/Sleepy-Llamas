@@ -50,16 +50,28 @@ struct BabyStatusCard: View {
     var onToggleSleep: () -> Void
     var onNote: () -> Void
     var onEditBaby: () -> Void
-    var onAdjustSleep: () -> Void
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
     private var accentColor: Color { baby.accent.color(for: theme) }
-    private var stateColor: Color { baby.isAsleep ? palette.sleep : palette.awake }
-    /// The wash the state tint is legible on. These pairs were ported together and
-    /// are pinned to 4.5:1 by `PaletteTests` — do not substitute an opacity.
-    private var stateWash: Color { baby.isAsleep ? palette.sleepFaint : palette.awakeFaint }
+
+    /// **The tile is the baby's colour, in both states.** It used to be sage for
+    /// asleep and gold for awake — the same two colours on every card — so with
+    /// twins the two tiles could swap hues without changing which baby was which,
+    /// and hue said nothing about whose card you were looking at.
+    ///
+    /// Now hue is identity and the *depth of the fill* is the state. That is a
+    /// deliberate demotion of colour as a state signal, and it is only defensible
+    /// because state was never carried by colour alone here: the icon is a moon or a
+    /// sun, the sentence reads "Mia is asleep" in words, and the elapsed counter
+    /// appears only while asleep. Colour remains the third signal, as
+    /// `docs/design.md` requires — it has simply changed what it is third *for*.
+    private var stateColor: Color { accentColor }
+
+    /// Pinned by `PaletteTests` across every accent, theme and state — do not
+    /// substitute an opacity. See `BabyAccent.wash(for:asleep:)`.
+    private var stateWash: Color { baby.accent.wash(for: theme, asleep: baby.isAsleep) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -96,23 +108,32 @@ struct BabyStatusCard: View {
         .accessibilityLabel("\(baby.name), day \(baby.dayOfLife). Edit name and colour.")
     }
 
-    // The Wake/Sleep button toggles instantly — that is the 3am path. This tile
-    // opens the sheet for a back-dated or corrected time, visibly rather than
-    // behind a long-press.
+    // **The tile toggles, at the time you tapped it.** It is the biggest target on
+    // the card and the one thing done most often at 3am, so it takes no
+    // configuration at all — the same write the Wake/Sleep button below makes.
     //
-    // Ported from the PWA's sleep tile, which is the one piece of that design
-    // worth keeping literally: a bordered, state-tinted block reading "Mia is
-    // asleep" is legible across a dark room in a way a coloured word in a row is
-    // not. What is deliberately NOT ported is its copy — the web tile said "tap
-    // when Mia wakes" because tapping it toggled. Tapping this one opens the
-    // adjust sheet, so it says so.
+    // It used to open the adjust-sleep sheet instead, which meant the largest
+    // control on the screen asked a question rather than answering one. Getting the
+    // time right afterwards is the rarer job and now lives where the record is: tap
+    // the sleep row in tonight's timeline.
+    //
+    // Ported from the PWA's sleep tile, which is the one piece of that design worth
+    // keeping literally: a bordered, tinted block reading "Mia is asleep" is legible
+    // across a dark room in a way a coloured word in a row is not. Its copy is
+    // correct again now that the gesture matches — the web tile said "tap when Mia
+    // wakes" precisely because tapping it toggled.
     private func status(now: Date) -> some View {
-        Button(action: { Haptics.tap(); onAdjustSleep() }) {
+        Button(action: {
+            guard !isBusy else { return }
+            Haptics.tap()
+            onToggleSleep()
+        }) {
             statusContent(now: now)
         }
         .buttonStyle(.plain)
+        .disabled(isBusy)
         .accessibilityLabel(accessibleStatus(now: now))
-        .accessibilityHint("Adjust the time")
+        .accessibilityHint(baby.isAsleep ? "Wake \(baby.name)" : "Put \(baby.name) to sleep")
     }
 
     private func statusContent(now: Date) -> some View {
@@ -154,7 +175,11 @@ struct BabyStatusCard: View {
         .contentShape(shape)
     }
 
-    /// "Since 3:42am · tap to adjust" — when this state began, then what the tap does.
+    /// "Since 3:42am · tap to wake" — when this state began, then what the tap does.
+    ///
+    /// The hint names the state the tap moves *to*, and uses the same two words as
+    /// the button below it. Copy that describes the wrong gesture is worse than no
+    /// copy, and this line has already been wrong once in the other direction.
     ///
     /// The time sits on this line rather than trailing the state sentence above it,
     /// which is where it was first put. Appended there it wrapped, and it wrapped
@@ -164,11 +189,11 @@ struct BabyStatusCard: View {
     /// where the badge exists, and any name longer than "Mia" makes it worse. The
     /// state stays one short bold line; the clock time is the supporting fact.
     ///
-    /// Both states carry it now. Awake used to say nothing about when it started,
-    /// which was the more useful of the two — "she has been up since 4:20" is what
-    /// decides whether to try a feed.
+    /// Both states carry the time now. Awake used to say nothing about when it
+    /// started, which was the more useful of the two — "she has been up since 4:20"
+    /// is what decides whether to try a feed.
     private var subtitle: String {
-        let hint = baby.isAsleep ? "tap to adjust" : "tap to log a sleep you missed"
+        let hint = baby.isAsleep ? "tap to wake" : "tap to sleep"
         guard let since = baby.stateSince else {
             // Before this baby has slept, there is no honest answer. Say nothing
             // rather than name the shift's start as though it were a wake.

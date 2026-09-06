@@ -21,7 +21,10 @@ enum DemoSeed {
         UserDefaults.standard.string(forKey: "moonlogTab")
     }
 
-    /// `-moonlogOpenSheet feed|diaper|sleep|note` — opens that sheet on appear.
+    /// `-moonlogOpenSheet feed|diaper|note` — opens that sheet on appear.
+    ///
+    /// No `sleep`: the tile toggles now, so there is no new-sleep sheet to open.
+    /// Correcting one is `-moonlogEditFirst` on a sleep row.
     static func requestedSheet(for babyID: UUID?) -> LogSheet? {
         guard let babyID,
               let name = UserDefaults.standard.string(forKey: "moonlogOpenSheet")
@@ -29,7 +32,6 @@ enum DemoSeed {
         switch name {
         case "feed": return .feed(babyID: babyID)
         case "diaper": return .diaper(babyID: babyID)
-        case "sleep": return .sleep(babyID: babyID)
         case "note": return .note(babyID: babyID)
         case "pump": return .extra(kind: .pump, babyID: nil)
         case "medication": return .extra(kind: .medication, babyID: babyID)

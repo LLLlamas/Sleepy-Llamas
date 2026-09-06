@@ -137,6 +137,82 @@ final class PaletteTests: XCTestCase {
 
     /// Text drawn *on* the accent fill — the confirmation banner, which carries the
     /// Undo button and is the only feedback that a write landed.
+    /// The status tile, which is now tinted by the baby rather than by the state:
+    /// five accents x three themes x two states, and three pairs inside each tile.
+    ///
+    /// Two thresholds, because two different things are being measured. `ink` and
+    /// `faint` are text and are held to AA's 4.5:1 like every other text role here.
+    /// The accent is the 2pt border and the moon/sun glyph — non-text UI components,
+    /// which WCAG 1.4.11 holds to 3:1. Holding the border to 4.5 as well was tried
+    /// and forced the accent 44% of the way to `ink` to satisfy it, which bleached
+    /// out the one thing the tile's colour now exists to say.
+    ///
+    /// `faint` on a wash is a pair nothing checked before this — not for the old
+    /// `sleepFaint`/`awakeFaint` either. It is the tightest of the three.
+    func testTheBabyTintedTileHoldsUpInEveryAccentAndState() {
+        for theme in MoonTheme.allCases {
+            let p = Palette.for(theme)
+            for accent in BabyAccent.allCases {
+                for asleep in [true, false] {
+                    let wash = accent.wash(for: theme, asleep: asleep)
+                    let state = asleep ? "asleep" : "awake"
+                    let where_ = "\(theme.displayName)/\(accent.displayName)/\(state)"
+
+                    for (name, text) in [("ink", p.ink), ("faint", p.faint)] {
+                        let ratio = contrast(text, wash)
+                        XCTAssertGreaterThanOrEqual(
+                            ratio, 4.5,
+                            "\(where_): \(name) on the tile is "
+                                + String(format: "%.2f:1", ratio))
+                    }
+
+                    let outline = contrast(accent.color(for: theme), wash)
+                    XCTAssertGreaterThanOrEqual(
+                        outline, 3.0,
+                        "\(where_): the border and icon are "
+                            + String(format: "%.2f:1", outline))
+                }
+            }
+        }
+    }
+
+    /// Awake and asleep must not render the same fill. Not a WCAG threshold — the
+    /// state is stated in words and by the icon — but two states that paint
+    /// identically would mean the fill is decoration rather than information.
+    func testAwakeAndAsleepFillsAreDistinguishable() {
+        for theme in MoonTheme.allCases {
+            for accent in BabyAccent.allCases {
+                let ratio = contrast(
+                    accent.wash(for: theme, asleep: false),
+                    accent.wash(for: theme, asleep: true))
+                // Low, and deliberately so. A near-black card flattens whatever is
+                // blended into it, so Deep Night tops out at 1.17:1 however the
+                // factors are tuned — this asserts the fill still says *something*,
+                // not that it carries the state on its own. The icon, the sentence
+                // and the elapsed counter do that.
+                XCTAssertGreaterThan(
+                    ratio, 1.15,
+                    "\(theme.displayName)/\(accent.displayName): the two fills are "
+                        + String(format: "%.3f:1", ratio))
+            }
+        }
+    }
+
+    /// `blend` must return four opaque sRGB components. `components(_:)` reads three
+    /// and ignores alpha, so a translucent wash would be measured as solid and score
+    /// a ratio the eye never gets — and a monochrome colour space returns two
+    /// components and traps outright.
+    func testBlendProducesOpaqueSRGBComponents() {
+        let midpoint = Color.blend("000000", toward: "ffffff", by: 0.5)
+        let parts = UIColor(midpoint).cgColor.components ?? []
+        XCTAssertEqual(parts.count, 4)
+        XCTAssertEqual(parts[3], 1.0, accuracy: 0.001, "the wash must be opaque")
+        for channel in 0..<3 {
+            XCTAssertEqual(parts[channel], 0.5, accuracy: 0.01)
+        }
+        XCTAssertEqual(Color.blend("aabbcc", toward: "ffffff", by: 0), Color.hex("aabbcc"))
+    }
+
     func testAccentInkHoldsAAOnTheAccentFill() {
         for theme in MoonTheme.allCases {
             let p = Palette.for(theme)

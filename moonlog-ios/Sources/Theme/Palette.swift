@@ -109,11 +109,23 @@ public struct Palette: Sendable {
     private static let cachedDeepNight = build(.deepNight)
     private static let cachedDay = build(.day)
 
+    /// The card the status tile sits on. Named separately because `BabyAccent`
+    /// blends its wash against it, and the wash's contrast is only meaningful if
+    /// that blend uses the same value the card is actually painted with — two
+    /// copies of this hex would drift apart and the tests would keep passing.
+    static func raisedHex(_ theme: MoonTheme) -> String {
+        switch theme {
+        case .night: return "2d1219"
+        case .deepNight: return "210d14"
+        case .day: return "fffaf7"
+        }
+    }
+
     private static func build(_ theme: MoonTheme) -> Palette {
         switch theme {
         case .night:
             return Palette(
-                bg: .hex("1a0a0e"), bgLift: .hex("2e1019"), raised: .hex("2d1219"),
+                bg: .hex("1a0a0e"), bgLift: .hex("2e1019"), raised: .hex(raisedHex(.night)),
                 raised2: .hex("3a1822"), chip: .hex("43202b"),
                 ink: .hex("f7ece9"), soft: .hex("d9bcbd"), faint: .hex("bb979c"),
                 line: .hex("3f2129"), lineStrong: .hex("532a34"),
@@ -127,7 +139,7 @@ public struct Palette: Sendable {
             )
         case .deepNight:
             return Palette(
-                bg: .hex("100508"), bgLift: .hex("220b12"), raised: .hex("210d14"),
+                bg: .hex("100508"), bgLift: .hex("220b12"), raised: .hex(raisedHex(.deepNight)),
                 raised2: .hex("2c121b"), chip: .hex("351822"),
                 ink: .hex("efdedb"), soft: .hex("c8a9ab"), faint: .hex("ab8c91"),
                 line: .hex("341a21"), lineStrong: .hex("46232c"),
@@ -141,7 +153,7 @@ public struct Palette: Sendable {
             )
         case .day:
             return Palette(
-                bg: .hex("fdf4f1"), bgLift: .hex("f6e4df"), raised: .hex("fffaf7"),
+                bg: .hex("fdf4f1"), bgLift: .hex("f6e4df"), raised: .hex(raisedHex(.day)),
                 raised2: .hex("f9ebe7"), chip: .hex("f5e2dc"),
                 ink: .hex("2a1418"), soft: .hex("6b4a4f"), faint: .hex("6f5056"),
                 line: .hex("3d0f17", opacity: 0.12), lineStrong: .hex("3d0f17", opacity: 0.24),
@@ -197,31 +209,103 @@ public enum BabyAccent: String, CaseIterable, Sendable, Identifiable {
         return all[((index % all.count) + all.count) % all.count]
     }
 
-    public func color(for theme: MoonTheme) -> Color {
+    public func color(for theme: MoonTheme) -> Color { .hex(hex(for: theme)) }
+
+    /// The hex behind `color(for:)`. Exposed as a string because the status tile's
+    /// wash is a *blend* of it with the card underneath, and blending needs numbers.
+    func hex(for theme: MoonTheme) -> String {
         switch theme {
         case .night, .deepNight:
             // Light enough to carry on #1a0a0e / #100508.
             switch self {
-            case .gold: return .hex("d9a96b")
-            case .rose: return .hex("e39aa6")
-            case .lilac: return .hex("b7a0dd")
-            case .sky: return .hex("6aa8dd")
-            case .sage: return .hex("8fb8a8")
+            case .gold: return "d9a96b"
+            case .rose: return "e39aa6"
+            case .lilac: return "b7a0dd"
+            case .sky: return "6aa8dd"
+            case .sage: return "8fb8a8"
             }
         case .day:
             // Darkened to hold contrast on the cream/blush surfaces.
             switch self {
-            case .gold: return .hex("9a6b1f")
-            case .rose: return .hex("b8446a")
-            case .lilac: return .hex("6b4d9e")
-            case .sky: return .hex("1f5f9e")
-            case .sage: return .hex("3f7d68")
+            case .gold: return "9a6b1f"
+            case .rose: return "b8446a"
+            case .lilac: return "6b4d9e"
+            case .sky: return "1f5f9e"
+            case .sage: return "3f7d68"
             }
         }
+    }
+
+    /// The fill behind the status tile: this baby's colour, most of the way back to
+    /// the card it sits on.
+    ///
+    /// **Asleep is the same colour faded further.** Which reads as *darker* on the
+    /// two night themes and as *more transparent* by day, because both are "closer
+    /// to the card" — the card is near-black at night and near-white by day. One
+    /// rule, and it is the one the tile is meant to express: awake is the baby's
+    /// colour at full, asleep is that colour quietened.
+    ///
+    /// **Computed opaque, never `.opacity()`.** An alpha value composites against
+    /// whatever happens to be behind it at render time, which no contrast test can
+    /// measure — `PaletteTests` reads the components and would score a translucent
+    /// wash as if it were solid, passing a pair the eye fails. See the note on
+    /// `Palette.raisedHex`.
+    ///
+    /// **The factors differ per theme, and that is not a rounding artefact.** How
+    /// deep the awake fill can go is set by how much room the theme's own text roles
+    /// have on it, and the three cards are nothing like each other: Day's is
+    /// near-white and takes a fill at 0.74, Deep Night's is near-black and gives out
+    /// at 0.85. Each number is the deepest that still keeps `ink` and `faint` at
+    /// 4.5:1 and the accent outline at 3:1, for all five accents. They were measured,
+    /// not chosen — change one and `PaletteTests` will tell you.
+    ///
+    /// The asleep fill sits at 0.95 everywhere: far enough back to read as quietened,
+    /// not so far that the baby's colour disappears into the card.
+    ///
+    /// The honest limit of this: on Deep Night the two fills are only 1.17:1 apart,
+    /// because a near-black card flattens everything blended into it. The fill is a
+    /// supporting signal there, not the one carrying the state — the moon or sun
+    /// glyph, the words "is asleep", and the elapsed counter that appears only while
+    /// asleep all say it outright.
+    public func wash(for theme: MoonTheme, asleep: Bool) -> Color {
+        let awake: Double
+        switch theme {
+        case .night: awake = 0.82
+        case .deepNight: awake = 0.85
+        case .day: awake = 0.74
+        }
+        return .blend(
+            hex(for: theme), toward: Palette.raisedHex(theme), by: asleep ? 0.95 : awake)
     }
 }
 
 extension Color {
+    /// Two hex colours mixed, `by` of the way from the first to the second, as a
+    /// fully opaque colour.
+    ///
+    /// Takes hex strings rather than `Color`s because SwiftUI will not give a
+    /// `Color`'s components back without bridging to UIKit, and nothing in `Sources`
+    /// imports UIKit for colour. Component-wise in sRGB, which is what "mix" means
+    /// everywhere else these values are authored.
+    static func blend(_ from: String, toward to: String, by amount: Double) -> Color {
+        let a = rgb(from), b = rgb(to)
+        let t = min(max(amount, 0), 1)
+        return Color(
+            .sRGB,
+            red: a.0 + (b.0 - a.0) * t,
+            green: a.1 + (b.1 - a.1) * t,
+            blue: a.2 + (b.2 - a.2) * t,
+            opacity: 1)
+    }
+
+    private static func rgb(_ hex: String) -> (Double, Double, Double) {
+        var value: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&value)
+        return (Double((value >> 16) & 0xFF) / 255,
+                Double((value >> 8) & 0xFF) / 255,
+                Double(value & 0xFF) / 255)
+    }
+
     /// Six-digit hex, matching how the values are written in `tokens.css` so the
     /// two files can be diffed by eye.
     static func hex(_ hex: String, opacity: Double = 1) -> Color {
