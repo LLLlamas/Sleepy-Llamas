@@ -18,13 +18,6 @@ struct FamilyRoster {
     let hasOpenShift: (UUID) -> Bool
 }
 
-/// The two-step erase confirmation. An enum rather than two `Bool`s, so the two
-/// steps cannot both be true and there is only ever one alert to present.
-private enum EraseStep: Identifiable {
-    case first, second
-    var id: Self { self }
-}
-
 struct SettingsView: View {
     let roster: FamilyRoster
     let onError: (String) -> Void
@@ -44,8 +37,7 @@ struct SettingsView: View {
     /// birth date is a setup mistake, and Tonight has no cards to tap between
     /// shifts.
     @State private var editingBaby: Baby?
-    /// Which of the two erase confirmations is up. See `resetSection`.
-    @State private var confirmingErase: EraseStep?
+    @State private var confirmingErase = false
     /// The tags a swipe is asking to delete. Deleting a tag has no Undo — it is not a
     /// `CareStore` write with a reversing twin, it goes through `StoreWrite` — so
     /// this is the one place in Settings that can ask first.
@@ -95,27 +87,15 @@ struct SettingsView: View {
         } message: { _ in
             Text("Notes already written keep the tag. It stops being offered as a chip.")
         }
-        .alert(
-            confirmingErase == .first ? "Erase everything?" : "Really erase everything?",
-            isPresented: Binding(
-                get: { confirmingErase != nil },
-                set: { if !$0 { confirmingErase = nil } })
-        ) {
-            if confirmingErase == .first {
-                Button("Erase", role: .destructive) { confirmingErase = .second }
-            } else {
-                Button("Erase everything", role: .destructive) {
-                    confirmingErase = nil
-                    Haptics.warn()
-                    run { try await $0.eraseEverything() }
-                }
+        .alert("Erase everything?", isPresented: $confirmingErase) {
+            Button("Erase everything", role: .destructive) {
+                Haptics.warn()
+                run { try await $0.eraseEverything() }
             }
-            Button("Cancel", role: .cancel) { confirmingErase = nil }
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text(confirmingErase == .first
-                 ? "Every client family, every night and every record on this "
-                   + "device. There is no undo."
-                 : "Last chance. The app will restart at the welcome screen.")
+            Text("Every client family, every night and every record on this device. "
+                 + "There is no undo, and the app goes back to the welcome screen.")
         }
         .sheet(isPresented: $addingFamily) {
             AddFamilySheet(onAdd: roster.create)
@@ -496,15 +476,17 @@ struct SettingsView: View {
     /// which loses the TestFlight build and takes minutes. Walking the whole app
     /// from onboarding is the only way to test the parts that only happen once.
     ///
-    /// Last section on the screen, and it asks **twice**: the first alert says what
-    /// goes, the second is the one that does it. Two alerts rather than a typed
-    /// confirmation because the thumb that reaches this by accident is the same
-    /// thumb that would type "erase" without reading.
+    /// Last section on the screen, behind one alert that names exactly what goes.
+    ///
+    /// One alert, not two. A second "are you sure you're sure" is friction on the
+    /// thumb that meant it and no obstacle at all to the thumb that did not — and
+    /// the point of this control is that starting over is something done
+    /// repeatedly while testing.
     private var resetSection: some View {
         Section {
             Button(role: .destructive) {
                 Haptics.warn()
-                confirmingErase = .first
+                confirmingErase = true
             } label: {
                 Label("Erase everything and start over", systemImage: "trash")
                     .frame(maxWidth: .infinity)

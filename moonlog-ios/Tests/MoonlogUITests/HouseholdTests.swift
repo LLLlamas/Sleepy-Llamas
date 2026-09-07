@@ -51,29 +51,26 @@ final class HouseholdTests: MoonlogUITestCase {
     }
 
     /// Ships in Release: the only other way back to a first run on a real phone is
-    /// deleting the app. It asks twice, and the second alert is the one that does it.
-    func testEraseAsksTwiceAndCanBeBackedOutOf() {
+    /// deleting the app.
+    func testEraseAsksBeforeItDoesAnything() {
         launch(["-moonlogTab", "settings"])
         reveal(app.buttons["Erase everything and start over"]).tap()
 
-        XCTAssertTrue(app.alerts["Erase everything?"].waitForExistence(timeout: 5))
-        app.alerts.buttons["Erase"].tap()
-
         XCTAssertTrue(
-            app.alerts["Really erase everything?"].waitForExistence(timeout: 5),
-            "the first alert erased on its own")
+            app.alerts["Erase everything?"].waitForExistence(timeout: 5),
+            "erased with no confirmation at all")
         app.alerts.buttons["Cancel"].tap()
 
         app.buttons["Tonight"].firstMatch.tap()
         XCTAssertTrue(
             cardButton("Feed", for: "Mia").waitForExistence(timeout: 10),
-            "cancelling the second alert erased anyway")
+            "cancelling erased anyway")
     }
 
     func testEraseReturnsTheAppToItsFirstRun() {
         launch(["-moonlogTab", "settings"])
         reveal(app.buttons["Erase everything and start over"]).tap()
-        app.alerts.buttons["Erase"].tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5))
         app.alerts.buttons["Erase everything"].tap()
 
         // Onboarding is what a first run looks like, and it is the screen that is

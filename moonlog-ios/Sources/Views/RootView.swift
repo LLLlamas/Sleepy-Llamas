@@ -91,7 +91,14 @@ struct RootView: View {
     private func tabs(_ family: Family?) -> some View {
         let shift = family.flatMap(openShift(for:))
 
-        TabView(selection: $tab) {
+        // With no family there is exactly one screen worth being on, and it is the
+        // one that offers to make one. Without this, erasing everything from
+        // Settings leaves you sitting on an empty Settings — and the alert that
+        // did it says the app goes back to the welcome screen.
+        TabView(selection: Binding(
+            get: { families.isEmpty ? "tonight" : tab },
+            set: { tab = $0 })
+        ) {
             stack("Moonlog") { tonight(family, shift) }
                 .tabItem { Label("Tonight", systemImage: "moon.stars.fill") }
                 .tag("tonight")

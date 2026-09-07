@@ -62,6 +62,10 @@ verification table and the command-line upload path.
 | **Summary's cards use the handoff's roster rule, not `activeBabies`** | fixed |
 | **Feed minutes step by 5; Undo's tap target is a real target** | done |
 | **A UI test target — the reachability suite, its own `MoonlogUI` scheme** | done |
+| **Rename or remove a client family** | done |
+| **Reorder babies, and put a removed one back** | done |
+| **Erase everything and start over — ships in Release** | done |
+| **Past nights, as a `NavigationLink` that actually pushes** | fixed |
 
 188 tests green (91 in `MoonlogCoreTests`, 97 in `MoonlogTests`), up from 184.
 Four new, all in `CareStoreTests`: correcting a birth date, rejecting a future one
@@ -161,6 +165,37 @@ onboarding line that said "later" without saying where.
 - **There is no way to remove a client family**, only a baby. `OnboardingView`
   already admits this in a comment.
 
+## The reachability suite, and what it found on its first run
+
+`Tests/MoonlogUITests`, run through the `MoonlogUI` scheme. **20 tests, all green**,
+in about four minutes. It asserts `isHittable` rather than `exists`, because a row
+below the fold exists and tapping it does nothing.
+
+It earned itself immediately. **`.navigationDestination(isPresented:)` has never
+worked in this app.** Inside a `Section` it lands on a blank screen — that much was
+known and recorded as fixed by moving it to the `Form`. That was not a fix. The
+destination stayed dead: setting the flag during the first appear brought the whole
+app up **blank white**, no tab bar, no navigation bar, alive and rendering nothing;
+setting it any later did nothing at all. Both states were only ever reached through
+`-moonlogSettingsSheet history`, the launch argument that was supposed to be
+*verifying* the route — so the route was recorded as working twice while pushing
+into a dead destination both times. Past nights is a `NavigationLink` now, which
+took a piece of state, a modifier and a debug hook with it.
+
+Three smaller things it also settled, none of which a green unit suite could:
+
+- Erasing everything from Settings left you sitting on an **empty Settings**, while
+  the alert that did it said the app goes back to the welcome screen. With no
+  family there is now exactly one tab worth being on.
+- The **"Ask before" rows really do only respond on the switch**, not on the row.
+  Both the row's centre and its own label were tried and both left the setting off;
+  a `contentShape` on the label does not change it. Listed below as still open —
+  the test taps where a thumb would rather than pretending otherwise.
+- Two tests were wrong about the app rather than the other way round: the seed does
+  carry finished nights, and the Copy button's "Copied" state lasts two seconds,
+  which is less time than this machine has taken to answer a single UI query. A
+  test that fails on timing teaches the suite to be ignored.
+
 ## Next, in order
 
 **CloudKit is deferred, not next** — see the correction below and `docs/cloudkit.md`.
@@ -259,6 +294,9 @@ green; it took driving the UI to see it. All confirmations are alerts now.
    archived babies unconditionally would put an empty card on tonight's summary for
    every discharged baby, so it needed the handoff's "has records in this shift"
    rule, which is exactly what it now shares.
+13. **Settings toggle rows respond only on the switch.** Measured, not assumed —
+    see above. Every other row on the screen is tappable across its full width, so
+    the two that are not read as broken rather than as different.
 7. Smaller: the handoff lists feed and note times but not diaper times; it mixes
    two clock registers (`9:00 PM` in the header, `3:12a` in rows);
    `Fmt.paddedDuration` has no day rollover past 24h and clamps negatives silently;

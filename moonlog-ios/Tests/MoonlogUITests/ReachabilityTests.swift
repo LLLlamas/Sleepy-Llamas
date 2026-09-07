@@ -64,15 +64,18 @@ final class ReachabilityTests: MoonlogUITestCase {
         launch(["-moonlogTab", "settings"])
         reveal(app.buttons["Past nights"]).tap()
 
-        // Asserted on the destination's own content, not on `navigationBars`.
-        // Querying the pushed navigation bar hung XCUITest for twenty-five minutes
-        // against a screen that was rendering nothing, and a timeout that long is
-        // indistinguishable from a suite that is simply slow.
+        // Asserted on the destination's own **content**, not on its navigation bar.
+        // A bar can render over a screen with nothing on it, which is exactly the
+        // bug this test exists for; and querying the bar once hung XCUITest for
+        // twenty-five minutes, which is indistinguishable from a slow suite.
         //
-        // The seeded night is still running, so this household has no finished ones
-        // — the empty state is the correct content here, and a blank screen is not.
+        // The seed carries finished nights as well as tonight's running one, so the
+        // list has rows. Either those or the empty state is a screen; neither is.
+        let aNight = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] ' – '")).firstMatch
         XCTAssertTrue(
-            app.staticTexts["No finished nights yet"].waitForExistence(timeout: 10),
+            aNight.waitForExistence(timeout: 10)
+                || app.staticTexts["No finished nights yet"].exists,
             "pushed a blank screen")
     }
 

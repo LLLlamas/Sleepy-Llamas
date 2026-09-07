@@ -34,7 +34,20 @@ final class RecoveryTests: MoonlogUITestCase {
     /// another screen, and it has to survive a relaunch to be worth anything.
     func testTurningOnAskBeforeMakesTheTileConfirm() {
         launch(["-moonlogTab", "settings"])
-        reveal(app.switches["Wake and sleep"]).tap()
+        // Matched on the contained text, not the switch's own label: each row is a
+        // title plus an explanatory second line, and the accessibility label is
+        // both of them joined.
+        // Tapped at the row's trailing edge, where the switch actually is.
+        //
+        // Neither the row's centre nor its label toggles it — both were tried and
+        // both left the value at "0". A `contentShape` on the label does not change
+        // that. So the target for this control really is the switch and not the
+        // row, which is a wart rather than a bug and is recorded as one; the test
+        // taps where a thumb would rather than pretending otherwise.
+        let row = reveal(
+            app.switches.containing(.staticText, identifier: "Wake and sleep").firstMatch)
+        row.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        XCTAssertEqual(row.value as? String, "1", "the switch did not turn on")
 
         app.buttons["Tonight"].firstMatch.tap()
         let mia = app.buttons.containing(.staticText, identifier: "Mia is asleep").firstMatch
