@@ -57,6 +57,22 @@ struct NightHeader: View {
                 .foregroundStyle(palette.soft)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+
+            // The one condition under which a whole night is lost on quit, and it
+            // was visible only on the Settings tab — a line reading "In memory"
+            // that nobody has a reason to go and read. Silently losing a night is
+            // the worst thing this app can do, so it says so on the screen the
+            // logging actually happens on, all night, in the stop colour.
+            if case .inMemory = ModelContainerFactory.mode {
+                Label(
+                    "Not saving to this phone — tonight will be lost when the app closes.",
+                    systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(palette.stop)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
@@ -67,6 +83,17 @@ struct NightHeader: View {
         .accessibilityLabel(
             "\(familyName). \(Fmt.clock(now, timeZone: timeZone)), "
                 + "\(Fmt.longDate(now, timeZone: timeZone)). On since "
-                + Fmt.clock(startedAt, timeZone: timeZone))
+                + Fmt.clock(startedAt, timeZone: timeZone)
+                + storageWarningForVoiceOver)
+    }
+
+    /// Folded into the header's one utterance rather than left as a separate stop,
+    /// because `children: .combine` would otherwise drop it entirely.
+    private var storageWarningForVoiceOver: String {
+        if case .inMemory = ModelContainerFactory.mode {
+            return ". Warning: not saving to this phone. Tonight will be lost when "
+                + "the app closes."
+        }
+        return ""
     }
 }

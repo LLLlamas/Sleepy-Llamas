@@ -68,6 +68,7 @@ verification table and the command-line upload path.
 | **Past nights, as a `NavigationLink` that actually pushes** | fixed |
 | **Save moved to the bottom of every log sheet, full width** | done |
 | **A feed logs on its time alone — two taps** | done |
+| **The in-memory fallback says so on Tonight, not just in Settings** | fixed |
 
 188 tests green (91 in `MoonlogCoreTests`, 97 in `MoonlogTests`), up from 184.
 Four new, all in `CareStoreTests`: correcting a birth date, rejecting a future one
@@ -247,6 +248,40 @@ Measured on device, worth knowing before it is called finished:
   the 1.18 the test demands, under the 1.20 the other seven clear. It reads as a quiet
   cream-tan block rather than the blank white it was, but it is the weakest of the
   eight and any future deepening of Day's surfaces will eat it.
+
+## The crash and data-loss pass, 2026-09-07
+
+Asked for directly, and done by hand after two agent attempts died mid-run. The
+ranking used: **silent wrong data > silent data loss > crash mid-shift > crash at
+launch > performance**, because a crash is visible and a night that quietly went
+missing is not.
+
+**One finding, and it was the worst-ranked kind.** `ModelContainerFactory` degrades
+CloudKit → local → **in memory**, and the in-memory case was surfaced *only* as a
+line reading "In memory" in Settings › Data. A doula whose local store failed to
+open would log an entire night and lose all of it when the app closed, with nothing
+on the screen she was actually using saying so. `NightHeader` now carries a
+stop-coloured warning for the whole night in that state, folded into its VoiceOver
+utterance as well.
+
+**Checked and found sound**, so it does not get churned:
+
+- **No force unwraps, `try!`, `as!` or `fatalError` anywhere** in `Sources/` except
+  one: the in-memory `ModelContainer` at the end of the degradation chain, which is
+  the last resort and is commented as such. Its schema is fully defaulted.
+- **Every write goes through `StoreWrite.run`**, which surfaces a thrown error as an
+  alert. There is no path where a failed save leaves the UI showing a write that
+  did not persist — that bug existed and was fixed on 2026-09-05.
+- The `try?` occurrences are `Task.sleep` in banner timers and the keepsake-page
+  debug dump. The only one over the store is `CareStore:368`, whose `nil` is then
+  refused by the baby-required check.
+- The actor returns snapshots, never `@Model` objects.
+
+**Not covered by this pass**, and worth saying so rather than implying it was: an
+app killed mid-write, DST and midnight-boundary attribution beyond the existing DST
+fixtures, and Undo re-applying onto a record changed since. The first is bounded by
+SwiftData's own save semantics, the second has tests in `MoonlogCoreTests`, the
+third has never been driven.
 
 ## Known issues
 
