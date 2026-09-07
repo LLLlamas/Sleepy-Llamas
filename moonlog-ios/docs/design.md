@@ -82,9 +82,9 @@ the note-tag chips are 44pt (Apple's floor) so a row of them fits without wrappi
 
 ## The night header
 
-Tonight opens with `NightHeader`: the family name and shift start in a small
-tracked uppercase line, then the current time set large in `accent` — gold at
-night, maroon by day — then the date written out in full.
+Tonight opens with `NightHeader`: the family name in a small tracked uppercase
+line, then the current time set large in `accent` — gold at night, maroon by day —
+then the date written out in full.
 
 The clock is the biggest thing in the app deliberately. Every log a doula makes
 is "when did that happen, relative to now", and the PWA answered that in a
@@ -93,8 +93,15 @@ needs. It is `@ScaledMetric`, so it grows for someone who has told the system th
 need larger text — opting the one deliberately-large number out of Dynamic Type
 would defeat the point of making it large.
 
-It ticks on its own `TimelineView`. The rule that the rest of Tonight does not
-tick is unchanged: the timeline re-renders on writes, not on the clock.
+**It must agree with the status bar.** It ticks on `TimelineView(.everyMinute)`,
+which fires on the minute boundary rather than a period counted from whenever the
+view appeared, and it renders in the *device's* zone — not the family's recorded
+one, which has no editor and is only ever whatever the phone was in when the family
+was added. A big clock a doula reads and then writes on a bottle has to be the same
+clock the phone shows, or it is worse than no clock.
+
+The rule that the rest of Tonight does not tick is unchanged: the timeline re-renders
+on writes, not on the clock.
 
 The family name is there for a second reason — see "One family at a time" below.
 

@@ -84,10 +84,7 @@ struct TonightView: View {
     private func content(_ data: Tonight) -> some View {
         ScrollView {
             VStack(spacing: 14) {
-                NightHeader(
-                    familyName: family.name,
-                    startedAt: shift.startedAt,
-                    timeZone: data.timeZone)
+                NightHeader(familyName: family.name, timeZone: data.timeZone)
 
                 ForEach(data.babies) { presentation in
                     BabyStatusCard(
@@ -699,7 +696,15 @@ private struct Tonight {
 
     init(family: Family, shift: Shift, now: Date, generation: Int) {
         self.generation = generation
-        self.timeZone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
+        // The device's zone, not the shift's recorded one. The recorded zone is
+        // whatever the phone was in when the client family was added, and there is
+        // no editor for it — so a family added away from home leaves the header
+        // clock reading an hour off the status bar, and a doula who reads the app
+        // clock and then writes that time on a bottle has no way to notice. Night
+        // boundaries and day-of-life still run on the family's zone
+        // (`Family.calendar`); this is display only. Past nights in History keep
+        // their recorded zone, which is the right thing for a night already worked.
+        self.timeZone = .current
 
         let roster = family.activeBabies
         var models: [UUID: Baby] = [:]

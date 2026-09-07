@@ -96,36 +96,33 @@ which is the source of truth and is committed.
   undone — no Undo button is offered rather than one that quietly does nothing.
   Undoing a delete restores the record's own id and `createdAt`; re-logging would
   mint a lookalike.
+- **The clock on Tonight must match the status bar.** `TimelineView(.everyMinute)`,
+  not a period, and the *device's* zone for anything displayed on Tonight — the
+  family's recorded zone has no editor. Family zone is still what night boundaries
+  and day-of-life run on. See `docs/decisions.md`.
 - **Calendar arithmetic for calendar quantities, `TimeInterval` for physical
   durations, never multiply to cross a day boundary.** See `docs/testing.md`.
-- **Prefer a `NavigationLink` inside the row. `.navigationDestination(isPresented:)`
-  has never worked in this app.** Declared inside a `Section` it is not registered
-  until that row is built, so the push lands on a blank screen — that much was
-  known. Moving it to the `Form` was recorded as the fix and **was not one**: the
-  destination stayed dead, setting the flag during the first appear brought the
-  whole app up *blank white* — no tab bar, no navigation bar, alive and rendering
-  nothing — and setting it any later did nothing at all. Both states were reached
-  through the launch argument that was supposed to be *verifying* the route, which
-  is why it read as working twice. History is a `NavigationLink` now.
-- **Use `.alert` for a confirmation, never `.confirmationDialog`.** Inside a sheet
-  a confirmation dialog presents as a **popover**, and a popover drops the cancel
-  action — so "are you sure?" renders with a destructive button and no way out but
-  tapping beside it. It also anchors its tail to whatever it is attached to and
-  floats over the screen behind. The app's one delete confirmation shipped like this.
-  An alert is centred, modal, and always renders both buttons.
-- **A confirmation belongs on the screen that owns the button, never handed across
-  a sheet that is dismissing.** The end-shift dialog was first raised from
-  `TonightView` off `ShiftHoursSheet`'s callback — which runs while the sheet is
-  still up and immediately before it dismisses. `ShiftHoursSheet` raises it itself.
-  Same family as the rule above: nothing errors, the suite stays green, and the
-  action silently does nothing.
+- **Use a `NavigationLink` in the row. `.navigationDestination(isPresented:)` has
+  never worked in this app.** Inside a `Section` it lands on a blank screen; moving
+  it to the `Form` was recorded as the fix and was not one — the destination stayed
+  dead, and setting the flag during the first appear brought the app up *blank
+  white*, alive and rendering nothing. Both dead states were only ever reached
+  through the launch argument meant to be *verifying* the route, which is why it
+  read as working twice.
+- **Use `.alert` for a confirmation, never `.confirmationDialog`.** Inside a sheet a
+  confirmation dialog presents as a **popover**, and a popover drops the cancel
+  action — "are you sure?" renders with a destructive button and no way out. The
+  app's one delete confirmation shipped like that.
+- **A confirmation belongs on the screen that owns the button, never handed across a
+  sheet that is dismissing.** The end-shift dialog was raised from `TonightView` off
+  `ShiftHoursSheet`'s callback, which runs while the sheet is still up: nothing
+  errored, the suite stayed green, the action silently did nothing.
 - **Whether an action asks first is a setting.** `ConfirmableAction` +
-  `ConfirmPreferences`; the list is in Settings under "Ask before". Gate at the call
-  site, not inside `perform`. If the control lives in a sheet, the *sheet* raises the
-  dialog — `LogSheetChrome` for delete and move, `ShiftHoursSheet` for ending.
-  `TonightView.confirming(_:_:_:)` is for controls on Tonight itself. Read the
-  preference through the environment with the action's own default as the fallback,
-  never `bool(forKey:)`.
+  `ConfirmPreferences`, listed in Settings under "Ask before". Gate at the call site,
+  not inside `perform`; read the preference through the environment with the action's
+  own default as the fallback, never `bool(forKey:)`. A control in a sheet has the
+  *sheet* raise the dialog — `LogSheetChrome` for delete and move, `ShiftHoursSheet`
+  for ending; `TonightView.confirming(_:_:_:)` is for Tonight itself.
 
 ## Conventions
 
@@ -135,18 +132,17 @@ which is the source of truth and is committed.
   has broken twice by omission — check the *warning* state as well as the resting
   one when adding anything that changes colour to mean something.
 - **A control declared on a view is not a control that renders.** `BabyStatusCard`
-  took an `onNote` closure, `TonightView` passed one, and the action row listed
-  three buttons — so notes, note tags, temperature and the fever badge were built,
-  tested and unreachable through two TestFlight builds. A green suite cannot see
-  this and neither can a compiler. Drive the screen.
+  took an `onNote` closure, `TonightView` passed one, and the action row listed three
+  buttons — so notes, note tags, temperature and the fever badge were built, tested
+  and unreachable through two TestFlight builds. Drive the screen.
 - **The status tile is tinted by the baby's accent, not by the state.** Hue is
   identity, depth of fill is state. The blend factors in `BabyAccent.wash(for:asleep:)`
   are measured, not chosen — change one and `PaletteTests` fails. Washes are computed
   opaque via `Color.blend`; never `.opacity()`, which no contrast test can measure.
 - **Every palette value is pinned by a WCAG contrast test.** Adding a role or
-  changing a surface means `PaletteTests` has to pass first — the previous
-  "contrast-checked" claim was documentation, not enforcement, and the Day theme
-  had been failing five pairs the whole time.
+  changing a surface means `PaletteTests` passes first — the previous
+  "contrast-checked" claim was documentation, not enforcement, and Day had been
+  failing five pairs the whole time.
 - **The page base is `.moonBackground(_:)`, never `.background(palette.bg)`.**
   One gradient, described once.
 - Comments explain *why*, especially where the code looks odd — most oddities here

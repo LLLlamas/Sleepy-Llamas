@@ -1,8 +1,7 @@
 import SwiftUI
 import MoonlogCore
 
-/// The top of Tonight: whose night this is, what time it is now, and how long the
-/// doula has been on.
+/// The top of Tonight: whose night this is and what time it is now.
 ///
 /// The clock is the largest thing in the app on purpose. A night doula reads the
 /// time constantly — every log is "when did that happen relative to now" — and the
@@ -16,7 +15,7 @@ import MoonlogCore
 /// two-tap convenience for the exact mis-logging risk it was guarding against.
 struct NightHeader: View {
     let familyName: String
-    let startedAt: Date
+    /// The device's zone, not the family's stored one — see `Tonight.timeZone`.
     let timeZone: TimeZone
 
     @Environment(\.palette) private var palette
@@ -27,17 +26,26 @@ struct NightHeader: View {
     @ScaledMetric(relativeTo: .largeTitle) private var clockSize: CGFloat = 52
 
     var body: some View {
+        // `.everyMinute`, not a 30-second period: a periodic schedule starts
+        // counting from whenever the view first appeared, so the minute rolled over
+        // here up to half a minute after it rolled over in the status bar — the app
+        // reading 3:11 with the phone reading 3:12 all night. `.everyMinute` fires
+        // on the boundary, so the two change together.
+        //
         // Its own tick, like the cards. The screen around it deliberately does not
         // re-render on the clock — see the note in `TonightView.body`.
-        TimelineView(.periodic(from: .now, by: 30)) { context in
+        TimelineView(.everyMinute) { context in
             content(now: context.date)
         }
     }
 
     private func content(now: Date) -> some View {
         VStack(spacing: 2) {
-            Text("\(familyName) · on since \(Fmt.clock(startedAt, timeZone: timeZone))"
-                    .uppercased())
+            // The family name alone. It used to carry "on since HH:MM" as well,
+            // which answered a question nobody asks mid-shift now that a family's
+            // hours are set in advance rather than discovered from when the app
+            // was opened.
+            Text(familyName.uppercased())
                 .font(.caption2.weight(.semibold))
                 .tracking(1.1)
                 .foregroundStyle(palette.faint)
@@ -82,8 +90,7 @@ struct NightHeader: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(familyName). \(Fmt.clock(now, timeZone: timeZone)), "
-                + "\(Fmt.longDate(now, timeZone: timeZone)). On since "
-                + Fmt.clock(startedAt, timeZone: timeZone)
+                + Fmt.longDate(now, timeZone: timeZone)
                 + storageWarningForVoiceOver)
     }
 

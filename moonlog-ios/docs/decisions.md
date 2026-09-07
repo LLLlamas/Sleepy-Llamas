@@ -4,6 +4,36 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## The header clock is the phone's clock, and "on since" is gone
+**2026-09-07**
+
+Two things made the big clock on Tonight disagree with the status bar, and a clock that
+disagrees with the one above it is worse than no clock — the doula reads the app, writes
+that time on a bottle, and has no way to notice.
+
+**The tick.** `TimelineView(.periodic(from: .now, by: 30))` counts from whenever the view
+first appeared, so the minute rolled over here up to half a minute after it rolled over in
+the status bar. `.everyMinute` fires on the boundary instead. The 30-second period is
+still right for the elapsed labels on the cards and on Summary — those are durations, not
+a wall clock.
+
+**The zone.** The header rendered in the shift's recorded zone, which is copied from
+`Family.timeZoneIdentifier`, which is whatever `TimeZone.current` was when the family was
+added — and there is no editor for it. A family added away from home leaves the clock an
+hour off for good. Tonight now renders in the device's zone throughout, header, cards and
+timeline together. Night boundaries and day-of-life still run on the family's zone via
+`Family.calendar`; this is display only. **Past nights in History keep their recorded
+zone**, which is the right thing for a record of a night already worked.
+
+**"on since HH:MM" is dropped from the eyebrow**, leaving the family name alone. It
+answered "when did I start", which was worth asking when the shift began whenever the app
+was first opened. A family's hours are set in advance now, so the answer is known before
+the night starts and does not need a line at the top of the screen all night. Reversing it
+means putting the interpolation back in one `Text`; the shift's start is still on the
+shift-hours sheet, the summary and the handoff.
+
+---
+
 ## The status tile toggles on tap, and wears the baby's colour
 **2026-09-06**
 
@@ -221,10 +251,12 @@ is it, and whose night is this. The first is the question behind every log this 
 beside the wordmark. The second was being answered by the switcher that has just moved to
 Settings.
 
-It ticks on its own `TimelineView(.periodic(by: 30))`, a subtree rather than the screen.
-The rule that the rest of Tonight re-renders on writes and not on the clock is unchanged,
-and this is what keeping it costs: a live clock has to be its own island. The layout is
-in `docs/design.md`.
+It ticks on its own `TimelineView`, a subtree rather than the screen. The rule that the
+rest of Tonight re-renders on writes and not on the clock is unchanged, and this is what
+keeping it costs: a live clock has to be its own island. The layout is in
+`docs/design.md`.
+
+*Amended 2026-09-07 — see "The header clock is the phone's clock" below.*
 
 ---
 
@@ -263,6 +295,13 @@ that structural instead of a branch someone has to remember to check.
 
 ## `navigationDestination` goes on the `Form`, not inside the `Section`
 **2026-09-06**
+
+*Superseded 2026-09-07: moving it to the `Form` was not a fix either.
+`.navigationDestination(isPresented:)` has never worked in this app — the
+destination stayed dead, and setting the flag during the first appear brought the
+whole app up blank white. **Use a `NavigationLink` in the row.** Both dead states
+were only ever reached through the launch argument meant to be verifying the route,
+which is why it read as working twice.*
 
 Declared inside the `Section` whose row triggers it, the push to `HistoryView` landed on a
 blank screen: a `navigationDestination` inside a lazy container is not registered until
