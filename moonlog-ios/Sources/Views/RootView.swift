@@ -32,7 +32,21 @@ struct RootView: View {
     @AppStorage("moonlog.currentFamilyID") private var currentFamilyIDRaw = ""
 
     @State private var error: String?
+
+    // Seeded at initialisation, not assigned from a `.task`.
+    //
+    // Setting it after the first render rebuilds the selected tab's whole subtree,
+    // and anything that tab's own `.task` had already done went with it. That is
+    // not theoretical: `-moonlogSettingsSheet history` pushed History into a
+    // `SettingsView` that was about to be discarded, and the app came up **blank
+    // white** — no tab bar, no navigation bar, alive but rendering nothing. With
+    // the push delayed past the rebuild it did nothing at all instead, which is
+    // how the cause was cornered.
+    #if DEBUG
+    @State private var tab = DemoSeed.requestedTab ?? "tonight"
+    #else
     @State private var tab = "tonight"
+    #endif
 
     private var appearance: AppearancePreference {
         AppearancePreference.stored(raw: appearanceRaw, legacyDeepNight: legacyDeepNight)
@@ -92,7 +106,8 @@ struct RootView: View {
                         current: family,
                         all: families,
                         select: { currentFamilyIDRaw = $0.uuidString },
-                        create: createFamily),
+                        create: createFamily,
+                        hasOpenShift: { id in openShifts.contains { $0.familyIDRaw == id } }),
                     onError: { error = $0 })
             }
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
@@ -104,9 +119,6 @@ struct RootView: View {
         .toolbarBackground(palette.bg.opacity(families.isEmpty ? 0.55 : 1), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .sensoryFeedback(.selection, trigger: tab)
-        #if DEBUG
-        .task { tab = DemoSeed.requestedTab ?? tab }
-        #endif
     }
 
     /// One `NavigationStack` per tab, which is the standard iOS shape. A single

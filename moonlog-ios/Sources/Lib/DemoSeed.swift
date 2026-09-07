@@ -64,7 +64,7 @@ enum DemoSeed {
         UserDefaults.standard.bool(forKey: "moonlogDumpHandoff")
     }
 
-    /// `-moonlogSettingsSheet family|baby|history` — presents one of the surfaces
+    /// `-moonlogSettingsSheet family|baby` — presents one of the surfaces
     /// that moved off Tonight and Summary into Settings. Without this they are
     /// only reachable by tapping, which is what `-moonlogShiftHours` exists to fix.
     static var requestedSettingsSheet: String? {
@@ -79,10 +79,48 @@ enum DemoSeed {
         UserDefaults.standard.bool(forKey: "moonlogDemoWrite")
     }
 
+    /// `-moonlogResetStore YES` — empties the store before seeding.
+    ///
+    /// The UI test target needs it: the seed deliberately fires only into an empty
+    /// store, so without a reset the second test in a run inherits whatever the
+    /// first one logged, and a suite whose tests are order-dependent is worse than
+    /// no suite. Also gated on `isRequested`, so it can only ever run in a seeded
+    /// launch and can never be the thing that empties a real night.
+    static var wantsStoreReset: Bool {
+        UserDefaults.standard.bool(forKey: "moonlogResetStore")
+    }
+
+    /// The other half of the reset, and it has to run before anything reads a
+    /// preference — so it is called from `MoonlogApp.init`, not from
+    /// `seedIfNeeded`, whose position in static-initialisation order is not
+    /// something to depend on.
+    ///
+    /// Without this the suite is order-dependent in the worst way: a test that
+    /// turns on "Ask before" leaves it on, and a later test that taps a tile gets a
+    /// dialog it never asked for and fails somewhere unrelated. Every `moonlog.`
+    /// key goes, which is what a fresh install actually looks like.
+    static func resetPreferencesIfRequested() {
+        guard isRequested, wantsStoreReset else { return }
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("moonlog.") {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
     @MainActor
     static func seedIfNeeded(_ container: ModelContainer) {
         guard isRequested else { return }
         let context = ModelContext(container)
+        if wantsStoreReset {
+            // `Family` cascades to babies, shifts, and through those to every
+            // record; note tags hang off the family too. Deleting the roots is
+            // enough, and asking for the whole graph would be a second place for
+            // the delete rules to be described.
+            for family in (try? context.fetch(FetchDescriptor<Family>())) ?? [] {
+                context.delete(family)
+            }
+            try? context.save()
+        }
         guard (try? context.fetch(FetchDescriptor<Family>()))?.isEmpty ?? false else { return }
 
         let now = Date()

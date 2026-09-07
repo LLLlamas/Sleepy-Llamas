@@ -12,6 +12,17 @@ struct FamilyRoster {
     let all: [Family]
     let select: (UUID) -> Void
     let create: (String, String, Date, VolumeUnit) -> Void
+    /// Answered by `RootView`, which already runs the open-shift query. Settings
+    /// asks so it can say *why* a household cannot be removed before the store
+    /// refuses it — an alert after the fact is a worse way to learn that.
+    let hasOpenShift: (UUID) -> Bool
+}
+
+/// The two-step erase confirmation. An enum rather than two `Bool`s, so the two
+/// steps cannot both be true and there is only ever one alert to present.
+private enum EraseStep: Identifiable {
+    case first, second
+    var id: Self { self }
 }
 
 struct SettingsView: View {
@@ -24,16 +35,17 @@ struct SettingsView: View {
     @AppStorage("moonlog.deepNight") private var legacyDeepNight = false
     @State private var newTag = ""
     @State private var addingFamily = false
+    /// The household being renamed or removed. Adding one and correcting one are
+    /// the same kind of act and belong on the same screen.
+    @State private var editingFamily: Family?
     @State private var addingBaby = false
     /// The baby whose name, colour or birth date is being corrected. Editing one
     /// also lives on Tonight, on her card; it is here as well because a wrong
     /// birth date is a setup mistake, and Tonight has no cards to tap between
     /// shifts.
     @State private var editingBaby: Baby?
-    /// Drives the push to `HistoryView`. State rather than a `NavigationLink`'s
-    /// own routing so there is exactly one way in — a screenshot run can set it,
-    /// which a `NavigationLink` cannot be made to do without a second route.
-    @State private var showingHistory = false
+    /// Which of the two erase confirmations is up. See `resetSection`.
+    @State private var confirmingErase: EraseStep?
     /// The tags a swipe is asking to delete. Deleting a tag has no Undo — it is not a
     /// `CareStore` write with a reversing twin, it goes through `StoreWrite` — so
     /// this is the one place in Settings that can ask first.
@@ -61,6 +73,7 @@ struct SettingsView: View {
             appearanceSection
             confirmSection
             dataSection
+            resetSection
         }
         .moonForm(palette)
         // On the Form for the same reason the destination below is: the row that
@@ -82,22 +95,43 @@ struct SettingsView: View {
         } message: { _ in
             Text("Notes already written keep the tag. It stops being offered as a chip.")
         }
-        // On the Form, never inside the Section that triggers it. A
-        // `navigationDestination` declared inside a lazy container is only
-        // registered once that row has been built, and pushing it before then
-        // lands on a blank screen — which is exactly what this did.
-        .navigationDestination(isPresented: $showingHistory) {
-            if let family {
-                HistoryView(family: family)
+        .alert(
+            confirmingErase == .first ? "Erase everything?" : "Really erase everything?",
+            isPresented: Binding(
+                get: { confirmingErase != nil },
+                set: { if !$0 { confirmingErase = nil } })
+        ) {
+            if confirmingErase == .first {
+                Button("Erase", role: .destructive) { confirmingErase = .second }
             } else {
-                // The same guard `TonightView.coreSheet` uses: the household went
-                // away between the tap and the push. An empty destination is a
-                // blank screen whose only exit is the back button.
-                Color.clear.onAppear { showingHistory = false }
+                Button("Erase everything", role: .destructive) {
+                    confirmingErase = nil
+                    Haptics.warn()
+                    run { try await $0.eraseEverything() }
+                }
             }
+            Button("Cancel", role: .cancel) { confirmingErase = nil }
+        } message: {
+            Text(confirmingErase == .first
+                 ? "Every client family, every night and every record on this "
+                   + "device. There is no undo."
+                 : "Last chance. The app will restart at the welcome screen.")
         }
         .sheet(isPresented: $addingFamily) {
             AddFamilySheet(onAdd: roster.create)
+        }
+        .sheet(item: $editingFamily) { family in
+            let id = family.id
+            FamilyDetailSheet(
+                name: family.name,
+                babyCount: family.activeBabies.count,
+                hasOpenShift: roster.hasOpenShift(id)
+            ) { name in
+                run { try await $0.renameFamily(id, name: name) }
+            } onDelete: {
+                run { try await $0.deleteFamily(id) }
+            }
+            .presentationDetents([.medium, .large])
         }
         .sheet(item: $editingBaby) { baby in
             let id = baby.id
@@ -129,7 +163,6 @@ struct SettingsView: View {
             switch DemoSeed.requestedSettingsSheet {
             case "family": addingFamily = true
             case "baby": addingBaby = true
-            case "history": showingHistory = true
             default: break
             }
         }
@@ -176,6 +209,15 @@ struct SettingsView: View {
                 addingFamily = true
             } label: {
                 Label("Add client family", systemImage: "person.2.badge.plus")
+            }
+
+            if let current = family {
+                Button {
+                    Haptics.tap()
+                    editingFamily = current
+                } label: {
+                    Label("Rename or remove \(current.name)", systemImage: "square.and.pencil")
+                }
             }
         } header: {
             Text("Client family")
@@ -233,6 +275,32 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
                 .accessibilityHint("Edit \(baby.name)")
             }
+            // Drag to reorder. Card position on Tonight is muscle memory at 3am —
+            // the thumb goes to a place, not to a name — so which twin is on top
+            // is worth being able to set once, in daylight.
+            .onMove { offsets, destination in
+                var order = family.activeBabies.map(\.id)
+                order.move(fromOffsets: offsets, toOffset: destination)
+                Haptics.tap()
+                run { try await $0.reorderBabies(order, familyID: family.id) }
+            }
+
+            // Removing a baby is one tap in a sheet; without this it was permanent.
+            ForEach(archivedBabies(family)) { baby in
+                HStack {
+                    BabyChip(name: baby.name, accent: baby.accent)
+                        .opacity(0.55)
+                    Spacer()
+                    Button("Put back") {
+                        Haptics.tap()
+                        run { try await $0.restoreBaby(baby.id) }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(palette.accent)
+                }
+            }
+
             Button {
                 Haptics.tap()
                 addingBaby = true
@@ -240,12 +308,33 @@ struct SettingsView: View {
                 Label("Add baby", systemImage: "person.badge.plus")
             }
         } header: {
-            Text("Babies")
+            HStack {
+                Text("Babies")
+                Spacer()
+                // An explicit `EditButton`, not a hidden long-press: `onMove`
+                // needs edit mode, and a gesture nobody is told about is the same
+                // as no feature. It appears only when there is an order to change.
+                if family.activeBabies.count > 1 {
+                    EditButton()
+                        .font(.footnote.weight(.semibold))
+                        .textCase(nil)
+                }
+            }
         } footer: {
-            Text("Tap a baby to correct her name, colour or birth date. The birth "
-                 + "date is what \"Day 4\" on the handoff counts from.")
+            Text("Tap a baby to correct her name, colour or birth date — the birth "
+                 + "date is what \"Day 4\" on the handoff counts from. Edit to change "
+                 + "which twin sits on top of Tonight.")
         }
         .listRowBackground(palette.raised)
+    }
+
+    /// Removed babies, so a removal can be taken back. They keep their records and
+    /// stay on every night they were actually here; this only puts them back on
+    /// Tonight.
+    private func archivedBabies(_ family: Family) -> [Baby] {
+        (family.babies ?? [])
+            .filter(\.isArchived)
+            .sorted { $0.sortOrder < $1.sortOrder }
     }
 
     // MARK: - History
@@ -253,20 +342,22 @@ struct SettingsView: View {
     /// Past nights used to render under tonight's totals on Summary, and — because
     /// that section only appeared in the branch with no open shift — were
     /// unreachable during the shift itself. Here they are reachable all night.
+    /// A plain `NavigationLink`, after two rounds of the state-driven version not
+    /// working. `.navigationDestination(isPresented:)` declared on the `Form` was
+    /// **never registered**: setting the flag during the first appear brought the
+    /// whole app up blank white — no tab bar, no navigation bar, alive and
+    /// rendering nothing — and setting it any later did nothing at all. The route
+    /// was recorded as fixed and verified when neither was true; what verified it
+    /// was the launch argument, which pushed into the same dead destination.
+    ///
+    /// A `NavigationLink` inside a `List` row is the one shape that has never
+    /// failed here. It also drops a piece of state, a modifier and a debug hook.
     private func historySection(_ family: Family) -> some View {
         Section {
-            Button {
-                Haptics.tap()
-                showingHistory = true
+            NavigationLink {
+                HistoryView(family: family)
             } label: {
-                HStack {
-                    Label("Past nights", systemImage: "calendar")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(palette.faint)
-                }
-                .contentShape(Rectangle())
+                Label("Past nights", systemImage: "calendar")
             }
             .foregroundStyle(palette.ink)
         }
@@ -394,6 +485,34 @@ struct SettingsView: View {
             // Previously this was in a code comment claiming Settings surfaced
             // it. There was no Settings, so a fallback to memory was silent.
             Text(storageFooter)
+        }
+        .listRowBackground(palette.raised)
+    }
+
+    /// Start over: every household, every night, gone.
+    ///
+    /// It ships in **Release**, not behind `#if DEBUG`, because the alternative way
+    /// back to a first run on a real phone is deleting and reinstalling the app —
+    /// which loses the TestFlight build and takes minutes. Walking the whole app
+    /// from onboarding is the only way to test the parts that only happen once.
+    ///
+    /// Last section on the screen, and it asks **twice**: the first alert says what
+    /// goes, the second is the one that does it. Two alerts rather than a typed
+    /// confirmation because the thumb that reaches this by accident is the same
+    /// thumb that would type "erase" without reading.
+    private var resetSection: some View {
+        Section {
+            Button(role: .destructive) {
+                Haptics.warn()
+                confirmingErase = .first
+            } label: {
+                Label("Erase everything and start over", systemImage: "trash")
+                    .frame(maxWidth: .infinity)
+            }
+        } footer: {
+            Text("Puts the app back to its first run — every client family, every "
+                 + "night and every record. Handoffs you have already sent to "
+                 + "parents are documents of their own and are not affected.")
         }
         .listRowBackground(palette.raised)
     }

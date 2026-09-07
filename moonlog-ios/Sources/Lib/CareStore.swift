@@ -53,6 +53,88 @@ actor CareStore {
         return baby.id
     }
 
+    /// Rename a household. Same trim-and-refuse-blank rule as a baby's name: the
+    /// family name heads the parents' document and sits above the clock all night.
+    func renameFamily(_ familyID: UUID, name: String) throws {
+        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
+        family.name = trimmed
+        try modelContext.save()
+    }
+
+    /// **A real delete**, and the only one in this file.
+    ///
+    /// Babies are archived rather than deleted because a name has to survive in
+    /// every past handoff. A whole household is different: deleting it is how you
+    /// undo adding the wrong one, or drop a client whose work is finished and whose
+    /// records you have no business keeping. The cascade takes the babies, the
+    /// shifts, and through the shifts every record and sleep session.
+    ///
+    /// Refuses while a shift is open, so a night in progress cannot be deleted from
+    /// under itself by a mis-tap two screens away.
+    func deleteFamily(_ familyID: UUID) throws {
+        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        if try openShift(familyID: familyID) != nil { throw CareStoreError.shiftAlreadyOpen }
+        modelContext.delete(family)
+        try modelContext.save()
+    }
+
+    /// Card order, which is muscle memory at 3am and therefore worth setting once.
+    ///
+    /// Takes the whole ordered list rather than a move, so the result cannot depend
+    /// on what the caller thought the previous order was. Ids that are not this
+    /// family's are ignored.
+    func reorderBabies(_ orderedIDs: [UUID], familyID: UUID) throws {
+        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+        let mine = Dictionary(
+            uniqueKeysWithValues: (family.babies ?? []).map { ($0.id, $0) })
+        for (index, id) in orderedIDs.enumerated() {
+            mine[id]?.sortOrder = index
+        }
+        try modelContext.save()
+    }
+
+    /// Puts an archived baby back on the roster. Archiving is reversible from the
+    /// same row that did it; without this, one mis-tap on Remove was permanent.
+    func restoreBaby(_ babyID: UUID) throws {
+        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+        baby.isArchived = false
+        try modelContext.save()
+    }
+
+    /// Empties the store completely — every household and everything under it.
+    ///
+    /// Ships in Release, deliberately. It is how the app gets tested end to end on
+    /// a real device without deleting and reinstalling it, which is the only other
+    /// way back to a first run. It sits at the bottom of Settings behind two
+    /// confirmations, and it is the one control in the app that is worth being hard
+    /// to reach by accident.
+    func eraseEverything() throws {
+        for family in try modelContext.fetch(FetchDescriptor<Family>()) {
+            modelContext.delete(family)
+        }
+        // Records whose family relationship went nil at some point would survive a
+        // cascade from the roots, and a "start over" that leaves rows behind is
+        // worse than no button at all.
+        for shift in try modelContext.fetch(FetchDescriptor<Shift>()) {
+            modelContext.delete(shift)
+        }
+        for baby in try modelContext.fetch(FetchDescriptor<Baby>()) {
+            modelContext.delete(baby)
+        }
+        for event in try modelContext.fetch(FetchDescriptor<LogEvent>()) {
+            modelContext.delete(event)
+        }
+        for session in try modelContext.fetch(FetchDescriptor<SleepSession>()) {
+            modelContext.delete(session)
+        }
+        for tag in try modelContext.fetch(FetchDescriptor<NoteTagPreset>()) {
+            modelContext.delete(tag)
+        }
+        try modelContext.save()
+    }
+
     func setVolumeUnit(_ unit: VolumeUnit, familyID: UUID) throws {
         guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
         family.volumeUnitRaw = unit.rawValue

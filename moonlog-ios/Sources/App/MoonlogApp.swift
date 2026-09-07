@@ -3,6 +3,15 @@ import SwiftData
 
 @main
 struct MoonlogApp: App {
+    init() {
+        #if DEBUG
+        // Before any `@AppStorage` or `ConfirmPreferences` read. See the note on
+        // `resetPreferencesIfRequested`; it does nothing unless the app was
+        // launched with both the seed and the reset arguments.
+        DemoSeed.resetPreferencesIfRequested()
+        #endif
+    }
+
     /// Built once, on the main actor. The factory degrades to a local store rather
     /// than crashing, so a CloudKit problem never costs the night's logs.
     @MainActor

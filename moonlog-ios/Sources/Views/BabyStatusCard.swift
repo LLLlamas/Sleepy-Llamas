@@ -105,7 +105,8 @@ struct BabyStatusCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(baby.name), day \(baby.dayOfLife). Edit name and colour.")
+        .accessibilityLabel(
+            "\(baby.name), day \(baby.dayOfLife). Edit name, birth date and colour.")
     }
 
     // **The tile toggles, at the time you tapped it.** It is the biggest target on

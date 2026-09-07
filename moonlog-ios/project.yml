@@ -136,8 +136,32 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Moonlog.app/Moonlog
         BUNDLE_LOADER: $(TEST_HOST)
 
-# Explicit scheme so `xcodebuild test` works locally — the auto-generated
+  # Reachability tests. Everything here launches the real app and taps, because
+  # this project's recurring failure is not wrong logic — it is correct logic with
+  # no route to it. Three features have shipped built-and-unreachable, and a green
+  # unit suite said nothing about any of them.
+  MoonlogUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/MoonlogUITests
+    dependencies:
+      - target: Moonlog
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sleepyllamas.moonlog.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+        TEST_TARGET_NAME: Moonlog
+
+# Explicit schemes so `xcodebuild test` works locally — the auto-generated
 # scheme has no test action.
+#
+# Two schemes, not one: the unit suite runs in under a second and is what you run
+# on every edit, and the UI suite launches the app once per test and takes minutes.
+# Putting them together would have made the fast one slow, which is how a suite
+# stops being run.
 schemes:
   Moonlog:
     build:
@@ -147,3 +171,12 @@ schemes:
       targets:
         - MoonlogCoreTests
         - MoonlogTests
+
+  MoonlogUI:
+    build:
+      targets:
+        Moonlog: all
+        MoonlogUITests: [test]
+    test:
+      targets:
+        - MoonlogUITests

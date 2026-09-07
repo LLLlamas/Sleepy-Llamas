@@ -119,3 +119,41 @@ one means editing that grep in the same change; `moonlogSettingsSheet` is in it.
 
 Some bugs only appear when the thing runs: the CloudKit launch crash and the theme
 latch were both invisible to the test suite.
+
+## The reachability suite
+
+`Tests/MoonlogUITests`, run through its own **`MoonlogUI` scheme**:
+
+```bash
+xcodebuild -project Moonlog.xcodeproj -scheme MoonlogUI \
+  -destination "platform=iOS Simulator,name=iPhone 17 Pro" test
+```
+
+It is a second scheme rather than a second target in the first because it launches
+the app once per test and takes minutes, where the unit suite takes under a second.
+Bolted together, the fast one stops being run on every edit, and that one is the
+one that catches things.
+
+**What it is for is narrower than "UI tests".** This project's failures have not
+been wrong logic — the logic has a suite and the suite is green. They have been
+correct logic with **no route to it**: `Totals.compute` fully tested with no caller
+until Summary existed; the Note button declared, passed a closure, and never
+rendered, through two TestFlight builds; Copy and Share on the handoff; the
+`reassignEvent` remedy; `archiveBaby` with no call site anywhere; History pushing a
+blank screen because its `.navigationDestination` sat inside a `Section`. Every one
+of those was invisible to a compiler and to 188 green unit tests.
+
+So the assertions are about **whether a thumb can get there**, and they use
+`isHittable` rather than `exists` — a row below the fold exists, and tapping it
+silently does nothing. `MoonlogUITestCase.reveal(_:)` scrolls until an element is
+genuinely tappable and fails saying which of the two it was.
+
+**Isolation.** The seed only fires into an empty store, so without a reset the
+second test in a run inherits whatever the first logged. `-moonlogResetStore YES`
+empties the store *and* removes every `moonlog.` preference key, which is what a
+fresh install actually looks like — the preference half matters because a test that
+turns on "Ask before" would otherwise leave it on and fail an unrelated test three
+classes later. It is gated on the seed argument as well, so it can never be the
+thing that empties a real night.
+
+**Add a case whenever a control moves**, and run it before an archive.

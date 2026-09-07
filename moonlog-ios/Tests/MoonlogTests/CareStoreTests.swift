@@ -506,6 +506,120 @@ final class CareStoreTests: XCTestCase {
         }
     }
 
+    // MARK: - The household itself
+
+    func testRenamingAFamilyTrimsAndRefusesBlank() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        try await store.renameFamily(family, name: "  Nguyen-Hall  ")
+        let context = ModelContext(container)
+        XCTAssertEqual(
+            try XCTUnwrap(
+                context.fetch(FetchDescriptor<Family>(predicate: #Predicate { $0.id == family }))
+                    .first).name,
+            "Nguyen-Hall")
+
+        do {
+            try await store.renameFamily(family, name: " ")
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .emptyName)
+        }
+    }
+
+    /// The app's only real delete. A baby is archived so her name survives in past
+    /// handoffs; a whole household goes, and takes everything under it.
+    func testDeletingAFamilyTakesItsBabiesShiftsAndRecords() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        _ = try await store.logEvent(
+            kind: .feed, at: shiftStart.addingTimeInterval(600), shiftID: shift, babyID: mia)
+        try await store.endShift(shift, endedAt: shiftStart.addingTimeInterval(3600))
+
+        try await store.deleteFamily(family)
+
+        let context = ModelContext(container)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Family>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Baby>()).isEmpty, "babies cascaded")
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Shift>()).isEmpty, "shifts cascaded")
+        XCTAssertTrue(try context.fetch(FetchDescriptor<LogEvent>()).isEmpty, "records cascaded")
+    }
+
+    /// A night in progress cannot be deleted from under itself by a mis-tap two
+    /// screens away.
+    func testAFamilyCannotBeDeletedWhileAShiftIsRunning() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        _ = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        do {
+            try await store.deleteFamily(family)
+            XCTFail("expected rejection")
+        } catch {
+            XCTAssertEqual(error as? CareStoreError, .shiftAlreadyOpen)
+        }
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<Family>()).count, 1)
+    }
+
+    /// Card position is muscle memory: the thumb goes to a place, not a name.
+    func testReorderingBabies() async throws {
+        let (family, mia, leo) = try await makeFamilyWithTwins()
+        try await store.reorderBabies([leo, mia], familyID: family)
+
+        let context = ModelContext(container)
+        let familyModel = try XCTUnwrap(
+            context.fetch(FetchDescriptor<Family>(predicate: #Predicate { $0.id == family })).first)
+        XCTAssertEqual(familyModel.activeBabies.map(\.name), ["Leo", "Mia"])
+    }
+
+    /// An id from another household must not be able to reshuffle this one.
+    func testReorderingIgnoresIDsFromAnotherFamily() async throws {
+        let (family, mia, leo) = try await makeFamilyWithTwins()
+        let other = try await store.createFamily(name: "Okafor")
+        let ada = try await store.addBaby(
+            to: other, name: "Ada", birthAt: Date(timeIntervalSince1970: 1_787_000_000))
+
+        try await store.reorderBabies([ada, leo, mia], familyID: family)
+
+        let context = ModelContext(container)
+        let otherModel = try XCTUnwrap(
+            context.fetch(FetchDescriptor<Family>(predicate: #Predicate { $0.id == other })).first)
+        XCTAssertEqual(otherModel.activeBabies.map(\.sortOrder), [0], "Ada untouched")
+    }
+
+    /// Removing a baby is one tap in a sheet; without this it was permanent.
+    func testAnArchivedBabyCanBePutBack() async throws {
+        let (_, mia, _) = try await makeFamilyWithTwins()
+        try await store.archiveBaby(mia)
+        try await store.restoreBaby(mia)
+
+        let baby = try XCTUnwrap(
+            ModelContext(container)
+                .fetch(FetchDescriptor<Baby>(predicate: #Predicate { $0.id == mia })).first)
+        XCTAssertFalse(baby.isArchived)
+    }
+
+    /// The reset button. It ships in Release, so it gets a test that says the store
+    /// is genuinely empty afterwards and not merely detached from its roots.
+    func testEraseEverythingLeavesNothingBehind() async throws {
+        let (family, mia, _) = try await makeFamilyWithTwins()
+        let shift = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: "Cat")
+        _ = try await store.logEvent(
+            kind: .feed, at: shiftStart.addingTimeInterval(600), shiftID: shift, babyID: mia)
+        _ = try await store.toggleSleep(
+            shiftID: shift, babyID: mia, at: shiftStart.addingTimeInterval(900))
+
+        try await store.eraseEverything()
+
+        let context = ModelContext(container)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Family>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Baby>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Shift>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<LogEvent>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<SleepSession>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<NoteTagPreset>()).isEmpty, "tags too")
+    }
+
     // MARK: - Who a shift is about
 
     /// The Summary cards used to come from `activeBabies`, so archiving a baby

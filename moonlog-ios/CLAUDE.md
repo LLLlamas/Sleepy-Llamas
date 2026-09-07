@@ -27,6 +27,21 @@ xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
   -destination "platform=iOS Simulator,name=iPhone 17 Pro" test
 ```
 
+The **reachability** suite is a second scheme, because it launches the app once per
+test and takes minutes where the unit suite takes under a second — together, the
+fast one stops being run:
+
+```bash
+xcodebuild -project Moonlog.xcodeproj -scheme MoonlogUI \
+  -destination "platform=iOS Simulator,name=iPhone 17 Pro" test
+```
+
+It exists because this project's recurring failure is not wrong logic, it is
+correct logic with no route to it. Run it before an archive, and add a case to it
+whenever a control moves. Each test launches with `-moonlogResetStore`, which
+empties the store **and** every `moonlog.` preference, so the tests do not depend on
+each other's leftovers.
+
 `Moonlog.xcodeproj` is generated and gitignored — never edit it, never commit it.
 Adding a new `Sources/` subdirectory means adding it to `project.yml`; XcodeGen
 errors on a source path that does not exist yet.
@@ -83,10 +98,15 @@ which is the source of truth and is committed.
   mint a lookalike.
 - **Calendar arithmetic for calendar quantities, `TimeInterval` for physical
   durations, never multiply to cross a day boundary.** See `docs/testing.md`.
-- **Never declare `.navigationDestination` inside a `Form`, `List` or any other
-  lazy container.** It is not registered until the row containing it has been
-  built, so a push that fires first lands on a blank screen with a working back
-  button. Put it on the container. Cost when this was learned: one screenshot.
+- **Prefer a `NavigationLink` inside the row. `.navigationDestination(isPresented:)`
+  has never worked in this app.** Declared inside a `Section` it is not registered
+  until that row is built, so the push lands on a blank screen — that much was
+  known. Moving it to the `Form` was recorded as the fix and **was not one**: the
+  destination stayed dead, setting the flag during the first appear brought the
+  whole app up *blank white* — no tab bar, no navigation bar, alive and rendering
+  nothing — and setting it any later did nothing at all. Both states were reached
+  through the launch argument that was supposed to be *verifying* the route, which
+  is why it read as working twice. History is a `NavigationLink` now.
 - **Use `.alert` for a confirmation, never `.confirmationDialog`.** Inside a sheet
   a confirmation dialog presents as a **popover**, and a popover drops the cancel
   action — so "are you sure?" renders with a destructive button and no way out but

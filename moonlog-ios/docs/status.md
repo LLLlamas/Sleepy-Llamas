@@ -61,6 +61,7 @@ verification table and the command-line upload path.
 | **Summary keeps the night just ended, with Copy and Share** | done |
 | **Summary's cards use the handoff's roster rule, not `activeBabies`** | fixed |
 | **Feed minutes step by 5; Undo's tap target is a real target** | done |
+| **A UI test target — the reachability suite, its own `MoonlogUI` scheme** | done |
 
 188 tests green (91 in `MoonlogCoreTests`, 97 in `MoonlogTests`), up from 184.
 Four new, all in `CareStoreTests`: correcting a birth date, rejecting a future one
@@ -165,14 +166,8 @@ onboarding line that said "later" without saying where.
 **CloudKit is deferred, not next** — see the correction below and `docs/cloudkit.md`.
 **NFC is backlog**, scoped in `docs/next-features.md` and not being built.
 
-1. **A UI test target**, now the only item left from the old list and the one piece
-   of tooling this project does not have. Three changes this session were driven
-   and screenshotted through a throwaway project in `/tmp` — the Note button
-   opening its sheet, the baby editor carrying a birth date, and picking Night
-   holding through a tab change on a phone in Light appearance. That throwaway is
-   most of the target already; it needs moving in and pointing at the real one.
-2. The reach problem on the log sheets — first bullet above.
-3. Known issue 8, `EventKind` having no `unknown` case.
+1. The reach problem on the log sheets — first bullet above.
+2. Known issue 8, `EventKind` having no `unknown` case.
 
 **Dropped on 2026-09-05, deliberately:**
 
