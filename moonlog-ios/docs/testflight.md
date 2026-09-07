@@ -52,6 +52,29 @@ Babies, along with the client-family switcher — see `docs/decisions.md`.
   parents rather than something the app can read back.
 - **NFC.** Backlog. Needs the entitlement on the App ID and has no UI yet.
 
+## Shipped — 0.1.0 (1788793916), 2026-09-07
+
+The current build, and the one to test on. Archive verified clean of debug markers,
+uploaded by the command-line path below, no Release warnings.
+
+**The reset is in this build.** Settings › bottom › *Erase everything and start
+over*. It ships in Release on purpose: the only other way back to a first run on a
+real phone is deleting the app, which loses the TestFlight build. One alert, and
+then you are on the welcome screen.
+
+New since 1788733948:
+
+| What | Where to look |
+|---|---|
+| Erase everything and start over | Settings, last section |
+| Rename or remove a client family | Settings › Client family. Removal is refused while a shift is running, and says so |
+| Reorder babies | Settings › Babies › Edit. Changes which twin sits on top of Tonight |
+| Put a removed baby back | Settings › Babies, under the active ones |
+| **Save is at the bottom of every log sheet** | Any log sheet. It was in the top-right corner |
+| A feed logs on its time alone | Feed → Save, without touching the steppers |
+| Past nights actually opens | Settings › Past nights. It pushed a dead destination in every build before this |
+| No shift running → you land on Tonight | Erase everything and watch where you end up |
+
 ## Shipped — 0.1.0 (1788733948), 2026-09-06
 
 The current build, and the one to test on. Archive verified clean of debug markers,
