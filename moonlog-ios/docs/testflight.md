@@ -56,6 +56,7 @@ All 0.1.0. Newest first.
 
 | Build | Date | What it added |
 |---|---|---|
+| 1788796092 | 09-07 | **The clock at the top of Tonight now matches the status bar** — same minute, same rollover, same zone. Check it against the phone's own clock at a minute boundary. The eyebrow is the family name alone; "on since" is gone. |
 | 1788793916 | 09-07 | Erase everything and start over (ships in Release — the only other way back to a first run is deleting the app, which loses the TestFlight build). Rename or remove a client family; reorder babies and put a removed one back. **Save moved to the bottom of every log sheet.** A feed logs on its time alone. **Past nights actually opens** — it pushed a dead destination in every earlier build. |
 | 1788733948 | 09-06 | **The Note button, which did not exist in any earlier build** — `BabyStatusCard` declared `onNote`, `TonightView` passed a closure, and the row rendered three controls, so notes, note tags, temperature and the fever badge were unreachable. Appearance as Follow phone / Night / Deep Night. Feed minutes step by 5. Edit a birth date; remove a baby. Summary keeps the night just ended. |
 | 1788712279 | 09-06 | The maroon gradient and night header; the switcher moved into Settings; History as its own screen; the tile's "since" on both states; "Ask before"; **every confirmation converted from `confirmationDialog` to `alert`** — the old ones presented as popovers with no Cancel. Tile toggles on tap, tinted by the baby's colour. (1788708510, same day, carries only the first three.) |
