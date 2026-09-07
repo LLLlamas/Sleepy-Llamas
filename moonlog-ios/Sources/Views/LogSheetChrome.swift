@@ -227,19 +227,47 @@ struct LogSheetChrome<Content: View>: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        guard !isSaving else { return }
-                        isSaving = true
-                        Haptics.commit()
-                        onSave()
-                        dismiss()
-                    }
-                    .disabled(!canSave)
-                }
             }
+            .safeAreaInset(edge: .bottom) { saveBar }
         }
         .tint(palette.accent)
+    }
+
+    /// Save, at the bottom, full width.
+    ///
+    /// It was in the navigation bar's trailing corner, which on a 6.3" phone is
+    /// about 800pt from a thumb holding the phone — for the action that ends every
+    /// log of the night, performed one-handed with a baby in the other arm. The
+    /// *destructive* Delete in the same sheet was already a comfortable full-width
+    /// row at the bottom, so the easy control was the dangerous one.
+    ///
+    /// A `safeAreaInset` rather than a last `Section`: it stays put while the form
+    /// scrolls, rises with the keyboard, and cannot end up below the fold in a
+    /// sheet whose content is longer than the screen. Cancel stays in the bar,
+    /// where a control you rarely want belongs.
+    private var saveBar: some View {
+        Button {
+            guard !isSaving else { return }
+            isSaving = true
+            Haptics.commit()
+            onSave()
+            dismiss()
+        } label: {
+            Text("Save")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .frame(height: MoonLayout.tapTarget)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(canSave ? palette.accentInk : palette.faint)
+        .background(
+            canSave ? palette.accent : palette.chip,
+            in: RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
+        .disabled(!canSave)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .background(.bar)
     }
 }
 

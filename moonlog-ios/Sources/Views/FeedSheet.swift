@@ -45,16 +45,6 @@ struct FeedSheet: View {
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
 
-    /// Something must have been entered — an empty feed record helps nobody.
-    private var hasContent: Bool {
-        switch method {
-        case .bottleBreastmilk, .bottleFormula: return amountMl > 0 || bottleMinutes > 0
-        case .breast: return leftMinutes + rightMinutes > 0
-        // An unrecorded method is already saved; editing its time alone is valid.
-        case .unknown: return true
-        }
-    }
-
     var body: some View {
         LogSheetChrome(
             title: editing == nil ? "Feed" : "Edit feed",
@@ -63,7 +53,14 @@ struct FeedSheet: View {
             at: $at,
             shift: shift,
             reassignment: reassignment,
-            saveEnabled: hasContent,
+            // No gate. A feed used to need a volume or a time at the breast before
+            // it could be saved, on the grounds that an empty record helps nobody —
+            // but the record was never empty: "she fed at the breast at 3:12" is the
+            // fact that drives "last fed" and the overdue warning, and it is the one
+            // you have when a baby unlatches and goes back down before you have
+            // touched the phone. Refusing it lost the whole feed to save a detail.
+            // `Handoff.warmFeed` already renders a bare "breast".
+            saveEnabled: true,
             onSave: save,
             onDelete: onDelete
         ) {

@@ -66,6 +66,8 @@ verification table and the command-line upload path.
 | **Reorder babies, and put a removed one back** | done |
 | **Erase everything and start over — ships in Release** | done |
 | **Past nights, as a `NavigationLink` that actually pushes** | fixed |
+| **Save moved to the bottom of every log sheet, full width** | done |
+| **A feed logs on its time alone — two taps** | done |
 
 188 tests green (91 in `MoonlogCoreTests`, 97 in `MoonlogTests`), up from 184.
 Four new, all in `CareStoreTests`: correcting a birth date, rejecting a future one
@@ -152,18 +154,20 @@ onboarding line that said "later" without saying where.
 
 **Raised and not done**, in its order:
 
-- **Every log sheet ends with a stretch to the top-right.** Save is in
-  `.confirmationAction` and the log sheets are presented full-height, so the most
-  repeated confirm of the night is ~800pt from the thumb — while the *destructive*
-  Delete in the same sheet is a comfortable full-width row at the bottom. Not
-  taken: `.presentationDetents([.medium, .large])` risks hiding fields behind the
-  keyboard, and a bottom Save row duplicates a control. It wants a real look at
-  the sheets rather than a one-line change.
+- ~~Every log sheet ends with a stretch to the top-right.~~ **Done.** Save is a
+  full-width button held at the bottom by a `safeAreaInset` — it stays put while
+  the form scrolls and rises with the keyboard, so it cannot end up below the fold.
+  Cancel stays in the bar, where a control you rarely want belongs. The
+  `presentationDetents` route was not taken: a medium detent hides fields behind
+  the keyboard.
+- ~~There is no way to remove a client family.~~ **Done**, along with renaming one.
 - **Summary's Copy sits in the top-*left* corner** — the least reachable point for
   a right thumb, for an action performed while packing up. Moving it into the share
-  menu on the right costs a tap; leaving it costs the reach. Undecided.
-- **There is no way to remove a client family**, only a baby. `OnboardingView`
-  already admits this in a comment.
+  menu on the right costs a tap; leaving it costs the reach. Still undecided, and
+  unlike the log sheets this is a once-a-night action rather than a forty-times one.
+- **A disabled Save says nothing about why.** It no longer applies to a feed, which
+  saves on its time alone, but a note with nothing in it and a pump with no volume
+  still refuse silently. `saveEnabled` is a `Bool` with no reason attached.
 
 ## The reachability suite, and what it found on its first run
 

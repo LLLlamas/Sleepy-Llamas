@@ -39,6 +39,30 @@ final class ReachabilityTests: MoonlogUITestCase {
         XCTAssertTrue(app.buttons["Cancel"].exists, "a way out")
     }
 
+    /// The night's most repeated action, end to end, counting the taps.
+    ///
+    /// It used to be unloggable in two: a breast feed refused to save until you had
+    /// stepped the minutes up from zero, so the record was lost to save a detail —
+    /// and Save was in the navigation bar's far corner, about 800pt from a thumb
+    /// holding the phone one-handed.
+    func testAFeedCanBeLoggedInTwoTaps() {
+        launch()
+        reveal(cardButton("Feed", for: "Mia")).tap()
+
+        let save = app.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5), "no Save")
+        XCTAssertTrue(save.isEnabled, "a feed cannot be logged on its time alone")
+        // Bottom third of the screen, where a thumb holding the phone can reach it.
+        XCTAssertGreaterThan(
+            save.frame.midY, app.frame.height * 0.66,
+            "Save is stranded out of thumb reach")
+        save.tap()
+
+        XCTAssertTrue(
+            app.buttons["Undo"].waitForExistence(timeout: 5),
+            "the feed did not log, or logged without an Undo")
+    }
+
     func testFeedSheetOpensFromTheCard() {
         launch()
         reveal(cardButton("Feed", for: "Leo")).tap()
