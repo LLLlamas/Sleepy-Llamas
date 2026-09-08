@@ -17,7 +17,6 @@ struct ShiftDetailView: View {
     @Environment(\.careStore) private var store
     @State private var copied = false
     @State private var editingNote = false
-    @State private var saveError: String?
 
     private var zone: TimeZone {
         TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
@@ -41,9 +40,11 @@ struct ShiftDetailView: View {
                     // archived still has her rows in it. Filtering here rendered them
                     // nameless and colourless — the same gap the handoff had.
                     names: Dictionary(
-                        uniqueKeysWithValues: (family.babies ?? []).map { ($0.id, $0.name) }),
+                        (family.babies ?? []).map { ($0.id, $0.name) },
+                        uniquingKeysWith: { first, _ in first }),
                     accents: Dictionary(
-                        uniqueKeysWithValues: (family.babies ?? []).map { ($0.id, $0.accent) }))
+                        (family.babies ?? []).map { ($0.id, $0.accent) },
+                        uniquingKeysWith: { first, _ in first }))
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -81,19 +82,10 @@ struct ShiftDetailView: View {
                 babyNames: family.activeBabies.map(\.name).joined(separator: " & "),
                 existing: shift.parentNote ?? ""
             ) { text in
-                StoreWrite.run(store, onError: { saveError = $0 }) {
-                    try await $0.setShiftNote(shift.id, text: text)
-                }
+                guard let store else { throw EntrySaveError.unavailable }
+                try await store.setShiftNote(shift.id, text: text)
             }
             .presentationDetents([.medium, .large])
-        }
-        .alert(
-            "Couldn't save",
-            isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
-        ) {
-            Button("OK", role: .cancel) { saveError = nil }
-        } message: {
-            Text(saveError ?? "")
         }
     }
 

@@ -9,6 +9,27 @@ import XCTest
 /// and the app runs almost entirely on the wrong side of the first one.
 final class FormattersTests: XCTestCase {
 
+    func testMalformedStoredNumbersDoNotCrashDisplay() {
+        for value in [Double.nan, .infinity, -.infinity, .greatestFiniteMagnitude, Double(Int.max), -1] {
+            XCTAssertEqual(Fmt.amount(ml: value, unit: .ml), "—")
+            XCTAssertEqual(Fmt.amount(ml: value, unit: .oz), "—")
+            XCTAssertEqual(Fmt.amountTotal(ml: value, unit: .ml), "—")
+            XCTAssertEqual(Fmt.weight(grams: value, unit: .oz), "—")
+            XCTAssertEqual(Fmt.weight(grams: value, unit: .ml), "—")
+            XCTAssertEqual(Fmt.duration(value), "—")
+            XCTAssertEqual(Fmt.spanned(value), "—")
+            XCTAssertEqual(Fmt.paddedDuration(value), "—")
+        }
+        XCTAssertEqual(Fmt.temp(.nan), "—")
+    }
+
+    func testTypedOuncesAreNotRoundedToTheStepperGrid() {
+        XCTAssertEqual(Fmt.amount(ml: 2.25 * 29.5735, unit: .oz), "2.25 oz")
+        XCTAssertEqual(Fmt.amount(ml: 4 * 29.5735, unit: .oz), "4 oz")
+        XCTAssertEqual(Fmt.amount(ml: 0, unit: .oz), "0 oz")
+        XCTAssertEqual(Fmt.paddedDuration(25 * 3600), "25h 00m")
+    }
+
     private let zone = TimeZone(identifier: Zone.newYork)!
 
     private func at(_ wall: String) -> Date { makeDate(wall, Zone.newYork) }

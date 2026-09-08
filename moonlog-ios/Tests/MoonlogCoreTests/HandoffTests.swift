@@ -78,8 +78,8 @@ final class HandoffTests: XCTestCase {
     /// A logged feed rendering as "0 oz" in the parents' handoff is the worst output
     /// this app can produce. Reachable when a family logged in ml then switched.
     func testASmallAmountNeverRoundsAwayToZero() {
-        XCTAssertEqual(Fmt.amount(ml: 5, unit: .oz), "0.2 oz")
-        XCTAssertEqual(Fmt.amount(ml: 1, unit: .oz), "0.1 oz")
+        XCTAssertEqual(Fmt.amount(ml: 5, unit: .oz), "0.17 oz")
+        XCTAssertEqual(Fmt.amount(ml: 1, unit: .oz), "0.03 oz")
         XCTAssertFalse(Fmt.amount(ml: 5, unit: .oz).hasPrefix("0 oz"))
     }
 
@@ -180,7 +180,9 @@ final class HandoffTests: XCTestCase {
 
         let out = text(babies: roster, events: events)
         XCTAssertTrue(out.contains("— Leo · Day 6 —"), out)
-        XCTAssertTrue(out.contains("bottle, formula — 3 oz"), out)
+        // 90 ml is 3.04 oz. Direct amount entry means the display no longer snaps
+        // to the stepper's half-ounce grid, so a typed 2.25 oz reads back unaltered.
+        XCTAssertTrue(out.contains("bottle, formula — 3.04 oz"), out)
         XCTAssertFalse(out.contains("Not matched to a baby"),
                        "Leo is on the roster, so nothing of his is orphaned")
     }

@@ -6,7 +6,7 @@ struct FeedSheet: View {
     let shift: ShiftWindow
     let unit: VolumeUnit
     let editing: FeedEntry?
-    let onSave: (FeedEntry) -> Void
+    let onSave: (FeedEntry) async throws -> Void
     var onDelete: (() -> Void)?
     /// Forwarded to the chrome; set only when editing.
     var reassignment: Reassignment?
@@ -25,7 +25,7 @@ struct FeedSheet: View {
         editing: FeedEntry? = nil,
         reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
-        onSave: @escaping (FeedEntry) -> Void
+        onSave: @escaping (FeedEntry) async throws -> Void
     ) {
         self.baby = baby
         self.shift = shift
@@ -93,8 +93,8 @@ struct FeedSheet: View {
         }
     }
 
-    private func save() {
-        onSave(
+    private func save() async throws {
+        try await onSave(
             FeedEntry(
                 at: at,
                 method: method,

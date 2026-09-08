@@ -170,16 +170,15 @@ struct RootView: View {
         }
     }
 
-    /// Shared by first-run onboarding and the add-family sheet in Settings — the
-    /// same three writes, in the same order, so a second household is set up
-    /// exactly like the first.
+    /// Shared by first-run onboarding and the add-family sheet in Settings, and one
+    /// write rather than three: a rejected birth date used to leave a nameless,
+    /// babyless household on the switcher with no way back to the setup screen.
     private func createFamily(
         _ familyName: String, _ babyName: String, _ birthAt: Date, _ unit: VolumeUnit
     ) {
         run { store in
-            let familyID = try await store.createFamily(name: familyName)
-            try await store.setVolumeUnit(unit, familyID: familyID)
-            _ = try await store.addBaby(to: familyID, name: babyName, birthAt: birthAt)
+            let familyID = try await store.createFamilyWithBaby(
+                name: familyName, babyName: babyName, birthAt: birthAt, unit: unit)
             // Select what was just created. `families` is sorted oldest-first, so
             // without this a newly added household would open behind the one
             // already on screen — and since the switcher now lives in Settings,

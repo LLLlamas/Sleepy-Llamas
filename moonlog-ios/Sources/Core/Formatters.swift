@@ -4,12 +4,20 @@ import Foundation
 /// apart — both render the same night and must agree.
 public enum Fmt {
 
+    /// Stored data may predate input validation. Never let a malformed value trap
+    /// while opening the timeline or composing a handoff.
+    private static func roundedNonnegative(_ value: Double) -> Int? {
+        guard value.isFinite, value >= 0 else { return nil }
+        return Int(exactly: value.rounded())
+    }
+
     /// "1h 23m" / "48m" / "just now".
     ///
     /// Rounds once, at the point of display — everything upstream carries seconds.
     /// Zero-padded register for documents: "9h 09m". Used by the handoff header.
     public static func paddedDuration(_ seconds: TimeInterval) -> String {
-        let minutes = Int(max(0, seconds).rounded()) / 60
+        guard let total = roundedNonnegative(seconds) else { return "—" }
+        let minutes = total / 60
         return String(format: "%dh %02dm", minutes / 60, minutes % 60)
     }
 
@@ -45,14 +53,14 @@ public enum Fmt {
     /// `duration` returns "just now" under a minute, which reads as nonsense under
     /// a label like "Sleep" — this returns a dash for nothing and minutes otherwise.
     public static func spanned(_ seconds: TimeInterval) -> String {
-        let total = Int(max(0, seconds).rounded())
+        guard let total = roundedNonnegative(seconds) else { return "—" }
         if total <= 0 { return "—" }
         if total < 60 { return "under a minute" }
         return duration(seconds)
     }
 
     public static func duration(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds.rounded())
+        guard let total = roundedNonnegative(seconds) else { return "—" }
         guard total >= 60 else { return "just now" }
         let minutes = total / 60
         let h = minutes / 60
@@ -99,27 +107,24 @@ public enum Fmt {
 
     /// Millilitres are canonical in storage; ounces are a display choice.
     public static func amount(ml: Double, unit: VolumeUnit) -> String {
+        guard let rounded = roundedNonnegative(ml) else { return "—" }
         switch unit {
-        case .ml:
-            return "\(Int(ml.rounded())) ml"
+        case .ml: return "\(rounded) ml"
         case .oz:
-            // Nearest half, trailing .0 trimmed — a 2oz bottle reads "2 oz", not
-            // "2.0 oz". Amounts are entered on a half-ounce grid, so this is
-            // lossless for a single feed. Never round a positive amount to "0 oz":
-            // a logged feed reading as nothing is the worst output this app has.
-            let exact = ml / 29.5735
-            let oz = (exact * 2).rounded() / 2
-            if oz < 0.5 { return String(format: "%.1f oz", max(0.1, exact)) }
-            return oz == oz.rounded() ? "\(Int(oz)) oz" : String(format: "%.1f oz", oz)
+            // Direct entry need not sit on the stepper's half-ounce grid.
+            if ml > 0 && ml / 29.5735 < 0.005 { return "<0.01 oz" }
+            let value = (ml / 29.5735).formatted(
+                .number.locale(Locale(identifier: "en_US_POSIX"))
+                    .grouping(.never).precision(.fractionLength(0...2)))
+            return "\(value) oz"
         }
     }
 
-    /// A summed volume. Sums do not sit on the half-ounce entry grid, so rounding
-    /// one to the nearest half misstates it by up to a quarter ounce — on exactly
-    /// the figure a parent is most likely to write down.
+    /// A summed volume, rounded once at display.
     public static func amountTotal(ml: Double, unit: VolumeUnit) -> String {
+        guard let rounded = roundedNonnegative(ml) else { return "—" }
         switch unit {
-        case .ml: return "\(Int(ml.rounded())) ml"
+        case .ml: return "\(rounded) ml"
         case .oz: return String(format: "%.1f oz", ml / 29.5735)
         }
     }
@@ -144,23 +149,25 @@ public enum Fmt {
     /// Weight in the unit system implied by the family's volume unit — a household
     /// working in ounces expects pounds and ounces, not grams.
     public static func weight(grams: Double, unit: VolumeUnit) -> String {
+        guard let rounded = roundedNonnegative(grams) else { return "—" }
         switch unit {
         case .ml:
             return grams >= 1000
                 ? String(format: "%.2f kg", grams / 1000)
-                : "\(Int(grams.rounded())) g"
+                : "\(rounded) g"
         case .oz:
             let totalOz = grams / 28.3495
             let pounds = Int(totalOz / 16)
             let ounces = totalOz - Double(pounds) * 16
             return pounds > 0
-                ? String(format: "%d lb %.1f oz", pounds, ounces)
+                ? "\(pounds) lb " + String(format: "%.1f oz", ounces)
                 : String(format: "%.1f oz", ounces)
         }
     }
 
     public static func temp(_ f: Double) -> String {
-        String(format: "%.1f°F", f)
+        guard f.isFinite else { return "—" }
+        return String(format: "%.1f°F", f)
     }
 
     public static func stool(_ colour: StoolColor) -> String {

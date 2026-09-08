@@ -5,7 +5,7 @@ struct DiaperSheet: View {
     let baby: BabyPresentation
     let shift: ShiftWindow
     let editing: DiaperEntry?
-    let onSave: (DiaperEntry) -> Void
+    let onSave: (DiaperEntry) async throws -> Void
     var onDelete: (() -> Void)?
     /// Forwarded to the chrome; set only when editing.
     var reassignment: Reassignment?
@@ -20,7 +20,7 @@ struct DiaperSheet: View {
         editing: DiaperEntry? = nil,
         reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
-        onSave: @escaping (DiaperEntry) -> Void
+        onSave: @escaping (DiaperEntry) async throws -> Void
     ) {
         self.baby = baby
         self.shift = shift
@@ -48,7 +48,7 @@ struct DiaperSheet: View {
             // Cleared when the contents no longer include stool. Keeping it meant a
             // corrected wet diaper still put meconium in the handoff.
             onSave: {
-                onSave(DiaperEntry(
+                try await onSave(DiaperEntry(
                     at: at, contents: contents,
                     stool: contents.countsAsDirty ? stool : nil))
             },

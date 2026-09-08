@@ -6,7 +6,7 @@ struct NoteSheet: View {
     let shift: ShiftWindow
     let presetTags: [String]
     let editing: NoteEntry?
-    let onSave: (NoteEntry) -> Void
+    let onSave: (NoteEntry) async throws -> Void
     var onDelete: (() -> Void)?
     /// Forwarded to the chrome; set only when editing.
     var reassignment: Reassignment?
@@ -24,7 +24,7 @@ struct NoteSheet: View {
         editing: NoteEntry? = nil,
         reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
-        onSave: @escaping (NoteEntry) -> Void
+        onSave: @escaping (NoteEntry) async throws -> Void
     ) {
         self.baby = baby
         self.shift = shift
@@ -59,8 +59,9 @@ struct NoteSheet: View {
             shift: shift,
             reassignment: reassignment,
             saveEnabled: hasContent,
+            saveDisabledReason: "Add a note, choose a tag, or record a temperature.",
             onSave: {
-                onSave(
+                try await onSave(
                     NoteEntry(
                         at: at,
                         text: text.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -83,15 +84,10 @@ struct NoteSheet: View {
             Section {
                 Toggle("Temperature", isOn: $recordTemp.animation())
                 if recordTemp {
-                    Stepper(value: $tempF, in: 93...107, step: 0.1) {
-                        HStack {
-                            Text("Reading")
-                            Spacer()
-                            Text(String(format: "%.1f °F", tempF))
-                                .font(.body.monospacedDigit())
-                                .foregroundStyle(isFever ? palette.stop : palette.ink)
-                        }
-                    }
+                    ValidatedNumberField(
+                        label: "Temperature (°F)", value: $tempF,
+                        range: 93...107, fractionDigits: 1, allowsEmpty: false)
+                    Stepper("Adjust by 0.1 °F", value: $tempF, in: 93...107, step: 0.1)
                     if isFever {
                         Label("At or above \(String(format: "%.1f", ShiftTotals.feverThresholdF))°F",
                               systemImage: "thermometer.high")

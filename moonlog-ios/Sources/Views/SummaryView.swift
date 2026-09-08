@@ -26,7 +26,6 @@ struct SummaryView: View {
 
     @State private var copied = false
     @State private var editingNote = false
-    @State private var saveError: String?
 
     /// The night this screen is about: the running shift, or — the moment it ends —
     /// the one just finished.
@@ -88,20 +87,11 @@ struct SummaryView: View {
                     babyNames: family.activeBabies.map(\.name).joined(separator: " & "),
                     existing: shift.parentNote ?? ""
                 ) { text in
-                    StoreWrite.run(store, onError: { saveError = $0 }) {
-                        try await $0.setShiftNote(shift.id, text: text)
-                    }
+                    guard let store else { throw EntrySaveError.unavailable }
+                    try await store.setShiftNote(shift.id, text: text)
                 }
                 .presentationDetents([.medium, .large])
             }
-        }
-        .alert(
-            "Couldn't save",
-            isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })
-        ) {
-            Button("OK", role: .cancel) { saveError = nil }
-        } message: {
-            Text(saveError ?? "")
         }
         #if DEBUG
         // A screenshot affordance, never reachable in a real run — same rationale
@@ -131,15 +121,6 @@ struct SummaryView: View {
             ShareLink(item: HandoffComposer.text(family: family, shift: shift, now: asOf)) {
                 Label("Send as plain text", systemImage: "text.alignleft")
             }
-            Divider()
-            Button {
-                editingNote = true
-            } label: {
-                Label(
-                    (shift.parentNote?.isEmpty ?? true)
-                        ? "Add a note to the parents" : "Edit the note to the parents",
-                    systemImage: "square.and.pencil")
-            }
         } label: {
             Image(systemName: "square.and.arrow.up")
         }
@@ -147,7 +128,33 @@ struct SummaryView: View {
 
     private func content(shift: Shift, now: Date) -> some View {
         ScrollView {
-            SummaryCards(family: family, shift: shift, now: now)
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button {
+                        editingNote = true
+                    } label: {
+                        Label(
+                            (shift.parentNote?.isEmpty ?? true)
+                                ? "Add a note to the parents" : "Edit the note to the parents",
+                            systemImage: "square.and.pencil")
+                            .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget, alignment: .leading)
+                    }
+                    .accessibilityIdentifier("summary.parentsNote")
+                    if let note = shift.parentNote, !note.isEmpty {
+                        Text(note).font(.body).foregroundStyle(palette.ink)
+                    }
+                    NavigationLink {
+                        HistoryView(family: family)
+                    } label: {
+                        Label("Past nights", systemImage: "clock.arrow.circlepath")
+                            .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget, alignment: .leading)
+                    }
+                    .accessibilityIdentifier("summary.pastNights")
+                }
+                .padding(.horizontal, 16)
+                .cardSurface(palette)
+                SummaryCards(family: family, shift: shift, now: now)
+            }
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, MoonLayout.tabBarClearance)

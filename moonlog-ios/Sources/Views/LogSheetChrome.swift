@@ -10,6 +10,11 @@ import MoonlogCore
 /// A baby this record could be moved to. Deliberately not `BabyPresentation`:
 /// the chrome needs a name, and taking the whole thing would tie every sheet to
 /// Tonight's derived state.
+enum EntrySaveError: LocalizedError {
+    case unavailable
+    var errorDescription: String? { "The data store is unavailable. Your entry has not been saved." }
+}
+
 struct ReassignTarget: Identifiable {
     let id: UUID
     let name: String
@@ -37,7 +42,8 @@ struct LogSheetChrome<Content: View>: View {
     /// family with somewhere to move it to.
     var reassignment: Reassignment?
     let saveEnabled: Bool
-    let onSave: () -> Void
+    var saveDisabledReason: String? = nil
+    let onSave: () async throws -> Void
     /// Non-nil puts a Delete row at the bottom, behind a confirmation. Only set
     /// when editing an existing record.
     var onDelete: (() -> Void)?
@@ -50,6 +56,8 @@ struct LogSheetChrome<Content: View>: View {
     /// The Save button stays hit-testable during the dismiss animation, and the
     /// write is async, so without this a second tap writes a second record.
     @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var numericValidation = NumericValidation()
     @State private var confirmingDelete = false
     /// The target a "Wrong baby?" choice is waiting on. Raised here rather than by
     /// `TonightView`, for the same reason the delete is: choosing dismisses this
@@ -108,7 +116,7 @@ struct LogSheetChrome<Content: View>: View {
         return false
     }
 
-    private var canSave: Bool { saveEnabled && !isFuture && !isSaving }
+    private var canSave: Bool { saveEnabled && !isFuture && !isSaving && numericValidation.firstError == nil }
 
     var body: some View {
         NavigationStack {
@@ -193,6 +201,7 @@ struct LogSheetChrome<Content: View>: View {
                     }
                 }
             }
+            .disabled(isSaving)
             // On the Form, not on the `Menu` that sets it — a menu builds its items
             // on its own schedule and closes as one is chosen, and this project has
             // already paid once for a presentation modifier inside a lazy container.
@@ -225,12 +234,14 @@ struct LogSheetChrome<Content: View>: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { dismiss() }.disabled(isSaving)
                 }
             }
             .safeAreaInset(edge: .bottom) { saveBar }
         }
         .tint(palette.accent)
+        .environment(numericValidation)
+        .interactiveDismissDisabled(isSaving)
     }
 
     /// Save, at the bottom, full width.
@@ -246,24 +257,45 @@ struct LogSheetChrome<Content: View>: View {
     /// sheet whose content is longer than the screen. Cancel stays in the bar,
     /// where a control you rarely want belongs.
     private var saveBar: some View {
-        Button {
-            guard !isSaving else { return }
-            isSaving = true
-            Haptics.commit()
-            onSave()
-            dismiss()
-        } label: {
-            Text("Save")
+        VStack(spacing: 8) {
+            if let reason = saveError ?? numericValidation.firstError ?? (!saveEnabled ? saveDisabledReason : nil) {
+                Label(reason, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(palette.stop)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("saveFeedback")
+            }
+            Button {
+                guard canSave else { return }
+                isSaving = true
+                saveError = nil
+                Haptics.commit()
+                Task {
+                    do {
+                        try await onSave()
+                        dismiss()
+                    } catch {
+                        saveError = error.localizedDescription
+                        Haptics.warn()
+                    }
+                    isSaving = false
+                }
+            } label: {
+                HStack {
+                    if isSaving { ProgressView() }
+                    Text(isSaving ? "Saving…" : (saveError == nil ? "Save" : "Retry save"))
+                }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .frame(height: MoonLayout.tapTarget)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(canSave ? palette.accentInk : palette.faint)
+            .background(
+                canSave ? palette.accent : palette.chip,
+                in: RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
+            .disabled(!canSave)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(canSave ? palette.accentInk : palette.faint)
-        .background(
-            canSave ? palette.accent : palette.chip,
-            in: RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
-        .disabled(!canSave)
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 10)
@@ -271,64 +303,122 @@ struct LogSheetChrome<Content: View>: View {
     }
 }
 
-/// Minutes stepper with a readable value. Used for feed durations, where a wheel
-/// would be precision nobody has at 3am.
-///
-/// Feeds step by 5. A minute at a time meant fifteen taps for a fifteen-minute
-/// breastfeed — the most repeated interaction of the night, done one-handed — and
-/// the extra precision was never real: nobody times a latch to the minute.
+/// A sheet keeps invalid text visible and blocks Save instead of silently saving
+/// the last valid number from a value-backed TextField.
+@Observable
+final class NumericValidation {
+    var errors: [UUID: String] = [:]
+    var firstError: String? { errors.sorted { $0.key.uuidString < $1.key.uuidString }.first?.value }
+}
+
+struct ValidatedNumberField: View {
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    var fractionDigits = 2
+    var allowsEmpty = true
+
+    @Environment(NumericValidation.self) private var validation
+    @Environment(\.locale) private var locale
+    @State private var text = ""
+    @State private var fieldID = UUID()
+    @State private var initialText: String?
+
+    private var parsed: Double? {
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.isEmpty { return allowsEmpty ? 0 : nil }
+        let separator = locale.decimalSeparator ?? "."
+        let parts = raw.components(separatedBy: separator)
+        guard parts.count <= 2,
+              parts.allSatisfy({ $0.allSatisfy(\.isNumber) }),
+              raw.contains(where: \.isNumber),
+              fractionDigits > 0 || parts.count == 1 else { return nil }
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        guard let number = formatter.number(from: raw)?.doubleValue,
+              number.isFinite, range.contains(number) else { return nil }
+        return number
+    }
+
+    private func display(_ number: Double) -> String {
+        if number == 0 && allowsEmpty { return "" }
+        return number.formatted(.number.locale(locale).grouping(.never)
+            .precision(.fractionLength(0...fractionDigits)))
+    }
+
+    private func validate() {
+        if let parsed {
+            validation.errors[fieldID] = nil
+            value = parsed
+        } else {
+            let lower = range.lowerBound.formatted(.number.locale(locale).precision(.fractionLength(0...2)))
+            let upper = range.upperBound.formatted(.number.locale(locale).precision(.fractionLength(0...2)))
+            validation.errors[fieldID] = "Enter \(label.lowercased()) between \(lower) and \(upper)."
+        }
+    }
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField(allowsEmpty ? "Optional" : label, text: $text)
+                .keyboardType(fractionDigits == 0 ? .numberPad : .decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 140)
+                .accessibilityLabel(label)
+                .accessibilityIdentifier("number.\(label)")
+                .onChange(of: text) { _, newText in
+                    if initialText == newText { initialText = nil; return }
+                    initialText = nil
+                    validate()
+                }
+                .onChange(of: value) { _, newValue in
+                    // A stepper can change the same value. Do not rewrite the text
+                    // after each keystroke when this field itself caused the change.
+                    if parsed != newValue { text = display(newValue) }
+                }
+                .onAppear {
+                    let displayed = display(value)
+                    if text != displayed { initialText = displayed; text = displayed }
+                }
+                .onDisappear { validation.errors[fieldID] = nil }
+        }
+    }
+}
+
+/// Direct entry avoids repeated taps; the familiar five-minute adjustment remains.
 struct MinutesField: View {
     let label: String
     @Binding var minutes: Int
     var step: Int = 1
 
-    @Environment(\.palette) private var palette
-
     var body: some View {
-        Stepper(value: $minutes, in: 0...240, step: step) {
-            HStack {
-                Text(label)
-                Spacer()
-                Text(minutes == 0 ? "—" : "\(minutes)m")
-                    .font(.body.monospacedDigit())
-                    .foregroundStyle(minutes == 0 ? palette.faint : palette.ink)
-            }
-        }
+        ValidatedNumberField(
+            label: "\(label) minutes",
+            value: Binding(get: { Double(minutes) }, set: { minutes = Int($0) }),
+            range: 0...240, fractionDigits: 0)
+        Stepper("Adjust \(label.lowercased()) by \(step) min", value: $minutes, in: 0...240, step: step)
     }
 }
 
-/// Weight in the family's unit. Storage stays canonical grams.
-///
-/// Typed rather than stepped: a nursery scale reads to the gram, and stepping from
-/// zero to a 3.5kg baby would be hundreds of taps. The formatted read-back is what
-/// confirms the number landed as intended — 7.25 entered, "7 lb 4.0 oz" shown.
+/// Weight stays canonical grams; the read-back confirms the household's unit.
 struct WeightField: View {
     let unit: VolumeUnit
     @Binding var grams: Double
-
     @Environment(\.palette) private var palette
-
     private var gramsPerUnit: Double { unit == .oz ? 453.59237 : 1 }
     private var label: String { unit == .oz ? "Pounds" : "Grams" }
-
-    private var typed: Binding<Double> {
-        Binding(
-            get: { grams / gramsPerUnit },
-            set: { grams = max(0, $0) * gramsPerUnit })
-    }
+    /// A stated bound, not `greatestFiniteMagnitude`: the out-of-range message
+    /// reads the bound back, and "between 0 and 39614081257132168000000000000000000000"
+    /// is not a sentence. 30kg covers any baby a night doula weighs.
+    private var maxGrams: Double { 30_000 }
 
     var body: some View {
-        HStack {
-            // Labelled beside the field, not through the placeholder: a placeholder
-            // disappears the moment there is a value, and "0" alone does not say
-            // whether it means grams or pounds.
-            Text(label)
-            Spacer()
-            TextField(label, value: typed, format: .number.precision(.fractionLength(0...2)))
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .frame(maxWidth: 120)
-        }
+        ValidatedNumberField(
+            label: label,
+            value: Binding(get: { grams / gramsPerUnit }, set: { grams = $0 * gramsPerUnit }),
+            range: 0...(maxGrams / gramsPerUnit))
         HStack {
             Text("Reads as")
             Spacer()
@@ -343,28 +433,17 @@ struct WeightField: View {
 struct AmountField: View {
     let unit: VolumeUnit
     @Binding var ml: Double
-
-    @Environment(\.palette) private var palette
-
-    /// Half an ounce, or 10ml — the granularity a bottle is actually read at.
-    private var stepMl: Double { unit == .oz ? 14.7868 : 10 }
+    private var mlPerUnit: Double { unit == .oz ? 29.5735 : 1 }
+    private var stepMl: Double { unit == .oz ? 29.5735 / 2 : 10 }
 
     var body: some View {
+        ValidatedNumberField(
+            label: unit == .oz ? "Amount (oz)" : "Amount (ml)",
+            value: Binding(get: { ml / mlPerUnit }, set: { ml = $0 * mlPerUnit }),
+            range: 0...(1000 / mlPerUnit), fractionDigits: unit == .oz ? 2 : 0)
         Stepper(
-            value: Binding(
-                get: { ml },
-                set: { ml = max(0, $0) }),
-            in: 0...1000,
-            step: stepMl
-        ) {
-            HStack {
-                Text("Amount")
-                Spacer()
-                Text(ml == 0 ? "—" : Fmt.amount(ml: ml, unit: unit))
-                    .font(.body.monospacedDigit())
-                    .foregroundStyle(ml == 0 ? palette.faint : palette.ink)
-            }
-        }
+            unit == .oz ? "Adjust by ½ oz" : "Adjust by 10 ml",
+            value: $ml, in: 0...1000, step: stepMl)
     }
 }
 

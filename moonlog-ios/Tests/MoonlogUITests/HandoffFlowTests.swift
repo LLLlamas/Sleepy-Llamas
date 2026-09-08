@@ -50,16 +50,31 @@ final class HandoffFlowTests: MoonlogUITestCase {
             "copying took the screen down with it")
     }
 
-    /// A note to the parents is written at the end of the night and is reached only
-    /// through the share menu, which is exactly the shape of a control nobody finds.
-    func testTheParentNoteIsReachableFromTheShareMenu() {
+    /// The note to the parents used to be an item inside the share menu, which is
+    /// exactly the shape of a control nobody finds — and it edits the handoff rather
+    /// than sharing it. It is on Summary itself now, so this asserts the screen, not
+    /// the menu: behind the open menu the row underneath still answered the old
+    /// query, and the test passed for a whole build without a route existing.
+    func testTheParentNoteIsOnSummaryItself() {
         launch(["-moonlogTab", "summary"])
-        let share = app.buttons["Share"].exists
-            ? app.buttons["Share"] : app.navigationBars.buttons.element(boundBy: 1)
-        XCTAssertTrue(share.waitForExistence(timeout: 15), "no share menu")
-        share.tap()
-        let note = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'note to the parents'")).firstMatch
-        XCTAssertTrue(note.waitForExistence(timeout: 5), "no way to the parent note")
+        let note = app.buttons["summary.parentsNote"]
+        XCTAssertTrue(note.waitForExistence(timeout: 15), "no way to the parent note")
+        XCTAssertTrue(note.isHittable, "the parent note is there but cannot be tapped")
+        note.tap()
+        XCTAssertTrue(
+            app.buttons["Save"].waitForExistence(timeout: 5), "the note sheet did not open")
+    }
+
+    /// Past nights was only ever under Settings, a tab away from the screen the
+    /// question is asked on.
+    func testPastNightsIsReachableFromSummary() {
+        launch(["-moonlogTab", "summary"])
+        reveal(app.buttons["summary.pastNights"]).tap()
+        let aNight = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] ' – '")).firstMatch
+        XCTAssertTrue(
+            aNight.waitForExistence(timeout: 10)
+                || app.staticTexts["No finished nights yet"].exists,
+            "pushed a blank screen")
     }
 }

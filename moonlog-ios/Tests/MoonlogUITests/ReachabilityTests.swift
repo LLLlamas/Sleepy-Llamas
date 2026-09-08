@@ -103,6 +103,36 @@ final class ReachabilityTests: MoonlogUITestCase {
             "pushed a blank screen")
     }
 
+    /// A sleep that ended while both hands were full had no route: the tile toggles
+    /// at the moment it is tapped, so recording one meant logging a state that was
+    /// not true and then correcting it from the timeline. `recordCompletedSleep`
+    /// landed in `CareStore` with no call site, which is how the last three of these
+    /// started.
+    func testAnEarlierSleepCanBeLoggedFromTheShiftMenu() {
+        launch()
+        reveal(app.buttons["More"]).tap()
+
+        // Flat per baby, because the seed carries twins.
+        let entry = app.buttons["Log earlier sleep — Mia"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 5), "no route to a missed sleep")
+        entry.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Earlier sleep"].waitForExistence(timeout: 5),
+            "the menu entry opened nothing")
+        // Never open-ended: this route must not create the session she is in now.
+        XCTAssertFalse(app.switches["Still asleep"].exists, "an earlier sleep cannot be running")
+
+        let save = app.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5), "no Save")
+        XCTAssertTrue(save.isEnabled, "the defaulted hour does not save")
+        save.tap()
+
+        XCTAssertTrue(
+            app.buttons["Undo"].waitForExistence(timeout: 10),
+            "the sleep did not log, or logged without an Undo")
+    }
+
     /// The client-family picker had never been driven. It is the app's one global
     /// mode, and the seed carries a second household precisely so it has somewhere
     /// to switch to.

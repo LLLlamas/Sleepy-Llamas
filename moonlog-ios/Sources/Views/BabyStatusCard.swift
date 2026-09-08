@@ -53,6 +53,7 @@ struct BabyStatusCard: View {
 
     @Environment(\.palette) private var palette
     @Environment(\.moonTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var accentColor: Color { baby.accent.color(for: theme) }
 
@@ -102,6 +103,7 @@ struct BabyStatusCard: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(palette.faint)
             }
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -157,8 +159,7 @@ struct BabyStatusCard: View {
                     // and it is a line read at 3am, so it is the better call anyway.
                     .foregroundStyle(palette.soft)
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
+            .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 8)
 
@@ -221,20 +222,23 @@ struct BabyStatusCard: View {
     }
 
     private func lastSeen(now: Date) -> some View {
-        HStack(spacing: 14) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 14))
+        return layout {
             // The glyph changes as well as the colour when a feed is due —
             // `docs/design.md`: colour is never the only signal. It was the only
             // signal here, on the one chip that decides the next action.
             chip("drop.fill", baby.lastFeedAt, now: now,
-                 empty: "no feed yet", warn: baby.feedIsDue(now: now))
+                 empty: "no feed yet", label: "Last feed", warn: baby.feedIsDue(now: now))
             chip("square.on.square", baby.lastDiaperAt, now: now,
-                 empty: "no change yet", warn: false)
+                 empty: "no change yet", label: "Last diaper", warn: false)
             Spacer()
         }
     }
 
     private func chip(
-        _ icon: String, _ at: Date?, now: Date, empty: String, warn: Bool
+        _ icon: String, _ at: Date?, now: Date, empty: String, label: String, warn: Bool
     ) -> some View {
         HStack(spacing: 5) {
             Image(systemName: warn ? "exclamationmark.triangle.fill" : icon)
@@ -245,6 +249,8 @@ struct BabyStatusCard: View {
         // `soft`, not `faint`, when it is not warning: these two lines are what
         // decide the next action, and they were the palest text on the card.
         .foregroundStyle(warn ? palette.warn : palette.soft)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label): " + (at.map { Fmt.ago($0, now: now) + " ago" } ?? empty) + (warn ? ", due" : ""))
     }
 
     /// Four, not three. `onNote` was declared here and passed in from `TonightView`
@@ -253,7 +259,10 @@ struct BabyStatusCard: View {
     /// built, tested and unreachable, and shipped that way. The comment on
     /// `extraButtons` already said "the card's four controls".
     private var actions: some View {
-        HStack(spacing: 8) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             action("Feed", "drop.fill", onFeed)
             action("Diaper", "square.on.square", onDiaper)
             action("Note", "text.bubble.fill", onNote)
@@ -279,12 +288,14 @@ struct BabyStatusCard: View {
                 Text(title).font(.caption.weight(.medium))
             }
             .frame(maxWidth: .infinity)
-            .frame(height: MoonLayout.tapTarget)
+            .padding(.vertical, 8)
+            .frame(minHeight: MoonLayout.tapTarget)
         }
         .buttonStyle(.plain)
         .foregroundStyle((tint ?? palette.ink).opacity(isBusy ? 0.4 : 1))
         .background(palette.chip, in: RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: MoonLayout.controlCorner, style: .continuous))
+        .disabled(isBusy)
         .accessibilityLabel("\(title) for \(baby.name)")
     }
 }

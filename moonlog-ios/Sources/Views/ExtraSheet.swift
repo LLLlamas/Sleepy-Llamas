@@ -29,7 +29,7 @@ struct ExtraSheet: View {
     let editing: ExtraEntry?
     var onDelete: (() -> Void)?
     var reassignment: Reassignment?
-    let onSave: (ExtraEntry) -> Void
+    let onSave: (ExtraEntry) async throws -> Void
 
     @State private var at: Date
     @State private var pumpedMl: Double
@@ -48,7 +48,7 @@ struct ExtraSheet: View {
         editing: ExtraEntry? = nil,
         reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
-        onSave: @escaping (ExtraEntry) -> Void
+        onSave: @escaping (ExtraEntry) async throws -> Void
     ) {
         self.kind = kind
         self.baby = baby
@@ -85,7 +85,8 @@ struct ExtraSheet: View {
             shift: shift,
             reassignment: reassignment,
             saveEnabled: hasContent,
-            onSave: { onSave(entry) },
+            saveDisabledReason: kind == .medication ? "Enter the medication name." : "Enter an amount greater than zero.",
+            onSave: { try await onSave(entry) },
             onDelete: onDelete
         ) {
             switch kind {

@@ -157,17 +157,20 @@ test asserted only that the two fills *differed*, and an invisible fill differs 
 visible one perfectly well. A screenshot caught it. `PaletteTests` now asserts both
 jobs.
 
-Its second line says **when the state started, then what the tap does** — "Since
-3:42am · tap to adjust". Both halves are departures from the web original, and both
-are deliberate:
+Its second line says **when the state started**. That is a departure from the web
+original, and it is deliberate:
 
-- **"tap to adjust", not "tap when Mia wakes".** The web tile toggled when tapped;
-  this one opens the adjust-sleep sheet, and the Wake/Sleep button below is what
-  toggles. Copy that describes the wrong gesture is worse than no copy.
 - **The time is on both states, not just asleep.** Awake used to say nothing about
   when it began, which was the more useful of the two. It comes from the last closed
-  sleep's `endAt`, and is simply absent before the baby has slept — the tile says
-  "Tap to log a sleep you missed" and claims no time it does not have.
+  sleep's `endAt`, and is simply absent before the baby has slept — the tile claims
+  no time it does not have.
+
+An earlier draft of this paragraph described the second line as reading "tap to
+adjust", on the grounds that the tile opened the adjust-sleep sheet. It does not and
+has not since the tile started toggling; the correction route is the sleep row in the
+timeline, and a missed sleep is logged from **Tonight's overflow menu › Log earlier
+sleep**. Copy that describes the wrong gesture is worse than no copy, and so is a
+design document that does.
 
 The time belongs on that second line and not appended to the state sentence above
 it. Appended, it wrapped inside its own parenthetical; the asleep tile is the tight

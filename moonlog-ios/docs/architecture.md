@@ -170,10 +170,13 @@ was unreachable during a shift, which is the one moment "how long did she go las
 night?" gets asked. It moved to `HistoryView` with the closed-shift query, and now
 has exactly one call site. Summary's empty state points at Settings › Past nights.
 
-The push is a `.navigationDestination(isPresented:)` declared on Settings' **`Form`**,
-never inside the `Section` holding the row. A `navigationDestination` inside a lazy
-container is not registered until that row has been built, and pushing before then
-lands on a blank screen. No test catches this; it was found by screenshot.
+The push is a **`NavigationLink` in the row**, from Settings and now from Summary as
+well. It is not a `.navigationDestination(isPresented:)`: inside a `Section` that
+lands on a blank screen, and moving it up to the `Form` — recorded here as the fix for
+a while — did not work either. The destination stayed dead, and setting the flag
+during the first appear brought the whole app up blank white, alive and rendering
+nothing. Both dead states were only ever reached through the launch argument meant to
+be *verifying* the route, which is why it read as working twice. See `CLAUDE.md`.
 
 **One page base.** `.moonBackground(_:)` in `Theme/MoonStyles.swift` is the only
 thing any screen sets as its background — a `MoonBackground` gradient from
@@ -209,8 +212,9 @@ present, so a second tap on Undo cannot duplicate.
 
 Whether an action confirms is a user preference, so the gate is a wrapper around the
 call site rather than a step inside `perform`. `TonightView.confirming(_:_:_:)` either
-runs the closure now or parks it on a `ConfirmPrompt` for the one
-`.confirmationDialog` the screen owns; the question and the button verb come off
+runs the closure now or parks it on a `ConfirmPrompt` for the one `.alert` the screen
+owns — never a `.confirmationDialog`, which inside a sheet presents as a popover and
+drops its cancel action; the question and the button verb come off
 `ConfirmableAction`, so adding a confirmable action does not mean adding a dialog to
 keep in step.
 

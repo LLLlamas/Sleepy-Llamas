@@ -9,6 +9,26 @@ import MoonlogCore
 @ModelActor
 actor CareStore {
 
+    /// Nested mutations (notably sleep reconciliation) share one durable commit.
+    /// No suspension occurs inside this boundary, so a failed operation cannot
+    /// leave pending changes for the next caregiver action to accidentally save.
+    private var writeDepth = 0
+
+    private func write<T>(_ action: () throws -> T) throws -> T {
+        let outermost = writeDepth == 0
+        modelContext.autosaveEnabled = false
+        writeDepth += 1
+        defer { writeDepth -= 1 }
+        do {
+            let result = try action()
+            if outermost { try modelContext.save() }
+            return result
+        } catch {
+            if outermost { modelContext.rollback() }
+            throw error
+        }
+    }
+
     // MARK: - Households
 
     /// The starting note tags, carried over from the retired PWA. They shipped
@@ -21,15 +41,28 @@ actor CareStore {
         name: String,
         timeZoneIdentifier: String = TimeZone.current.identifier
     ) throws -> UUID {
-        let family = Family(name: name, timeZoneIdentifier: timeZoneIdentifier)
-        modelContext.insert(family)
-        for (i, label) in Self.defaultNoteTags.enumerated() {
-            let tag = NoteTagPreset(label: label, sortOrder: i)
-            tag.family = family
-            modelContext.insert(tag)
+        return try write {
+            let family = Family(name: name, timeZoneIdentifier: timeZoneIdentifier)
+            modelContext.insert(family)
+            for (i, label) in Self.defaultNoteTags.enumerated() {
+                let tag = NoteTagPreset(label: label, sortOrder: i)
+                tag.family = family
+                modelContext.insert(tag)
+            }
+            return family.id
         }
-        try modelContext.save()
-        return family.id
+    }
+
+    /// First-run setup is one operation: a rejected baby never leaves an empty family.
+    func createFamilyWithBaby(
+        name: String, babyName: String, birthAt: Date, unit: VolumeUnit
+    ) throws -> UUID {
+        try write {
+            let id = try createFamily(name: name)
+            try setVolumeUnit(unit, familyID: id)
+            _ = try addBaby(to: id, name: babyName, birthAt: birthAt)
+            return id
+        }
     }
 
     func addBaby(
@@ -37,30 +70,32 @@ actor CareStore {
         name: String,
         birthAt: Date
     ) throws -> UUID {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        try rejectFuture(birthAt)
-        let existing = family.activeBabies
-        let baby = Baby(
-            name: name,
-            birthAt: birthAt,
-            // Appended, so an existing twin's card never moves.
-            sortOrder: (existing.map(\.sortOrder).max() ?? -1) + 1,
-            accent: BabyAccent.forIndex(existing.count)
-        )
-        baby.family = family
-        modelContext.insert(baby)
-        try modelContext.save()
-        return baby.id
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            try rejectFuture(birthAt)
+            let existing = family.activeBabies
+            let baby = Baby(
+                name: name,
+                birthAt: birthAt,
+                // Appended, so an existing twin's card never moves.
+                sortOrder: (existing.map(\.sortOrder).max() ?? -1) + 1,
+                accent: BabyAccent.forIndex(existing.count)
+            )
+            baby.family = family
+            modelContext.insert(baby)
+            return baby.id
+        }
     }
 
     /// Rename a household. Same trim-and-refuse-blank rule as a baby's name: the
     /// family name heads the parents' document and sits above the clock all night.
     func renameFamily(_ familyID: UUID, name: String) throws {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
-        family.name = trimmed
-        try modelContext.save()
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
+            family.name = trimmed
+        }
     }
 
     /// **A real delete**, and the only one in this file.
@@ -74,10 +109,11 @@ actor CareStore {
     /// Refuses while a shift is open, so a night in progress cannot be deleted from
     /// under itself by a mis-tap two screens away.
     func deleteFamily(_ familyID: UUID) throws {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        if try openShift(familyID: familyID) != nil { throw CareStoreError.shiftAlreadyOpen }
-        modelContext.delete(family)
-        try modelContext.save()
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            if try openShift(familyID: familyID) != nil { throw CareStoreError.shiftAlreadyOpen }
+            modelContext.delete(family)
+        }
     }
 
     /// Card order, which is muscle memory at 3am and therefore worth setting once.
@@ -86,21 +122,22 @@ actor CareStore {
     /// on what the caller thought the previous order was. Ids that are not this
     /// family's are ignored.
     func reorderBabies(_ orderedIDs: [UUID], familyID: UUID) throws {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        let mine = Dictionary(
-            uniqueKeysWithValues: (family.babies ?? []).map { ($0.id, $0) })
-        for (index, id) in orderedIDs.enumerated() {
-            mine[id]?.sortOrder = index
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            let mine = try indexedByID(family.babies ?? [], id: { $0.id })
+            for (index, id) in orderedIDs.enumerated() {
+                mine[id]?.sortOrder = index
+            }
         }
-        try modelContext.save()
     }
 
     /// Puts an archived baby back on the roster. Archiving is reversible from the
     /// same row that did it; without this, one mis-tap on Remove was permanent.
     func restoreBaby(_ babyID: UUID) throws {
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        baby.isArchived = false
-        try modelContext.save()
+        return try write {
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            baby.isArchived = false
+        }
     }
 
     /// Empties the store completely — every household and everything under it.
@@ -111,64 +148,72 @@ actor CareStore {
     /// confirmations, and it is the one control in the app that is worth being hard
     /// to reach by accident.
     func eraseEverything() throws {
-        for family in try modelContext.fetch(FetchDescriptor<Family>()) {
-            modelContext.delete(family)
+        return try write {
+            for family in try modelContext.fetch(FetchDescriptor<Family>()) {
+                modelContext.delete(family)
+            }
+            // Records whose family relationship went nil at some point would survive a
+            // cascade from the roots, and a "start over" that leaves rows behind is
+            // worse than no button at all.
+            for shift in try modelContext.fetch(FetchDescriptor<Shift>()) {
+                modelContext.delete(shift)
+            }
+            for baby in try modelContext.fetch(FetchDescriptor<Baby>()) {
+                modelContext.delete(baby)
+            }
+            for event in try modelContext.fetch(FetchDescriptor<LogEvent>()) {
+                modelContext.delete(event)
+            }
+            for session in try modelContext.fetch(FetchDescriptor<SleepSession>()) {
+                modelContext.delete(session)
+            }
+            for binding in try modelContext.fetch(FetchDescriptor<TagBinding>()) {
+                modelContext.delete(binding)
+            }
+            for tag in try modelContext.fetch(FetchDescriptor<NoteTagPreset>()) {
+                modelContext.delete(tag)
+            }
         }
-        // Records whose family relationship went nil at some point would survive a
-        // cascade from the roots, and a "start over" that leaves rows behind is
-        // worse than no button at all.
-        for shift in try modelContext.fetch(FetchDescriptor<Shift>()) {
-            modelContext.delete(shift)
-        }
-        for baby in try modelContext.fetch(FetchDescriptor<Baby>()) {
-            modelContext.delete(baby)
-        }
-        for event in try modelContext.fetch(FetchDescriptor<LogEvent>()) {
-            modelContext.delete(event)
-        }
-        for session in try modelContext.fetch(FetchDescriptor<SleepSession>()) {
-            modelContext.delete(session)
-        }
-        for tag in try modelContext.fetch(FetchDescriptor<NoteTagPreset>()) {
-            modelContext.delete(tag)
-        }
-        try modelContext.save()
     }
 
     func setVolumeUnit(_ unit: VolumeUnit, familyID: UUID) throws {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        family.volumeUnitRaw = unit.rawValue
-        try modelContext.save()
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            family.volumeUnitRaw = unit.rawValue
+        }
     }
 
     func setOptionalKinds(_ kinds: [EventKind], familyID: UUID) throws {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        family.setOptionalKinds(kinds)
-        try modelContext.save()
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            family.setOptionalKinds(kinds)
+        }
     }
 
     /// Note tags are user-defined. Until this existed they could only be created by
     /// the DEBUG demo seed, so the tag row never appeared in a real install.
     func addNoteTag(_ label: String, familyID: UUID) throws {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
-        let existing = family.noteTags ?? []
-        guard !existing.contains(where: { $0.label.caseInsensitiveCompare(trimmed) == .orderedSame })
-        else { return }
-        let tag = NoteTagPreset(
-            label: trimmed, sortOrder: (existing.map(\.sortOrder).max() ?? -1) + 1)
-        tag.family = family
-        modelContext.insert(tag)
-        try modelContext.save()
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
+            let existing = family.noteTags ?? []
+            guard !existing.contains(where: { $0.label.caseInsensitiveCompare(trimmed) == .orderedSame })
+            else { return }
+            let tag = NoteTagPreset(
+                label: trimmed, sortOrder: (existing.map(\.sortOrder).max() ?? -1) + 1)
+            tag.family = family
+            modelContext.insert(tag)
+        }
     }
 
     func deleteNoteTag(_ id: UUID) throws {
-        guard let tag = try one(
-            FetchDescriptor<NoteTagPreset>(predicate: #Predicate { $0.id == id }))
-        else { return }
-        modelContext.delete(tag)
-        try modelContext.save()
+        return try write {
+            guard let tag = try one(
+                FetchDescriptor<NoteTagPreset>(predicate: #Predicate { $0.id == id }))
+            else { return }
+            modelContext.delete(tag)
+        }
     }
 
     /// Accent is the user's choice; the auto-assigned default only makes twins
@@ -182,26 +227,28 @@ actor CareStore {
         accent: BabyAccent? = nil,
         birthAt: Date? = nil
     ) throws {
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        if let name {
-            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
-            baby.name = trimmed
+        return try write {
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            if let birthAt { try rejectFuture(birthAt) }
+            if let name {
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { throw CareStoreError.emptyName }
+                baby.name = trimmed
+            }
+            if let accent { baby.accentRaw = accent.rawValue }
+            if let birthAt {
+                baby.birthAt = birthAt
+            }
         }
-        if let accent { baby.accentRaw = accent.rawValue }
-        if let birthAt {
-            try rejectFuture(birthAt)
-            baby.birthAt = birthAt
-        }
-        try modelContext.save()
     }
 
     /// Archives rather than deletes: a hard delete would strip the baby's name from
     /// every past handoff. There is deliberately no public delete.
     func archiveBaby(_ babyID: UUID) throws {
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        baby.isArchived = true
-        try modelContext.save()
+        return try write {
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            baby.isArchived = true
+        }
     }
 
     // MARK: - Shift lifecycle
@@ -214,42 +261,45 @@ actor CareStore {
         startedAt: Date,
         caregiver: String?
     ) throws -> UUID {
-        guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
-        try rejectFuture(startedAt)
-        if try openShift(familyID: familyID) != nil {
-            throw CareStoreError.shiftAlreadyOpen
+        return try write {
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            try rejectFuture(startedAt)
+            if try openShift(familyID: familyID) != nil {
+                throw CareStoreError.shiftAlreadyOpen
+            }
+            let shift = Shift(
+                startedAt: startedAt,
+                caregiver: caregiver,
+                timeZoneIdentifier: family.timeZoneIdentifier
+            )
+            shift.attach(to: family)
+            modelContext.insert(shift)
+            return shift.id
         }
-        let shift = Shift(
-            startedAt: startedAt,
-            caregiver: caregiver,
-            timeZoneIdentifier: family.timeZoneIdentifier
-        )
-        shift.attach(to: family)
-        modelContext.insert(shift)
-        try modelContext.save()
-        return shift.id
     }
 
     /// Ends a shift without opening a replacement — the doula is leaving the baby
     /// with the parents. An in-progress sleep is deliberately left open; totals clip
     /// to the shift window instead. See `docs/architecture.md`.
     func endShift(_ shiftID: UUID, endedAt: Date) throws {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        guard shift.isOpen else { throw CareStoreError.shiftAlreadyClosed }
-        try rejectFuture(endedAt)
-        guard endedAt >= shift.startedAt else { throw CareStoreError.endBeforeStart }
-        shift.close(at: endedAt)
-        try modelContext.save()
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard shift.isOpen else { throw CareStoreError.shiftAlreadyClosed }
+            try rejectFuture(endedAt)
+            guard endedAt >= shift.startedAt else { throw CareStoreError.endBeforeStart }
+            shift.close(at: endedAt)
+        }
     }
 
     /// The note that goes to the parents. Editable for as long as the shift exists —
     /// it is the one part of the handoff written rather than recorded, and the
     /// sentence you want at 6am is rarely the one you had at 5.
     func setShiftNote(_ shiftID: UUID, text: String?) throws {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
-        shift.parentNote = (trimmed?.isEmpty ?? true) ? nil : trimmed
-        try modelContext.save()
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+            shift.parentNote = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        }
     }
 
     /// Corrects a shift's own hours after the fact. Both ends belong to the doula,
@@ -258,26 +308,27 @@ actor CareStore {
     /// watched. `nil` leaves that end alone; a closed shift cannot be reopened here,
     /// because `close(at:)` is the only thing keeping `isOpen` honest.
     func updateShift(_ shiftID: UUID, startedAt: Date? = nil, endedAt: Date? = nil) throws {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        let start = startedAt ?? shift.startedAt
-        let end = endedAt ?? shift.endedAt
-        try rejectFuture(start)
-        if let end {
-            try rejectFuture(end)
-            guard end >= start else { throw CareStoreError.endBeforeStart }
-        }
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            let start = startedAt ?? shift.startedAt
+            let end = endedAt ?? shift.endedAt
+            try rejectFuture(start)
+            if let end {
+                try rejectFuture(end)
+                guard end >= start else { throw CareStoreError.endBeforeStart }
+            }
 
-        // Narrowing the window can strand a session outside it, where the timeline
-        // still shows a duration but the totals and the handoff — which both clip to
-        // this window — count nothing. Refuse rather than silently drop the hours.
-        let proposed = ShiftWindow(startedAt: start, endedAt: end)
-        for session in shift.sleepSessions ?? [] {
-            try requireOverlap(startAt: session.startAt, endAt: session.endAt, with: proposed)
-        }
+            // Narrowing the window can strand a session outside it, where the timeline
+            // still shows a duration but the totals and the handoff — which both clip to
+            // this window — count nothing. Refuse rather than silently drop the hours.
+            let proposed = ShiftWindow(startedAt: start, endedAt: end)
+            for session in shift.sleepSessions ?? [] {
+                try requireOverlap(startAt: session.startAt, endAt: session.endAt, with: proposed)
+            }
 
-        shift.startedAt = start
-        if let endedAt { shift.close(at: endedAt) }
-        try modelContext.save()
+            shift.startedAt = start
+            if let endedAt { shift.close(at: endedAt) }
+        }
     }
 
     // MARK: - Time rules
@@ -330,16 +381,18 @@ actor CareStore {
         source: EventSource = .manual,
         configure: (LogEvent) -> Void = { _ in }
     ) throws -> UUID {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        let baby = try requiredBaby(babyID, for: kind)
-        try rejectFuture(at)
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            let baby = try requiredBaby(babyID, for: kind, in: shift)
+            try rejectFuture(at)
 
-        let event = LogEvent(kind: kind, at: at, source: source)
-        configure(event)
-        event.attach(to: shift, baby: baby)
-        modelContext.insert(event)
-        try modelContext.save()
-        return event.id
+            let event = LogEvent(kind: kind, at: at, source: source)
+            configure(event)
+            try validatePayload(event)
+            event.attach(to: shift, baby: baby)
+            modelContext.insert(event)
+            return event.id
+        }
     }
 
     /// Puts a deleted event back as it was, for Undo. Deliberately not `logEvent`:
@@ -347,28 +400,31 @@ actor CareStore {
     /// `LogEvent.restoration`. Re-running it is harmless, so a double-tap on Undo
     /// cannot produce two copies.
     func restoreEvent(_ restoration: EventRestoration) throws {
-        guard let shift = try shift(restoration.shiftID) else {
-            throw CareStoreError.shiftNotFound
-        }
-        let restoredID = restoration.id
-        if try one(FetchDescriptor<LogEvent>(
-            predicate: #Predicate { $0.id == restoredID })) != nil { return }
+        return try write {
+            guard let shift = try shift(restoration.shiftID) else {
+                throw CareStoreError.shiftNotFound
+            }
+            let restoredID = restoration.id
+            if try one(FetchDescriptor<LogEvent>(
+                predicate: #Predicate { $0.id == restoredID })) != nil { return }
 
-        let baby = try requiredBaby(restoration.babyID, for: restoration.kind)
-        let event = LogEvent(
-            id: restoration.id, kind: restoration.kind, at: restoration.at,
-            createdAt: restoration.createdAt, source: restoration.source)
-        restoration.applyPayload(to: event)
-        event.attach(to: shift, baby: baby)
-        modelContext.insert(event)
-        try modelContext.save()
+            let baby = try requiredBaby(restoration.babyID, for: restoration.kind, in: shift)
+            let event = LogEvent(
+                id: restoration.id, kind: restoration.kind, at: restoration.at,
+                createdAt: restoration.createdAt, source: restoration.source)
+            restoration.applyPayload(to: event)
+            try validatePayload(event)
+            event.attach(to: shift, baby: baby)
+            modelContext.insert(event)
+        }
     }
 
-    private func requiredBaby(_ babyID: UUID?, for kind: EventKind) throws -> Baby? {
-        guard kind.attachesToBaby else { return babyID.flatMap { try? baby($0) } }
+    private func requiredBaby(_ babyID: UUID?, for kind: EventKind, in shift: Shift) throws -> Baby? {
+        guard kind.attachesToBaby else { return nil }
         guard let babyID, let baby = try baby(babyID) else {
             throw CareStoreError.babyNotFound
         }
+        try requireMembership(baby, in: shift)
         return baby
     }
 
@@ -380,27 +436,36 @@ actor CareStore {
         at: Date,
         configure: (LogEvent) -> Void
     ) throws {
-        guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
-        try rejectFuture(at)
-        event.at = at
-        configure(event)
-        try modelContext.save()
+        return try write {
+            guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
+            try rejectFuture(at)
+            event.at = at
+            configure(event)
+            try validatePayload(event)
+        }
     }
 
     /// Moves an event to a different baby. The whole reason the confirmation names
     /// the baby is so a wrong-twin tap is caught — this is how it gets fixed.
     func reassignEvent(_ eventID: UUID, toBaby babyID: UUID) throws {
-        guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        event.baby = baby
-        event.babyIDRaw = baby.id
-        try modelContext.save()
+        return try write {
+            guard let event = try event(eventID) else { throw CareStoreError.eventNotFound }
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            guard let shiftID = event.shiftIDRaw, let shift = try shift(shiftID) else {
+                throw CareStoreError.shiftNotFound
+            }
+            guard event.kind.attachesToBaby else { throw CareStoreError.babyNotApplicable }
+            try requireMembership(baby, in: shift)
+            event.baby = baby
+            event.babyIDRaw = baby.id
+        }
     }
 
     func deleteEvent(_ eventID: UUID) throws {
-        guard let event = try event(eventID) else { return }
-        modelContext.delete(event)
-        try modelContext.save()
+        return try write {
+            guard let event = try event(eventID) else { return }
+            modelContext.delete(event)
+        }
     }
 
     // MARK: - Sleep
@@ -409,24 +474,25 @@ actor CareStore {
     /// reconciler mops up anything sync delivers.
     @discardableResult
     func toggleSleep(shiftID: UUID, babyID: UUID, at date: Date) throws -> SleepToggle {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        try rejectFuture(date)
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            try requireMembership(baby, in: shift)
+            try rejectFuture(date)
 
-        try reconcileSleep(shiftID: shiftID, babyID: babyID)
+            try reconcileSleep(shiftID: shiftID, babyID: babyID)
 
-        if let open = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
-            guard date >= open.startAt else { throw CareStoreError.endBeforeStart }
-            open.close(at: date)
-            try modelContext.save()
-            return .closed(open.id)
+            if let open = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
+                guard date >= open.startAt else { throw CareStoreError.endBeforeStart }
+                open.close(at: date)
+                return .closed(open.id)
+            }
+
+            let session = SleepSession(startAt: date)
+            session.attach(to: shift, baby: baby)
+            modelContext.insert(session)
+            return .opened(session.id)
         }
-
-        let session = SleepSession(startAt: date)
-        session.attach(to: shift, baby: baby)
-        modelContext.insert(session)
-        try modelContext.save()
-        return .opened(session.id)
     }
 
     /// Corrects the running session, or records one that was missed.
@@ -437,47 +503,78 @@ actor CareStore {
     /// independently, so the parents would be told the baby slept roughly twice as
     /// long as she did.
     func recordSleep(shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date?) throws {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        try rejectFuture(startAt)
-        if let endAt { try rejectFuture(endAt) }
-        if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
-        try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            try requireMembership(baby, in: shift)
+            try rejectFuture(startAt)
+            if let endAt { try rejectFuture(endAt) }
+            if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
+            try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
 
-        if let existing = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
-            existing.startAt = startAt
-            if let endAt { existing.close(at: endAt) }
-        } else {
+            if let existing = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
+                existing.startAt = startAt
+                if let endAt { existing.close(at: endAt) }
+            } else {
+                let session = SleepSession(startAt: startAt, endAt: endAt)
+                session.attach(to: shift, baby: baby)
+                modelContext.insert(session)
+            }
+            try reconcileSleep(shiftID: shiftID, babyID: babyID)
+        }
+    }
+
+    /// A missed, finished sleep must never replace the sleep currently running.
+    /// Reject intervals the reconciler would merge into that live session.
+    @discardableResult
+    func recordCompletedSleep(
+        shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date
+    ) throws -> UUID {
+        try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            try requireMembership(baby, in: shift)
+            try rejectFuture(startAt)
+            try rejectFuture(endAt)
+            guard endAt > startAt else { throw CareStoreError.endBeforeStart }
+            try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
+            if let live = try storedOpenSleepSession(shiftID: shiftID, babyID: babyID) {
+                guard endAt <= live.startAt,
+                      live.startAt.timeIntervalSince(startAt) > 120 else {
+                    throw CareStoreError.overlapsRunningSleep
+                }
+            }
             let session = SleepSession(startAt: startAt, endAt: endAt)
             session.attach(to: shift, baby: baby)
             modelContext.insert(session)
+            try reconcileSleep(shiftID: shiftID, babyID: babyID)
+            return session.id
         }
-        try modelContext.save()
-        try reconcileSleep(shiftID: shiftID, babyID: babyID)
     }
 
     /// Corrects a specific session by id — the path the timeline uses. Unlike
     /// `recordSleep` this never inserts, so editing cannot duplicate.
     func updateSleepSession(_ id: UUID, startAt: Date, endAt: Date?) throws {
-        guard let session = try one(
-            FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
-        else { return }
-        try rejectFuture(startAt)
-        if let endAt { try rejectFuture(endAt) }
-        if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
-        if let shiftID = session.shiftIDRaw, let shift = try shift(shiftID) {
-            try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
+        return try write {
+            guard let session = try one(
+                FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
+            else { return }
+            try rejectFuture(startAt)
+            if let endAt { try rejectFuture(endAt) }
+            if let endAt, endAt <= startAt { throw CareStoreError.endBeforeStart }
+            if let shiftID = session.shiftIDRaw, let shift = try shift(shiftID) {
+                try requireOverlap(startAt: startAt, endAt: endAt, with: shift.window)
+            }
+            session.startAt = startAt
+            if let endAt {
+                session.close(at: endAt)
+            } else {
+                session.endAt = nil
+                session.isOpen = true
+            }
+            try reconcileSleep(
+                shiftID: session.shiftIDRaw ?? UUID(), babyID: session.babyIDRaw ?? UUID())
         }
-        session.startAt = startAt
-        if let endAt {
-            session.close(at: endAt)
-        } else {
-            session.endAt = nil
-            session.isOpen = true
-        }
-        try modelContext.save()
-        try reconcileSleep(
-            shiftID: session.shiftIDRaw ?? UUID(), babyID: session.babyIDRaw ?? UUID())
     }
 
     /// Puts a deleted sleep session back under its own id, for Undo.
@@ -489,25 +586,28 @@ actor CareStore {
     func restoreSleepSession(
         id: UUID, shiftID: UUID, babyID: UUID, startAt: Date, endAt: Date?
     ) throws {
-        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
-        guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
-        if try one(FetchDescriptor<SleepSession>(
-            predicate: #Predicate { $0.id == id })) != nil { return }
+        return try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard let baby = try baby(babyID) else { throw CareStoreError.babyNotFound }
+            try requireMembership(baby, in: shift)
+            if try one(FetchDescriptor<SleepSession>(
+                predicate: #Predicate { $0.id == id })) != nil { return }
 
-        let session = SleepSession(id: id, startAt: startAt, endAt: endAt)
-        session.attach(to: shift, baby: baby)
-        modelContext.insert(session)
-        try modelContext.save()
-        try reconcileSleep(shiftID: shiftID, babyID: babyID)
+            let session = SleepSession(id: id, startAt: startAt, endAt: endAt)
+            session.attach(to: shift, baby: baby)
+            modelContext.insert(session)
+            try reconcileSleep(shiftID: shiftID, babyID: babyID)
+        }
     }
 
     /// Removes a sleep session outright. A closed session is otherwise unreachable.
     func deleteSleepSession(_ id: UUID) throws {
-        guard let session = try one(
-            FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
-        else { return }
-        modelContext.delete(session)
-        try modelContext.save()
+        return try write {
+            guard let session = try one(
+                FetchDescriptor<SleepSession>(predicate: #Predicate { $0.id == id }))
+            else { return }
+            modelContext.delete(session)
+        }
     }
 
     func openSleepSession(shiftID: UUID, babyID: UUID) throws -> SleepSnapshot? {
@@ -523,30 +623,66 @@ actor CareStore {
     /// Required, not defensive: CloudKit cannot enforce uniqueness, so two devices
     /// can both open a session for one baby and the store accepts both.
     func reconcileSleep(shiftID: UUID, babyID: UUID) throws {
-        let descriptor = FetchDescriptor<SleepSession>(
-            predicate: #Predicate { $0.babyIDRaw == babyID && $0.shiftIDRaw == shiftID })
-        let stored = try modelContext.fetch(descriptor)
-        guard stored.count > 1 else { return }
+        return try write {
+            let descriptor = FetchDescriptor<SleepSession>(
+                predicate: #Predicate { $0.babyIDRaw == babyID && $0.shiftIDRaw == shiftID })
+            let stored = try modelContext.fetch(descriptor)
+            guard stored.count > 1 else { return }
 
-        let snapshots = stored.compactMap(\.snapshot)
-        let result = SleepReconciler.reconcile(snapshots, forBaby: babyID)
+            let byID = try indexedByID(stored, id: { $0.id })
+            let snapshots = stored.compactMap(\.snapshot)
+            let result = SleepReconciler.reconcile(snapshots, forBaby: babyID)
 
-        let byID = Dictionary(uniqueKeysWithValues: stored.map { ($0.id, $0) })
-        for id in result.mergedAway {
-            if let doomed = byID[id] { modelContext.delete(doomed) }
-        }
-        for repaired in result.sessions {
-            guard let session = byID[repaired.id] else { continue }
-            if session.endAt != repaired.endAt {
-                if let end = repaired.endAt {
-                    session.close(at: end)
-                } else {
-                    session.endAt = nil
-                    session.isOpen = true
+            for id in result.mergedAway {
+                if let doomed = byID[id] { modelContext.delete(doomed) }
+            }
+            for repaired in result.sessions {
+                guard let session = byID[repaired.id] else { continue }
+                if session.endAt != repaired.endAt {
+                    if let end = repaired.endAt {
+                        session.close(at: end)
+                    } else {
+                        session.endAt = nil
+                        session.isOpen = true
+                    }
                 }
             }
         }
-        try modelContext.save()
+    }
+
+    private func validatePayload(_ event: LogEvent) throws {
+        // Technical bounds prevent overflow, not clinical judgement. A display
+        // formatter must still tolerate bad values already present in a store.
+        let values = [event.amountMl, event.pumpedMl, event.weightGrams, event.tempF]
+        for value in values.compactMap({ $0 }) {
+            guard value.isFinite, value >= 0, value < Double(Int.max) / 1024 else {
+                throw CareStoreError.invalidNumber
+            }
+        }
+        for seconds in [event.feedDurationSeconds, event.leftSeconds, event.rightSeconds]
+            .compactMap({ $0 }) {
+            guard seconds >= 0, seconds < Int.max / 1024 else {
+                throw CareStoreError.invalidNumber
+            }
+        }
+    }
+
+    private func requireMembership(_ baby: Baby, in shift: Shift) throws {
+        guard let familyID = shift.familyIDRaw, baby.family?.id == familyID else {
+            throw CareStoreError.wrongFamily
+        }
+    }
+
+    /// Keep conflicting records intact for recovery; never trap or silently choose
+    /// one care record merely because its logical identity was duplicated.
+    private func indexedByID<T>(_ values: [T], id: (T) -> UUID) throws -> [UUID: T] {
+        var result: [UUID: T] = [:]
+        for value in values {
+            guard result.updateValue(value, forKey: id(value)) == nil else {
+                throw CareStoreError.duplicateIdentity
+            }
+        }
+        return result
     }
 
     // MARK: - Lookups
@@ -599,6 +735,11 @@ enum SleepToggle: Equatable {
 }
 
 enum CareStoreError: Error, Equatable {
+    case invalidNumber
+    case overlapsRunningSleep
+    case wrongFamily
+    case babyNotApplicable
+    case duplicateIdentity
     case familyNotFound
     case babyNotFound
     case shiftNotFound
@@ -623,6 +764,11 @@ extension CareStoreError: LocalizedError {
     /// so it says what to do, not which case fired.
     var errorDescription: String? {
         switch self {
+        case .invalidNumber: return "Check the amount or duration. Use a valid, nonnegative number."
+        case .overlapsRunningSleep: return "That overlaps the sleep currently running. Choose earlier times, or correct the running sleep instead."
+        case .wrongFamily: return "That baby belongs to a different client family. Nothing was changed."
+        case .babyNotApplicable: return "This entry is about the parent and cannot be moved to a baby."
+        case .duplicateIdentity: return "Conflicting records were found. Nothing was changed. Keep the records and contact support."
         case .familyNotFound: return "That client family is no longer on this device."
         case .babyNotFound: return "That baby is no longer on this device."
         case .shiftNotFound: return "That shift is no longer on this device."

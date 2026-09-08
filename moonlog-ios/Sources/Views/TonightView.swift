@@ -116,6 +116,7 @@ struct TonightView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     extraButtons(data)
+                    earlierSleepButtons(data)
                     Button("Shift times", systemImage: "clock.arrow.circlepath") {
                         hoursSheet = .correct
                     }
@@ -126,6 +127,9 @@ struct TonightView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                // Named, because an SF Symbol alone leaves VoiceOver reading
+                // "ellipsis.circle" and leaves the suite guessing at bar indices.
+                .accessibilityLabel("More")
             }
         }
         .sheet(item: $hoursSheet) { purpose in
@@ -219,18 +223,20 @@ private extension TonightView {
             switch which {
             case .feed:
                 FeedSheet(baby: baby, shift: shift.window, unit: family.volumeUnit) {
-                    logNew(.feed, baby: baby, $0)
+                    try await logNew(.feed, baby: baby, $0)
                 }
             case .diaper:
                 DiaperSheet(baby: baby, shift: shift.window) {
-                    logNew(.diaper, baby: baby, $0)
+                    try await logNew(.diaper, baby: baby, $0)
                 }
             case .note:
                 NoteSheet(baby: baby, shift: shift.window, presetTags: presetTags) {
-                    logNew(.note, baby: baby, $0, said: "Note saved")
+                    try await logNew(.note, baby: baby, $0, said: "Note saved")
                 }
             case .editSleep(let id, _):
                 editSleepSheet(id: id, baby: baby)
+            case .pastSleep:
+                pastSleepSheet(baby: baby)
 
             case .extra, .editEvent:
                 // Routed before this switch; both can open without a baby.
@@ -266,7 +272,27 @@ private extension TonightView {
             ExtraSheet(
                 kind: kind, baby: baby, shift: shift.window, unit: family.volumeUnit
             ) {
-                logNew(kind, baby: baby, $0)
+                try await logNew(kind, baby: baby, $0)
+            }
+        }
+    }
+
+    /// The tile toggles at the moment it is tapped, so a sleep that ended while
+    /// both hands were full had no route at all: you had to toggle a false state
+    /// and then correct it from the timeline.
+    ///
+    /// Flat per baby, not a submenu, for the reason `extraButtons` is flat.
+    @ViewBuilder
+    func earlierSleepButtons(_ data: Tonight) -> some View {
+        if data.babies.count == 1, let only = data.babies.first {
+            Button("Log earlier sleep", systemImage: "moon.zzz.fill") {
+                sheet = .pastSleep(babyID: only.id)
+            }
+        } else {
+            ForEach(data.babies) { baby in
+                Button("Log earlier sleep — \(baby.name)", systemImage: "moon.zzz.fill") {
+                    sheet = .pastSleep(babyID: baby.id)
+                }
             }
         }
     }
@@ -333,28 +359,28 @@ private extension TonightView {
                     baby: baby, shift: shift.window, unit: family.volumeUnit,
                     editing: feedBefore, reassignment: move, onDelete: delete
                 ) {
-                    saveEdit(id, baby: baby, "Feed", from: feedBefore, to: $0)
+                    try await saveEdit(id, baby: baby, "Feed", from: feedBefore, to: $0)
                 }
             case (.diaper, let baby?):
                 DiaperSheet(
                     baby: baby, shift: shift.window,
                     editing: diaperBefore, reassignment: move, onDelete: delete
                 ) {
-                    saveEdit(id, baby: baby, "Diaper", from: diaperBefore, to: $0)
+                    try await saveEdit(id, baby: baby, "Diaper", from: diaperBefore, to: $0)
                 }
             case (.note, let baby?):
                 NoteSheet(
                     baby: baby, shift: shift.window, presetTags: presetTags,
                     editing: noteBefore, reassignment: move, onDelete: delete
                 ) {
-                    saveEdit(id, baby: baby, "Note", from: noteBefore, to: $0)
+                    try await saveEdit(id, baby: baby, "Note", from: noteBefore, to: $0)
                 }
             case (.pump, _), (.medication, _), (.measurement, _):
                 ExtraSheet(
                     kind: kind, baby: baby, shift: shift.window, unit: family.volumeUnit,
                     editing: extraBefore, reassignment: move, onDelete: delete
                 ) {
-                    saveEdit(id, baby: baby, kind.noun, from: extraBefore, to: $0)
+                    try await saveEdit(id, baby: baby, kind.noun, from: extraBefore, to: $0)
                 }
             default:
                 // A feed, diaper or note with no baby: its sheet is built around
@@ -410,7 +436,7 @@ private extension TonightView {
                     }
                 }
             ) { entry in
-                write(baby, "Sleep updated") { store in
+                try await writeAwaitingSave(baby, "Sleep updated") { store in
                     try await store.updateSleepSession(
                         id, startAt: entry.startAt, endAt: entry.endAt)
                     return {
@@ -421,6 +447,32 @@ private extension TonightView {
             }
         } else {
             Color.clear.onAppear { sheet = nil }
+        }
+    }
+
+    /// Manual entry for a sleep nobody was free to log at the time — the one thing
+    /// the tile's toggle cannot record, since toggling now would misdate it and
+    /// then need correcting.
+    ///
+    /// It ends where the baby's current state began: at the start of the sleep she
+    /// is in now, or at this moment if she is awake. Touching is safe — the
+    /// reconciler merges on starts within two minutes and truncates only a real
+    /// overlap — and `recordCompletedSleep` refuses anything closer.
+    func pastSleepSheet(baby: BabyPresentation) -> some View {
+        let until = baby.asleepSince ?? Date()
+        return SleepSheet(
+            baby: baby, shift: shift.window,
+            earlier: until.addingTimeInterval(-3600), until: until
+        ) { entry in
+            // `.earlier` never leaves the wake time open, so this is total.
+            guard let endAt = entry.endAt else { return }
+            try await writeAwaitingSave(baby, "Earlier sleep logged") { store in
+                let id = try await store.recordCompletedSleep(
+                    shiftID: shift.id, babyID: baby.id,
+                    startAt: entry.startAt, endAt: endAt)
+                // It did not exist a moment ago, so removing it is the state before.
+                return { try await $0.deleteSleepSession(id) }
+            }
         }
     }
 
@@ -507,8 +559,8 @@ private extension TonightView {
     /// exist a moment ago, so removing it is exactly the state before.
     func logNew<E: LogEntry>(
         _ kind: EventKind, baby: BabyPresentation?, _ entry: E, said: String? = nil
-    ) {
-        write(baby, said ?? "\(kind.noun) logged") { store in
+    ) async throws {
+        try await writeAwaitingSave(baby, said ?? "\(kind.noun) logged") { store in
             let id = try await store.logEvent(
                 kind: kind, at: entry.at, shiftID: shift.id, babyID: baby?.id
             ) { entry.apply(to: $0) }
@@ -521,13 +573,27 @@ private extension TonightView {
     /// over in the sheets.
     func saveEdit<E: LogEntry>(
         _ id: UUID, baby: BabyPresentation?, _ noun: String, from before: E, to entry: E
-    ) {
-        write(baby, "\(noun) updated") { store in
+    ) async throws {
+        try await writeAwaitingSave(baby, "\(noun) updated") { store in
             try await store.updateEvent(id, at: entry.at) { entry.apply(to: $0) }
             return {
                 try await $0.updateEvent(id, at: before.at) { before.apply(to: $0) }
             }
         }
+    }
+
+    /// Sheets await this result so errors leave their entered values available to retry.
+    func writeAwaitingSave(
+        _ baby: BabyPresentation?,
+        _ success: String,
+        _ action: @escaping (CareStore) async throws -> Undo?
+    ) async throws {
+        guard let store else { throw EntrySaveError.unavailable }
+        let undo = try await action(store)
+        refreshToken &+= 1
+        Haptics.success()
+        show(baby.map { success.contains($0.name) ? success : "\(success) · \($0.name)" } ?? success,
+             undo: undo)
     }
 
     /// `nil` only for a pump, which is about the mother and names nobody.
@@ -796,10 +862,12 @@ enum LogSheet: Identifiable, Equatable {
     /// Correcting an existing record. Carries the record id as well as the baby.
     case editEvent(id: UUID, babyID: UUID?)
     case editSleep(id: UUID, babyID: UUID)
+    /// A finished sleep nobody was free to log at the time.
+    case pastSleep(babyID: UUID)
 
     var babyID: UUID? {
         switch self {
-        case .feed(let id), .diaper(let id), .note(let id): return id
+        case .feed(let id), .diaper(let id), .note(let id), .pastSleep(let id): return id
         case .editSleep(_, let babyID): return babyID
         case .extra(_, let babyID), .editEvent(_, let babyID): return babyID
         }
@@ -822,6 +890,7 @@ enum LogSheet: Identifiable, Equatable {
         case .feed: return "Feed"
         case .diaper: return "Diaper"
         case .editSleep: return "Sleep"
+        case .pastSleep: return "Earlier sleep"
         case .note: return "Note"
         case .extra(let kind, _): return kind.noun
         case .editEvent: return "Edit"

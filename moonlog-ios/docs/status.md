@@ -2,7 +2,7 @@
 
 Updated 2026-09-07.
 
-**195 unit tests green** (91 `MoonlogCoreTests`, 104 `MoonlogTests`) plus **21
+**197 unit tests green** (93 `MoonlogCoreTests`, 104 `MoonlogTests`) plus **23
 reachability tests** in `MoonlogUITests`. No Release warnings.
 
 **0.1.0 is on TestFlight and is safe to work a real shift on** — local-only, no
@@ -34,34 +34,98 @@ sheets.
 `DayBuckets` is what a multi-night trends view will need; `Family.calendar`
 duplicates `MoonClock`.
 
+## The 2026-09-07 audit pass
+
+Three source audits — `docs/audit-ux.md`, `docs/audit-reliability.md`,
+`docs/audit-continuity.md` — were written against this checkout and are kept as the
+backlog. They are **source** audits: nothing in them was reproduced on a device, and
+the line numbers describe the tree before this pass changed it.
+
+What closed:
+
+- **A logical write is one commit.** `CareStore.write` disables autosave, saves once
+  at the outermost depth and rolls back on a throw, so nested reconciliation shares
+  the commit and a rejected update cannot leave mutations pending for the next
+  successful save to carry. Input is validated before anything is mutated.
+- **Save awaits the write.** Every log sheet's `onSave` is `async throws`; the sheet
+  latches, says "Saving…", and dismisses only on success. A failure keeps every
+  entered value and offers Retry, instead of returning to Tonight with an alert and
+  asking you to remember what you typed. Same for the note to the parents.
+- **A disabled Save says why**, beside the button — "Add a note, choose a tag, or
+  record a temperature." (Feeds were already ungated.)
+- **Amounts, minutes, weights and temperature are typed, not only stepped.** A 4 oz
+  bottle was eight presses of a stepper; 100.4°F was eighteen. The steppers stay for
+  the small nudge. Invalid text blocks Save and stays visible rather than silently
+  saving the last valid number.
+- **`Fmt` tolerates malformed stored values** — NaN, infinity, negative, and values
+  past `Int`'s range render as "—" rather than trapping while the timeline opens.
+  The writer refuses them at the actor.
+- **The actor enforces household membership.** Logging, correcting, restoring and
+  reassigning all check that the baby belongs to the shift's family. Reassignment
+  also refuses a kind that attaches to no baby.
+- **Duplicate logical ids no longer trap.** `Dictionary(uniqueKeysWithValues:)` on
+  model ids is gone; conflicts throw and keep both records.
+- **A family and its first baby are one write.** A rejected birth date used to leave
+  a nameless household on the switcher.
+- **"Log earlier sleep"**, per baby, in Tonight's overflow menu. The tile toggles at
+  the moment it is tapped, so a sleep that ended while both hands were full had no
+  route at all. It never opens a session — the actor refuses anything the reconciler
+  would merge into the sleep running now.
+- **The note to the parents and Past nights are on Summary**, not buried in the share
+  menu and a tab away in Settings.
+- Accessibility: the card's chips carry combined labels, its status text wraps instead
+  of shrinking to 70%, and the chip row and action row go vertical at accessibility
+  text sizes. Tap targets on the baby header and busy action buttons are honest.
+
+**One display rule changed.** `Fmt.amount` no longer snaps ounces to the half-ounce
+grid. That snap was lossless while amounts could only be stepped; with direct entry a
+typed 2.25 oz would have read back as 2.5. The cost is that a 90 ml feed shown to an
+ounces household now reads "3.04 oz" rather than "3 oz". Sums (`amountTotal`) are
+unchanged at one decimal.
+
 ## Still open
 
-1. **A disabled Save says nothing about why.** A note with nothing in it and a pump
-   with no volume refuse silently; `saveEnabled` is a `Bool` with no reason attached.
-   (Feeds are no longer gated — a feed saves on its time alone.)
-2. **Settings toggle rows respond only on the switch**, not across the row, unlike
+1. **No draft survives leaving the sheet.** Save now holds its values through a
+   *failed* write, but a swipe-dismiss or a process kill still loses unfinished
+   input; there is no scene-phase recovery. `audit-continuity.md` C2.
+2. **Sleep's busy period is still a fixed two-second timer**, not an observed merge,
+   and Undo is still one action for six seconds — replaced by the next write.
+   `audit-continuity.md` C3, C4.
+3. **Undo has no conflict check.** An event edit's reversal writes its whole prior
+   payload without checking the record still matches, and `runUndo` clears the action
+   before awaiting it, so a failed Undo cannot be retried. `audit-reliability.md` R6.
+4. **The in-memory fallback still ends in `try!`.** If that initializer throws the app
+   terminates instead of showing recovery UI, and there is no retry or reopen route.
+   `audit-reliability.md` R3.
+5. **History and the timeline have no upper bound.** Both fetch every closed shift and
+   filter in memory. P3 — measure on a populated store before optimising.
+   `audit-continuity.md` C5.
+6. **Settings toggle rows respond only on the switch**, not across the row, unlike
    every other row on that screen. Measured: the row centre and the label both leave
    the setting off, and a `contentShape` on the label does not fix it.
-3. **`EventKind` has no `unknown` case.** `LogEvent.kind` falls back to `.note`, so a
+7. **`EventKind` has no `unknown` case.** `LogEvent.kind` falls back to `.note`, so a
    kind written by a later build would read here as a note — a record of the wrong
    thing rather than of nothing. Every other wire-format enum has the guard. Closing
    it means adding a case to several exhaustive switches.
-4. **Summary's Copy sits in the top-left corner** — the worst reach for a right thumb.
+8. **Summary's Copy sits in the top-left corner** — the worst reach for a right thumb.
    Once a night, so undecided rather than open.
-5. **Undo has three gaps**, all deliberate and commented where they apply: recording a
+9. **Undo has three gaps**, all deliberate and commented where they apply: recording a
    sleep from the sheet (`recordSleep` corrects-or-inserts and does not say which),
    ending a shift (`updateShift` will not reopen one, because `close(at:)` is what
    keeps `isOpen` honest), and adding a baby (archiving is not un-adding).
-6. Smaller: the handoff lists feed and note times but not diaper times;
+10. Smaller: the handoff lists feed and note times but not diaper times;
    `Fmt.paddedDuration` has no rollover past 24h; `OnboardingView`'s
    `.navigationTitle` is dead, overridden by the tab's stack.
 
-**Not covered by the 2026-09-07 crash and data-loss pass**, and worth saying so: an
-app killed mid-write, and Undo re-applying onto a record changed since. That pass
-ranked *silent wrong data > silent data loss > crash mid-shift > crash at launch >
-performance*, and found one thing — the in-memory fallback was announced only in
-Settings, so a whole night could be logged and lost in silence. `NightHeader` carries
-that warning now. Otherwise: no force unwraps, `try!`, `as!` or `fatalError` outside
+**Not covered by either 2026-09-07 pass**, and worth saying so: an app killed
+mid-write, and Undo re-applying onto a record changed since. No fault injection was
+run — the transaction boundary above is verified by reading the code and by the unit
+suite, not by a failed disk write or a forced termination.
+
+The earlier crash and data-loss pass ranked *silent wrong data > silent data loss >
+crash mid-shift > crash at launch > performance*, and found one thing — the in-memory
+fallback was announced only in Settings, so a whole night could be logged and lost in
+silence. `NightHeader` carries that warning now. Otherwise: no force unwraps, `try!`, `as!` or `fatalError` outside
 the last-resort in-memory container; every write goes through `StoreWrite.run`, which
 surfaces a throw as an alert; the actor returns snapshots, never `@Model` objects.
 
