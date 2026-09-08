@@ -45,12 +45,16 @@ struct DiaperSheet: View {
             shift: shift,
             reassignment: reassignment,
             saveEnabled: true,
-            // Cleared when the contents no longer include stool. Keeping it meant a
-            // corrected wet diaper still put meconium in the handoff.
+            // Saved exactly as the swatches show it, cleared included. The colour used
+            // to be dropped whenever the contents were not dirty, because the section
+            // was dropped with them: a colour picked on "dirty" and then corrected to
+            // "wet" stayed in state unseen and put meconium in the parents' handoff.
+            // Nothing can be stranded now that the section stands on every contents
+            // choice — the only way to abandon a colour is to tap the chosen swatch
+            // again, and that has to reach the record as nil rather than leave the
+            // previous colour standing.
             onSave: {
-                try await onSave(DiaperEntry(
-                    at: at, contents: contents,
-                    stool: contents.countsAsDirty ? stool : nil))
+                try await onSave(DiaperEntry(at: at, contents: contents, stool: stool))
             },
             onDelete: onDelete
         ) {
@@ -63,21 +67,25 @@ struct DiaperSheet: View {
                 .pickerStyle(.segmented)
             }
 
-            if contents.countsAsDirty {
-                Section {
-                    StoolPicker(selection: $stool)
-                } header: {
-                    Text("Colour")
-                } footer: {
-                    Text("Whether meconium has cleared is what the parents and the "
-                         + "pediatrician are watching for.")
-                }
+            // On every contents choice, not just the dirty ones: a wet diaper can carry
+            // something worth reporting too, and a picker that comes and goes with the
+            // segmented control is what stranded a colour in the first place.
+            Section {
+                StoolPicker(selection: $stool)
+            } header: {
+                Text("Colour")
+            } footer: {
+                Text("Whether meconium has cleared is what the parents and the "
+                     + "pediatrician are watching for. Tap a chosen colour again to "
+                     + "clear it.")
             }
         }
     }
 }
 
-/// Labelled swatches in clinical progression order — never colour alone.
+/// Labelled swatches in clinical progression order — never colour alone. Tapping the
+/// selected one clears it: the field is optional, and with the picker on every diaper a
+/// mis-tap needs a way back that is not "delete the record and log it again".
 private struct StoolPicker: View {
     @Binding var selection: StoolColor?
     @Environment(\.palette) private var palette

@@ -9,7 +9,7 @@ final class FeedDueTests: XCTestCase {
     private func baby(lastFeed: Date?) -> BabyPresentation {
         BabyPresentation(
             id: UUID(), name: "Mia", accent: .gold, dayOfLife: 6,
-            asleepSince: nil, awakeSince: nil,
+            asleepSince: nil, awakeSince: nil, lastSleep: nil,
             lastFeedAt: lastFeed, lastDiaperAt: nil)
     }
 

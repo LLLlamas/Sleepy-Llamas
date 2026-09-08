@@ -256,11 +256,23 @@ public enum BabyAccent: String, CaseIterable, Sendable, Identifiable {
     /// — and far enough from the other state to read as awake or asleep. Deepening
     /// one costs the other, exactly.
     ///
-    /// These six numbers are the balance point, measured per theme rather than
-    /// chosen: the pair maximising the *smaller* of identity and separation while
-    /// `ink` and `soft` hold 4.5:1 on both fills and the accent outline holds 3:1,
-    /// across all five accents. Every theme clears 1.20:1 on both. Change one and
-    /// `PaletteTests` will tell you which job you broke.
+    /// The awake numbers are the measured balance point and have not moved. **The
+    /// asleep numbers are no longer balanced against separation — they are as deep
+    /// as the floors in `PaletteTests` allow**, because asleep was asked to read as
+    /// a see-through version of the same colour and at the old depths it read as a
+    /// solid second shade. Identity is now what binds: the shallowest accent clears
+    /// the card by 1.19:1 on Night and Deep Night and 1.19:1 by day, against a floor
+    /// of 1.18. Separation and both text pairs come along for free, since a fill
+    /// closer to the card is further from the awake fill and further from `ink`.
+    ///
+    /// **Day did not move at all, deliberately.** Its card is near-white, so a blend
+    /// toward it loses contrast fastest, and 0.85 already sat a hundredth off the
+    /// floor. The whole of the room there is 0.86 — worth 1.204:1 down to 1.189:1
+    /// against the card, which is not a difference an eye can find, and it spends
+    /// the last of the margin `docs/status.md` has flagged since the tile shipped.
+    /// Buying nothing visible with the only headroom Day has left is a bad trade.
+    /// Making Day's asleep tile genuinely see-through needs a lighter card, not a
+    /// deeper blend. Change one and `PaletteTests` will tell you which job you broke.
     ///
     /// They differ per theme because the cards do — near-white by day, near-black on
     /// Deep Night — and a blend toward a near-black card loses colour far faster.
@@ -274,9 +286,9 @@ public enum BabyAccent: String, CaseIterable, Sendable, Identifiable {
         let factor: Double
         switch (theme, asleep) {
         case (.night, false): factor = 0.65
-        case (.night, true): factor = 0.80
+        case (.night, true): factor = 0.88
         case (.deepNight, false): factor = 0.70
-        case (.deepNight, true): factor = 0.83
+        case (.deepNight, true): factor = 0.875
         case (.day, false): factor = 0.71
         case (.day, true): factor = 0.85
         }

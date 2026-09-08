@@ -222,7 +222,10 @@ private extension TonightView {
         if let baby = data.babies.first(where: { $0.id == which.babyID }) {  // swiftlint:disable:this all
             switch which {
             case .feed:
-                FeedSheet(baby: baby, shift: shift.window, unit: family.volumeUnit) {
+                FeedSheet(
+                    baby: baby, shift: shift.window, unit: family.volumeUnit,
+                    lastFeed: data.lastFeedEntry[baby.id]
+                ) {
                     try await logNew(.feed, baby: baby, $0)
                 }
             case .diaper:
@@ -756,6 +759,9 @@ private struct Tonight {
     let timeline: [TimelineEntry]
     let names: [UUID: String]
     let accents: [UUID: BabyAccent]
+    /// The values of each baby's most recent feed, for the sheet's "Same as last".
+    /// Held per baby, not per household: twins rarely take the same bottle.
+    let lastFeedEntry: [UUID: FeedEntry]
     private let models: [UUID: Baby]
 
     func model(for id: UUID) -> Baby? { models[id] }
@@ -777,6 +783,7 @@ private struct Tonight {
         var names: [UUID: String] = [:]
         var accents: [UUID: BabyAccent] = [:]
         var lastFeed: [UUID: Date] = [:]
+        var lastFeedEntry: [UUID: FeedEntry] = [:]
         var lastDiaper: [UUID: Date] = [:]
         var snapshots: [SleepSnapshot] = []
 
@@ -795,7 +802,10 @@ private struct Tonight {
             guard let babyID = event.babyIDRaw else { continue }
             switch event.kind {
             case .feed:
-                if event.at > lastFeed[babyID] ?? .distantPast { lastFeed[babyID] = event.at }
+                if event.at > lastFeed[babyID] ?? .distantPast {
+                    lastFeed[babyID] = event.at
+                    lastFeedEntry[babyID] = event.feedEntry
+                }
             case .diaper:
                 if event.at > lastDiaper[babyID] ?? .distantPast { lastDiaper[babyID] = event.at }
             case .note, .pump, .medication, .measurement:
@@ -813,6 +823,7 @@ private struct Tonight {
             for: shift, unit: unit, now: now, editable: true)
         self.names = names
         self.accents = accents
+        self.lastFeedEntry = lastFeedEntry
         self.models = models
 
         let calendar = family.calendar
@@ -827,6 +838,12 @@ private struct Tonight {
                 // device resolves a synced duplicate the same way.
                 asleepSince: SleepMath.openSession(in: snapshots, forBaby: baby.id)?.startAt,
                 awakeSince: SleepMath.lastWake(in: snapshots, forBaby: baby.id),
+                lastSleep: SleepMath.lastCompleted(in: snapshots, forBaby: baby.id)
+                    .flatMap { done in
+                        done.endAt.map {
+                            BabyPresentation.SleepSpan(startAt: done.startAt, endAt: $0)
+                        }
+                    },
                 lastFeedAt: lastFeed[baby.id],
                 lastDiaperAt: lastDiaper[baby.id])
         }
@@ -916,7 +933,9 @@ extension EventKind {
     var icon: String {
         switch self {
         case .feed: return "drop.fill"
-        case .diaper: return "square.on.square"
+        // Not an SF Symbol — see `CareGlyph`. Apple has no nappy, and the stack of
+        // squares that stood in for one reads as "duplicate".
+        case .diaper: return CareGlyph.diaper
         case .note: return "text.bubble.fill"
         case .pump: return "waveform.path"
         case .medication: return "pills.fill"
@@ -952,8 +971,13 @@ extension LogEvent {
 
     func apply(_ entry: DiaperEntry) {
         diaperContentsRaw = entry.contents.rawValue
-        // Cleared when the contents no longer include stool: keeping it meant a
-        // corrected wet diaper still put meconium in the handoff.
+        // Written through exactly as the sheet holds it, `nil` included. It used to
+        // be cleared whenever the contents stopped counting as dirty, because the
+        // colour swatches only appeared for dirty and a colour picked and then
+        // corrected away sat invisible in view state and rode into the handoff as
+        // meconium on a wet diaper. The swatches are on every diaper now, so
+        // nothing can be stranded — and clearing on contents would instead throw
+        // away a colour the doula can see and deliberately chose.
         stoolColorRaw = entry.stool?.rawValue
     }
 
@@ -994,7 +1018,7 @@ extension LogEvent {
     func timelineTitle(unit: VolumeUnit) -> String {
         switch kind {
         case .feed: return feedMethod.map(Fmt.feedMethod) ?? "Feed"
-        case .diaper: return diaperContents.map(Fmt.diaper) ?? "Diaper"
+        case .diaper: return diaperContents.map(Fmt.diaperRecord) ?? "Diaper"
         case .note: return "Note"
         case .pump: return "Pumped"
         case .medication: return "Medication"

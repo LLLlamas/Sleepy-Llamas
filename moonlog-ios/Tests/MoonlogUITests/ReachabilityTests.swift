@@ -103,6 +103,31 @@ final class ReachabilityTests: MoonlogUITestCase {
             "pushed a blank screen")
     }
 
+    /// The night's most repeated action, made repeatable. A routine bottle meant
+    /// choosing the method and setting the amount again every time, and this app
+    /// has shipped a control that was declared, passed a closure, and rendered
+    /// nowhere — so the assertion is that a thumb can reach it, not that it exists.
+    ///
+    /// Leo, because the seed gives him bottles with amounts; Mia's feeds are breast,
+    /// where there is less to repeat. The row's own text is not asserted: it is in
+    /// the household's volume unit and would pin this test to the seed's choice.
+    func testAFeedCanRepeatTheLastOne() {
+        launch()
+        reveal(cardButton("Feed", for: "Leo")).tap()
+
+        let repeatRow = app.buttons["feed.sameAsLast"]
+        XCTAssertTrue(repeatRow.waitForExistence(timeout: 5), "no way to repeat the last feed")
+        XCTAssertTrue(repeatRow.isHittable, "the row is there but cannot be tapped")
+        repeatRow.tap()
+
+        let save = app.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5), "no Save")
+        save.tap()
+        XCTAssertTrue(
+            app.buttons["Undo"].waitForExistence(timeout: 10),
+            "the repeated feed did not log")
+    }
+
     /// A sleep that ended while both hands were full had no route: the tile toggles
     /// at the moment it is tapped, so recording one meant logging a state that was
     /// not true and then correcting it from the timeline. `recordCompletedSleep`

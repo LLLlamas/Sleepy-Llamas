@@ -6,6 +6,9 @@ struct FeedSheet: View {
     let shift: ShiftWindow
     let unit: VolumeUnit
     let editing: FeedEntry?
+    /// This baby's most recent feed, for "Same as last". `nil` on the first feed of
+    /// the shift and while editing, where "last" would mean the record itself.
+    let lastFeed: FeedEntry?
     let onSave: (FeedEntry) async throws -> Void
     var onDelete: (() -> Void)?
     /// Forwarded to the chrome; set only when editing.
@@ -23,12 +26,14 @@ struct FeedSheet: View {
         shift: ShiftWindow,
         unit: VolumeUnit,
         editing: FeedEntry? = nil,
+        lastFeed: FeedEntry? = nil,
         reassignment: Reassignment? = nil,
         onDelete: (() -> Void)? = nil,
         onSave: @escaping (FeedEntry) async throws -> Void
     ) {
         self.baby = baby
         self.shift = shift
+        self.lastFeed = editing == nil ? lastFeed : nil
         self.unit = unit
         self.editing = editing
         self.onDelete = onDelete
@@ -64,6 +69,42 @@ struct FeedSheet: View {
             onSave: save,
             onDelete: onDelete
         ) {
+            // The night's most repeated action is the same bottle again, and typing
+            // it out four times is four chances to mis-set a stepper in the dark.
+            // Deliberately not a prefill: an amount nobody chose would still reach
+            // the parents' handoff as a measured fact, so the fields stay empty
+            // until this is tapped. The time is never copied — that is the one
+            // thing the doula has already set on the way in.
+            if let parts = lastFeedParts {
+                Section {
+                    Button {
+                        Haptics.tap()
+                        applyLastFeed()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.subheadline)
+                                .foregroundStyle(palette.accent)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Same as last")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(palette.ink)
+                                Text(parts.joined(separator: " \u{00B7} "))
+                                    .font(.caption)
+                                    .foregroundStyle(palette.soft)
+                            }
+                            Spacer()
+                        }
+                        .frame(minHeight: MoonLayout.tapTarget)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("feed.sameAsLast")
+                    .accessibilityLabel(
+                        "Repeat last feed, \(parts.joined(separator: ", "))")
+                }
+            }
+
             Section("How") {
                 Picker("Method", selection: $method) {
                     Text("Breast").tag(FeedMethod.breast)
@@ -91,6 +132,62 @@ struct FeedSheet: View {
                 }
             }
         }
+    }
+
+    /// What "same as last" would actually write, in pieces so the row can join them
+    /// with a separator and VoiceOver can hear them as a sentence.
+    ///
+    /// The words are `Handoff.warmFeed`'s — "bottle, formula", "both sides" — because
+    /// this row and the parents' handoff describe the same feed, and two spellings of
+    /// one night is how the parents end up asking which one is right. `warmFeed`
+    /// itself is internal to Core and takes an `EventSnapshot`, so it cannot be
+    /// called from here.
+    ///
+    /// `nil` also for an `unknown` method: there is nothing to repeat, and setting it
+    /// would select a tag the picker only offers while editing, leaving the segmented
+    /// control with nothing lit.
+    private var lastFeedParts: [String]? {
+        guard let last = lastFeed else { return nil }
+        var parts: [String] = []
+        switch last.method {
+        case .breast:
+            let left = last.leftSeconds ?? 0
+            let right = last.rightSeconds ?? 0
+            if left > 0 && right > 0 {
+                parts.append("both sides")
+                parts.append("left \(Fmt.duration(TimeInterval(left))), "
+                    + "right \(Fmt.duration(TimeInterval(right)))")
+            } else if left > 0 {
+                parts.append("left breast")
+                parts.append(Fmt.duration(TimeInterval(left)))
+            } else if right > 0 {
+                parts.append("right breast")
+                parts.append(Fmt.duration(TimeInterval(right)))
+            } else {
+                parts.append("breast")
+            }
+        case .bottleBreastmilk, .bottleFormula:
+            if let ml = last.amountMl, ml > 0 {
+                parts.append(Fmt.amount(ml: ml, unit: unit))
+            }
+            parts.append(last.method == .bottleFormula ? "bottle, formula" : "bottle, breastmilk")
+            if let seconds = last.bottleSeconds, seconds > 0 {
+                parts.append(Fmt.duration(TimeInterval(seconds)))
+            }
+        case .unknown:
+            return nil
+        }
+        return parts
+    }
+
+    /// Everything but the time. A repeat is about what the baby took, not when.
+    private func applyLastFeed() {
+        guard let last = lastFeed else { return }
+        method = last.method
+        amountMl = last.amountMl ?? 0
+        bottleMinutes = (last.bottleSeconds ?? 0) / 60
+        leftMinutes = (last.leftSeconds ?? 0) / 60
+        rightMinutes = (last.rightSeconds ?? 0) / 60
     }
 
     private func save() async throws {

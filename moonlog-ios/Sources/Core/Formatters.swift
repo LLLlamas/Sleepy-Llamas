@@ -182,4 +182,15 @@ public enum Fmt {
         case .unknown: return "Diaper"
         }
     }
+
+    /// The same contents, named as a thing rather than as an adjective — for a
+    /// timeline row, where "Wet" on its own is a word with no subject and reads as
+    /// a state of the baby rather than a record of a change.
+    ///
+    /// Kept separate from `diaper(_:)` rather than folded into it: the handoff
+    /// already builds "wet diaper" by lowercasing that one and appending the noun,
+    /// and a noun baked in at the source would give the parents "wet diaper diaper".
+    public static func diaperRecord(_ contents: DiaperContents) -> String {
+        contents == .unknown ? "Diaper" : diaper(contents) + " diaper"
+    }
 }

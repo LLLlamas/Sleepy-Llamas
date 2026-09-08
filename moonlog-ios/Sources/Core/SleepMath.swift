@@ -86,9 +86,25 @@ public enum SleepMath {
         in sessions: [SleepSnapshot],
         forBaby babyID: UUID
     ) -> Date? {
+        lastCompleted(in: sessions, forBaby: babyID)?.endAt
+    }
+
+    /// The whole of this baby's most recently finished sleep, not just its end.
+    ///
+    /// The card names both ends of it once the baby is awake again — "3:42a–4:22a"
+    /// is the fact a doula reads off to the parents, and it was previously only
+    /// recoverable by scrolling the timeline. Ties on `endAt` break on id, for the
+    /// same reason `openSession` does.
+    public static func lastCompleted(
+        in sessions: [SleepSnapshot],
+        forBaby babyID: UUID
+    ) -> SleepSnapshot? {
         sessions
-            .filter { $0.babyID == babyID }
-            .compactMap(\.endAt)
-            .max()
+            .filter { $0.babyID == babyID && $0.endAt != nil }
+            .max { lhs, rhs in
+                lhs.endAt == rhs.endAt
+                    ? lhs.id.uuidString < rhs.id.uuidString
+                    : (lhs.endAt ?? .distantPast) < (rhs.endAt ?? .distantPast)
+            }
     }
 }

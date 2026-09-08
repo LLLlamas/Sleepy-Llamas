@@ -83,8 +83,7 @@ struct TimelineSection: View {
 
     private func row(_ entry: TimelineEntry) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: entry.icon)
-                .font(.footnote)
+            CareGlyph(entry.icon, size: 13, relativeTo: .footnote)
                 .frame(width: 22)
                 .foregroundStyle(accentColor(for: entry))
 

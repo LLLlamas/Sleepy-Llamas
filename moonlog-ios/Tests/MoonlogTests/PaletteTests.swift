@@ -183,7 +183,14 @@ final class PaletteTests: XCTestCase {
     ///
     /// **Identity:** each fill must stand off the card enough to read as this baby's
     /// colour. **Separation:** the two states must not paint the same. They pull
-    /// against each other; 1.20 is what every theme clears on both.
+    /// against each other, and on the night themes the asleep fill is now set as
+    /// deep as this floor allows rather than balanced against separation — asleep is
+    /// meant to read as the colour seen through, so identity is what it spends. The
+    /// shallowest accent clears 1.19:1 on Night and Deep Night, where the margin
+    /// above 1.18 is one hundredth of a blend step. Day is left at 1.20:1 because
+    /// the step that would spend its margin is invisible; see `BabyAccent.wash`.
+    /// **The threshold is the design, not a formality** — do not lower it to make
+    /// room for a deeper fill.
     ///
     /// The first version of this test checked separation alone. The factors then in
     /// place put the asleep fill 1.06:1 from the card — invisible, an outline with
