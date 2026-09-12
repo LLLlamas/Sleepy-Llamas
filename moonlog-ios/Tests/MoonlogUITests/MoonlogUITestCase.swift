@@ -23,8 +23,17 @@ class MoonlogUITestCase: XCTestCase {
 
     @discardableResult
     func launch(_ extraArguments: [String] = []) -> XCUIApplication {
+        // `-moonlogStillGlyphs` freezes the tile's sun and moon. XCUITest waits for
+        // the app to report itself idle before the hierarchy snapshot a compound
+        // query needs, and an animation in flight is not idle: with the glyphs
+        // moving, the one test that asks for a button *containing* "Mia is asleep"
+        // took eighteen minutes on its own and the suite took twenty-two. The drift
+        // is bounded now, so the worst case is the length of the window rather than
+        // forever — but it is decorative and nothing here asserts on it, so the
+        // still frame stays.
         app.launchArguments =
-            ["-moonlogSeedDemo", "YES", "-moonlogResetStore", "YES"] + extraArguments
+            ["-moonlogSeedDemo", "YES", "-moonlogResetStore", "YES",
+             "-moonlogStillGlyphs", "YES"] + extraArguments
         app.launch()
         return app
     }

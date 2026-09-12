@@ -119,6 +119,34 @@ answering one. Correcting a time afterwards lives where the record is: the sleep
 in tonight's timeline, which is tappable for a running session as well as a finished
 one.
 
+### The tile does not flinch when you press it
+
+Tapping it used to dim the whole tile, which is `.buttonStyle(.plain)`'s default and
+reads as the control going unavailable rather than as it being pressed — on the one
+control that is pressed most. It uses a button style that returns its label untouched;
+the haptic and the state change are the feedback. The action row below still dims,
+because those buttons are small enough that the dim reads as a press rather than a
+fault.
+
+### The sun and the moon move
+
+The glyphs are drawn shapes, not SF Symbols. The moon's z's climb and fade on three
+staggered cycles; the sun's eight rays turn 45° — one ray-pitch — so the turn closes on
+itself. Changing state shakes and swells the glyph once.
+
+No symbol effect does this: they animate a glyph as a whole, and the ask was for the
+z's and the rays to move *independently* of it. That is the entire reason there is a
+hand-drawn shape here rather than `moon.zzz.fill`.
+
+**The drift is bounded** — about seven seconds for the moon, nine for the sun, then
+still. See *The glyph drift is bounded, not perpetual* in `decisions.md`. Because the
+settled frame is what the tile shows for the rest of the night, it is the frame the
+glyph is composed for: the crescent sits down and left of centre so the three z's have
+the top-right corner to themselves.
+
+**All of it stops under Reduce Motion** — the phase array collapses to one entry and
+the drift is passed `nil`, leaving that same resting frame.
+
 ### The tile wears the baby's colour, not the state's
 
 Both states are tinted by **that baby's accent**. The border and the moon/sun glyph
@@ -133,14 +161,23 @@ which, and hue said nothing about whose card you were looking at.
 So hue is identity now and depth of fill is state. **That is a deliberate demotion of
 colour as a state signal**, and it is only defensible because state was never carried
 by colour alone here: the glyph is a moon or a sun, the sentence says "Mia is asleep"
-in words, and the elapsed counter appears only while asleep. Colour stays the third
-signal — it has changed what it is third *for*.
+in words, and the trailing edge names the sleep's times. Colour stays the third signal
+— it has changed what it is third *for*.
 
 **Each fill has two jobs, and they pull against each other.** It must stand off the
 card enough to read as *this baby's colour*, and stand off the other state enough to
-read as awake or asleep. Deepening one costs the other. The six blend factors are the
-measured balance point per theme — every theme clears 1.20:1 on both, while `ink` and
-`soft` hold 4.5:1 on the fill and the accent outline holds 3:1.
+read as awake or asleep. Deepening one costs the other.
+
+The awake factors are the measured balance point per theme. **The asleep ones no longer
+are** — they are as deep as the floors allow, because asleep was asked to read as the
+colour seen *through* rather than as a solid second shade. On Night and Deep Night that
+took the fill from about 1.45:1 off the card to about 1.22:1, against a floor of 1.18.
+Day did not move: the whole of its remaining room is worth 1.204:1 down to 1.189:1,
+which no eye can find, and it would spend the last of a margin this document has flagged
+since the tile shipped. A genuinely see-through Day tile needs a lighter Day card, not a
+deeper blend. Throughout, `ink` and `soft` hold 4.5:1 on the fill and the accent outline
+holds 3:1 — those come along for free, since a fill nearer the card is further from the
+text on it.
 
 The outline and glyph are held to 3:1 rather than 4.5 because they are UI components,
 not text — WCAG 1.4.11. Holding them to 4.5 was tried and forced the accent 44% of the

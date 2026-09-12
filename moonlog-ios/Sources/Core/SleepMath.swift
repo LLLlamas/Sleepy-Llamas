@@ -1,6 +1,58 @@
 import Foundation
 
+/// One stretch of sleep as it counts toward a shift: when it began, when it ended,
+/// and how long that was.
+///
+/// Dates rather than formatted strings, because the timeline writes "1:15 AM" and
+/// the documents "1:15a" — and the thing that must not exist twice is the *clipping*
+/// rule, not the clock format. Before this the timeline showed a duration alone, so
+/// a row said a baby slept 2h 33m without saying until when.
+public struct SleepStretch: Sendable, Hashable, Identifiable {
+    public let id: UUID
+    public let start: Date
+    /// Where the stretch stops counting. On an open session this is where the clip
+    /// fell — the shift's end, or now — so `isOpen` guards printing it as a waking.
+    public let end: Date
+    public let isOpen: Bool
+
+    public var seconds: TimeInterval { end.timeIntervalSince(start) }
+
+    public init(id: UUID, start: Date, end: Date, isOpen: Bool) {
+        self.id = id
+        self.start = start
+        self.end = end
+        self.isOpen = isOpen
+    }
+}
+
 public enum SleepMath {
+
+    /// The clipped stretch, or `nil` when the session contributed no time to the
+    /// shift. Every caller that wants to *describe* a sleep goes through this;
+    /// `interval` and `seconds` remain for the ones that only need to add it up.
+    public static func stretch(
+        of session: SleepSnapshot,
+        clippedTo shift: ShiftWindow,
+        asOf now: Date
+    ) -> SleepStretch? {
+        guard let span = interval(of: session, clippedTo: shift, asOf: now),
+              span.duration > 0 else { return nil }
+        return SleepStretch(
+            id: session.id, start: span.start, end: span.end, isOpen: session.isOpen)
+    }
+
+    /// Every stretch one baby slept during the shift, oldest first.
+    public static func stretches(
+        of sessions: [SleepSnapshot],
+        forBaby babyID: UUID,
+        clippedTo shift: ShiftWindow,
+        asOf now: Date
+    ) -> [SleepStretch] {
+        sessions
+            .filter { $0.babyID == babyID }
+            .compactMap { stretch(of: $0, clippedTo: shift, asOf: now) }
+            .sorted { $0.start < $1.start }
+    }
 
     /// The portion of `session` counting toward `shift`.
     ///

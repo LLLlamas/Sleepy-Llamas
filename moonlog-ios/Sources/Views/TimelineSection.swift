@@ -20,6 +20,10 @@ struct TimelineSection: View {
     let timeZone: TimeZone
     let names: [UUID: String]
     let accents: [UUID: BabyAccent]
+    /// "Tonight" on the screen that is logging it. Summary calls the same list
+    /// something else, because there it is the record being handed over rather than
+    /// the night in progress.
+    var title = "Tonight"
     var onEdit: (LogSheet) -> Void = { _ in }
 
     @Environment(\.palette) private var palette
@@ -29,7 +33,7 @@ struct TimelineSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Tonight")
+            Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(palette.faint)
                 .padding(.horizontal, 4)

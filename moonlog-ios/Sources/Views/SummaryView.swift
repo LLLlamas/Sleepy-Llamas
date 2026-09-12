@@ -154,6 +154,7 @@ struct SummaryView: View {
                 .padding(.horizontal, 16)
                 .cardSurface(palette)
                 SummaryCards(family: family, shift: shift, now: now)
+                nightLog(shift: shift, now: now)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -161,6 +162,34 @@ struct SummaryView: View {
         }
     }
 
+    /// Every record of the night, in order, with the time each was logged.
+    ///
+    /// The cards above are what the night added up to; this is what actually
+    /// happened. Without it the only place a client could read a change against the
+    /// feed before it was the doula's own Tonight screen, which is not shared and is
+    /// empty the moment the shift ends. Read-only — Summary is the screen the night
+    /// is handed over from, and an edit belongs on Tonight where the record is.
+    ///
+    /// The same `ShiftTimeline` rows Tonight and a past night render, so a client
+    /// asking about a line and the doula reading it back are looking at one list.
+    private func nightLog(shift: Shift, now: Date) -> some View {
+        let zone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
+        return TimelineSection(
+            entries: ShiftTimeline.entries(
+                for: shift, unit: family.volumeUnit, timeZone: zone,
+                now: now, editable: false),
+            timeZone: zone,
+            // Every baby, not only the active ones: a night logged before a baby was
+            // archived still has her rows in it, and filtering here would render them
+            // nameless and colourless.
+            names: Dictionary(
+                (family.babies ?? []).map { ($0.id, $0.name) },
+                uniquingKeysWith: { first, _ in first }),
+            accents: Dictionary(
+                (family.babies ?? []).map { ($0.id, $0.accent) },
+                uniquingKeysWith: { first, _ in first }),
+            title: "The night, logged")
+    }
 }
 
 /// The per-baby cards for one shift.
@@ -192,6 +221,10 @@ struct SummaryCards: View {
                     totals: Totals.compute(
                         events: events, sessions: sessions, forBaby: baby.id,
                         shift: shift.window, asOf: now),
+                    // The same events the totals were computed from, so this card
+                    // and the handoff cannot disagree about whether the progression
+                    // is stool or the colour of a wet one.
+                    colourLabel: Handoff.diaperColourLabel(in: events, forBaby: baby.id),
                     unit: family.volumeUnit, shift: shift)
             }
         }
@@ -219,7 +252,8 @@ struct SummaryCards: View {
     }
 
     private func babyCard(
-        _ baby: Baby, totals: ShiftTotals, unit: VolumeUnit, shift: Shift
+        _ baby: Baby, totals: ShiftTotals, colourLabel: String,
+        unit: VolumeUnit, shift: Shift
     ) -> some View {
         // Pinned to the shift, like Tonight. Reading the optional property here
         // meant a dead fallback that, if it ever fired, would show a different day
@@ -250,7 +284,10 @@ struct SummaryCards: View {
 
             detail("Wet / dirty", "\(totals.wet) / \(totals.dirty)")
             if !totals.stoolProgression.isEmpty {
-                detail("Stool",
+                // "Stool" or "Colour", decided by whether a dirty diaper actually
+                // contributed one. A colour can come off a wet diaper now, and a
+                // night with none of the former would otherwise report stool.
+                detail(colourLabel,
                        totals.stoolProgression.map(Fmt.stool).joined(separator: " → "))
             }
             if totals.stretches > 0 {

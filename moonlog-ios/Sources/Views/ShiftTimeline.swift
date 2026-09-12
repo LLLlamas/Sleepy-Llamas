@@ -11,6 +11,7 @@ enum ShiftTimeline {
     static func entries(
         for shift: Shift,
         unit: VolumeUnit,
+        timeZone: TimeZone,
         now: Date,
         editable: Bool
     ) -> [TimelineEntry] {
@@ -36,18 +37,21 @@ enum ShiftTimeline {
         }
 
         for session in sessions {
+            // Start, wake and how long it lasted, in the same sentence the handoff
+            // prints — the row gave a duration alone, so it said 2h 33m without ever
+            // saying until when. Clipped to the shift, like Totals: an unclipped
+            // duration made the timeline and the Summary disagree about one sleep.
+            let stretch = session.snapshot.flatMap {
+                SleepMath.stretch(of: $0, clippedTo: shift.window, asOf: now)
+            }
             out.append(
                 TimelineEntry(
                     id: session.id, at: session.startAt, babyID: session.babyIDRaw,
                     icon: "moon.zzz.fill", title: "Asleep",
-                    // Clipped to the shift, like Totals — an unclipped duration made
-                    // the timeline and the Summary disagree about one sleep.
-                    detail: session.isOpen
-                        ? "still asleep"
-                        : session.snapshot.map {
-                            Fmt.duration(
-                                SleepMath.seconds(of: $0, clippedTo: shift.window, asOf: now))
-                        } ?? nil,
+                    detail: stretch.map {
+                        Handoff.sleepTail(
+                            $0, endLabel: Fmt.clock($0.end, timeZone: timeZone))
+                    },
                     edit: editable
                         ? session.babyIDRaw.map { .editSleep(id: session.id, babyID: $0) }
                         : nil))

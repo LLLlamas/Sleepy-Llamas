@@ -383,32 +383,50 @@ private struct UntouchedButton: ButtonStyle {
 /// every symbol effect this deployment target has moves the whole thing at once: it
 /// can shake the moon, it cannot send the z's up on their own. Shapes can.
 ///
-/// Two kinds of motion, deliberately. A continuous drift that says the tile is live,
-/// and a one-shot shake-and-swell fired by `asleep` actually changing. Both are
-/// small: this is read at 3am in a dark nursery, and the glyph is one of the three
-/// signals — glyph, words, colour — that say which state the baby is in, so it never
-/// fades out of legibility and never passes through the other shape on the way.
+/// Two kinds of motion, deliberately. A drift that says the tile is live, and a
+/// one-shot shake-and-swell fired by `asleep` actually changing. Both are small:
+/// this is read at 3am in a dark nursery, and the glyph is one of the three signals
+/// — glyph, words, colour — that say which state the baby is in, so it never fades
+/// out of legibility and never passes through the other shape on the way.
+///
+/// **The drift is bounded.** It ran `repeatForever`, which is motion the eye keeps
+/// catching all night for a fact it learned in the first second — and an animation
+/// that never ends is also an app that never reports itself idle, which is what
+/// `DemoSeed.wantsStillGlyphs` exists to work around. Each glyph now drifts for
+/// `Drift.window` seconds after it appears and then settles into its resting frame.
 private struct StatusGlyph: View {
     let asleep: Bool
     let tint: Color
 
     /// The drift is decoration, so it is the first thing to go.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Reduce Motion, or a UI-test launch that asked for a still frame. The second
+    /// is not a preference: it keeps a screenshot deterministic and spares each test
+    /// the drift window before the app is idle enough to snapshot. See
+    /// `DemoSeed.wantsStillGlyphs`.
+    private var still: Bool {
+        #if DEBUG
+        return reduceMotion || DemoSeed.wantsStillGlyphs
+        #else
+        return reduceMotion
+        #endif
+    }
     /// Sized off `.title3` — the size the SF Symbol it replaces was set in.
     @ScaledMetric(relativeTo: .title3) private var side: CGFloat = 26
 
     var body: some View {
         Group {
             if asleep {
-                MoonGlyph(side: side, tint: tint, still: reduceMotion)
+                MoonGlyph(side: side, tint: tint, still: still)
             } else {
-                SunGlyph(side: side, tint: tint, still: reduceMotion)
+                SunGlyph(side: side, tint: tint, still: still)
             }
         }
         .frame(width: side, height: side)
         // Fires on the state change, never on a timer. Reduce Motion collapses the
         // sequence to a single phase, which leaves the animator nowhere to go.
-        .phaseAnimator(reduceMotion ? [0] : [0, 1, 2, 3], trigger: asleep) { glyph, phase in
+        .phaseAnimator(still ? [0] : [0, 1, 2, 3], trigger: asleep) { glyph, phase in
             glyph
                 .rotationEffect(.degrees(shake(phase)))
                 .scaleEffect(swell(phase))
@@ -434,9 +452,8 @@ private struct StatusGlyph: View {
 
 /// A crescent with three z's climbing away from it.
 ///
-/// Its own view rather than a branch inside `StatusGlyph`, because the drift starts
-/// from `onAppear`: a repeating animation only attaches when the value it watches
-/// changes, and swapping sun for moon inserts a fresh view whose `onAppear` runs.
+/// Its own view rather than a branch inside `StatusGlyph`, because the drift is
+/// driven from `.task`: swapping sun for moon inserts a fresh view whose task runs.
 /// One `@State` shared across both would leave whichever glyph appeared second
 /// sitting perfectly still.
 private struct MoonGlyph: View {
@@ -444,14 +461,29 @@ private struct MoonGlyph: View {
     let tint: Color
     let still: Bool
 
-    @State private var drifting = false
+    @State private var drift = Drift.resting
+
+    /// Nil once the window has closed, so the return to the resting frame is a snap
+    /// and not the climb played backwards. The modifier is rebuilt with the *new*
+    /// phase, so the transition into `.settled` is the one it silences.
+    private func climb(delay: Double) -> Animation? {
+        guard !still, drift != .settled else { return nil }
+        return .easeOut(duration: Drift.moonClimb)
+            .repeatCount(Drift.moonClimbs, autoreverses: false)
+            .delay(delay)
+    }
 
     var body: some View {
         ZStack {
+            // Down and to the left of centre, so the z's have the top-right corner
+            // of the frame to themselves. It used to fill more of the box, which was
+            // survivable while the z's were mostly mid-climb and faded — with the
+            // drift bounded, the resting frame is what the tile shows all night, and
+            // in it the z's sat on top of the crescent and read as one blob.
             Crescent()
                 .fill(tint, style: FillStyle(eoFill: true))
-                .frame(width: side * 0.78, height: side * 0.78)
-                .offset(x: -side * 0.10, y: side * 0.08)
+                .frame(width: side * 0.72, height: side * 0.72)
+                .offset(x: -side * 0.14, y: side * 0.12)
 
             // The z's are the decoration and the crescent is the signal, which is
             // why only the z's fade: at the top of each climb they are gone and the
@@ -464,29 +496,36 @@ private struct MoonGlyph: View {
                         size: side * (0.17 + 0.05 * step), weight: .bold, design: .rounded))
                     .foregroundStyle(tint)
                     .offset(
-                        x: side * (0.15 + 0.10 * step) + (drifting ? side * 0.09 : 0),
-                        y: -side * (0.03 + 0.15 * step) - (drifting ? side * 0.13 : 0))
-                    .opacity(drifting ? 0 : 1)
-                    .animation(
-                        still
-                            ? nil
-                            : .easeOut(duration: 2.6)
-                                .repeatForever(autoreverses: false)
-                                .delay(step * 0.85),
-                        value: drifting)
+                        x: side * (0.30 + 0.08 * step) + (climbing ? side * 0.06 : 0),
+                        y: -side * (0.10 + 0.16 * step) - (climbing ? side * 0.10 : 0))
+                    .opacity(climbing ? 0 : 1)
+                    .animation(climb(delay: step * Drift.moonStagger), value: drift)
             }
         }
-        // Under Reduce Motion `drifting` never leaves `false`, which is also the
-        // resting frame: three z's stepping up off a full moon.
-        .onAppear { drifting = !still }
+        // Under Reduce Motion the phase never leaves `.resting`, which is also the
+        // frame it settles back to: three z's stepping up off the crescent.
+        //
+        // A card scrolled off-screen cancels the task, `try?` swallows that, and the
+        // next line settles it anyway — harmless, because settled *is* the resting
+        // frame, and coming back re-runs the task and drifts again.
+        .task {
+            guard !still else { return }
+            drift = .running
+            try? await Task.sleep(for: .seconds(Drift.moonWindow))
+            drift = .settled
+        }
     }
+
+    private var climbing: Bool { drift == .running }
 }
 
 /// A disc with eight rays turning slowly around it.
 ///
-/// One ray's pitch per cycle — 45° of eight — so the turn closes on itself and the
-/// restart is invisible. Nine seconds for that 45° is about five degrees a second:
-/// enough that the tile is alive, little enough that it is not something to watch.
+/// One ray's pitch — 45° of eight — so the turn closes on itself and the sun it
+/// stops on is the sun it started as. Nine seconds for that 45° is about five
+/// degrees a second: enough that the tile is alive, little enough that it is not
+/// something to watch. One turn and it is done; there is nothing to snap back from,
+/// which is why this one needs no settling phase.
 private struct SunGlyph: View {
     let side: CGFloat
     let tint: Color
@@ -510,12 +549,34 @@ private struct SunGlyph: View {
                 }
             }
             .rotationEffect(.degrees(turning ? 45 : 0))
-            .animation(
-                still ? nil : .linear(duration: 9).repeatForever(autoreverses: false),
-                value: turning)
+            .animation(still ? nil : .linear(duration: Drift.sunTurn), value: turning)
         }
         .onAppear { turning = !still }
     }
+}
+
+/// How long the decorative drift runs before each glyph settles.
+///
+/// Bounded on purpose — see `StatusGlyph`.
+private enum Drift {
+    case resting, running, settled
+
+    /// One climb of a z, the delay between the three, and how many climbs each makes.
+    static let moonClimb: Double = 2.6
+    static let moonStagger: Double = 0.85
+    static let moonClimbs = 2
+
+    /// Derived, not chosen. The last z starts two staggers late and then climbs
+    /// `moonClimbs` times; the window has to outlast that or the glyph is cut off
+    /// mid-climb and snaps. Written as a guessed constant it was clearing the motion
+    /// by a tenth of a second, under a comment claiming a second.
+    static var moonWindow: Double {
+        2 * moonStagger + Double(moonClimbs) * moonClimb + 0.4
+    }
+
+    /// One 45° turn — of eight rays, so it stops on the sun it started as. Nothing
+    /// to settle afterwards.
+    static let sunTurn: Double = 9
 }
 
 /// A disc with a second disc punched out of it. The overlap is only a hole when the

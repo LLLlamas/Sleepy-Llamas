@@ -4,6 +4,60 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## Every logged record carries its time, and the keepsake lists them
+**2026-09-08**
+
+Both documents reported diapers as a count and a colour. That was deliberate — eight
+rows of "wet" is not the shape of a night — and it was wrong about what the document
+is: the record a family hands to a pediatrician, where a change with no time on it
+cannot be placed against the feed before it. Diapers, weighings and pump sessions now
+list their records with times, like the feeds, notes and medications already did. The
+count and colour stay above the rows; the shape of the night is still worth reading
+first.
+
+A sleep stretch says when it began, **when the baby woke**, and how long that was. The
+timeline had been giving the duration alone, so a row read "2h 33m" without saying
+until when. `SleepMath.SleepStretch` is the one clipped stretch the timeline and both
+documents describe, and `Handoff.sleepTail` is its one sentence — the clock format
+stays the caller's, because the timeline sets "1:15 AM" and the documents "1:15a".
+See *One phrasing per fact*.
+
+**Summary carries the full log**, under the totals and read-only: the same
+`ShiftTimeline` rows Tonight renders. Without it the only place a night could be read
+record by record was the doula's own Tonight screen, which is not shared and is empty
+the moment the shift ends.
+
+*Reverses if:* a family asks for the shape without the detail — in which case the rows
+become a fold, not a deletion.
+
+---
+
+## The glyph drift is bounded, not perpetual
+**2026-09-08**
+
+The tile's moon and sun drifted on `repeatForever`. Two costs: motion the eye keeps
+catching all night for a fact it learned in the first second, and an app that never
+reports itself idle — which is what `-moonlogStillGlyphs` exists to work around, after
+one reachability test took eighteen minutes on its own.
+
+Each glyph now drifts for a bounded window and settles. The moon's z-train climbs
+twice over about seven seconds; the sun turns its 45° once over nine and stops on the
+sun it started as. The window is **derived** from the stagger and the climb count, not
+chosen — as a guessed constant it cleared the motion by a tenth of a second under a
+comment claiming a second. Settling nils the animation out, so the return to the
+resting frame is a snap rather than the climb played backwards.
+
+**The resting frame had to be redrawn.** It was barely seen while the z's spent most of
+each cycle faded and displaced; permanent, it showed them sitting on the crescent as
+one blob. The crescent moved down-left and shrank, and the z's took the top-right
+corner of the frame. Checked on the simulator rather than reasoned about: frames
+sampled inside the window differ, frames after it are byte-identical.
+
+*Reverses if:* the tile stops reading as live — in which case the window gets longer,
+never infinite.
+
+---
+
 ## The header clock is the phone's clock, and "on since" is gone
 **2026-09-07**
 
@@ -378,8 +432,11 @@ script or image. The page is forwarded, saved to Files and opened offline months
 so anything fetched over the network is either missing by then or is a request that
 tells a third party the exact moment the parents opened it. Hence an inline stylesheet.
 It is written mobile-first for the plain reason that they read it on a phone, straight
-out of Messages — the stat tiles reflow with `auto-fit` and there are no breakpoints to
-maintain.
+out of Messages. The stat tiles are `1fr 1fr` on a phone and go four across at `34rem`
+— one breakpoint, not `auto-fit`, because a tile whose number is one digit and a tile
+whose number is "6h 7m" have very different intrinsic widths, and `auto-fit` sized the
+row off the widest of them and left the rest short. Measured at 320pt: no horizontal
+overflow, which is the property that actually matters on a forwarded page.
 
 It ships as a `Transferable` **file** — `HandoffPage` in
 `Sources/Views/ShiftDetailView.swift`, a `DataRepresentation(exportedContentType: .html)`
@@ -446,7 +503,8 @@ derived their numbers from `Totals.compute`; now they derive their words from on
 too. The rule for anything added later: **a fact that appears in both documents is
 phrased in exactly one place.**
 
-The 14 string-exact tests over `Handoff.text` are what made the extraction safe. They
+The string-exact tests over `Handoff.text` — 14 when the helpers were extracted, 28
+now — are what made the extraction safe. They
 assert the actual words of a feed, a note and a stray record, and they passed unchanged,
 which is the evidence that moving the helpers changed nothing the doula has already read
 at 6am. The keepsake's own tests assert on meaningful substrings instead of a golden

@@ -90,6 +90,25 @@ enum DemoSeed {
         UserDefaults.standard.bool(forKey: "moonlogResetStore")
     }
 
+    /// `-moonlogStillGlyphs YES` — freezes the tile's sun and moon on their resting
+    /// frame.
+    ///
+    /// Not a preference and not about looks: **a `repeatForever` animation means the
+    /// app never reports itself idle**, and XCUITest waits for idle before it can
+    /// take the hierarchy snapshot a compound query needs. With the glyphs moving,
+    /// `testTurningOnAskBeforeMakesTheTileConfirm` — which asks
+    /// `app.buttons.containing(.staticText, identifier: "Mia is asleep")` — went
+    /// from about ten seconds to **eighteen minutes**, and took the whole suite from
+    /// four minutes to twenty-two. A suite that slow is a suite nobody runs, which
+    /// is the same as not having one.
+    ///
+    /// So the motion is not exercised by the reachability suite. That is the
+    /// deliberate trade: the glyph is decorative, the controls under it are not, and
+    /// no query in the suite is about whether a ray moved.
+    static var wantsStillGlyphs: Bool {
+        UserDefaults.standard.bool(forKey: "moonlogStillGlyphs")
+    }
+
     /// The other half of the reset, and it has to run before anything reads a
     /// preference — so it is called from `MoonlogApp.init`, not from
     /// `seedIfNeeded`, whose position in static-initialisation order is not

@@ -252,4 +252,79 @@ final class SleepMathTests: XCTestCase {
             SleepMath.seconds(of: session, clippedTo: shift, asOf: .distantFuture),
             3 * 3600, accuracy: 0.5)
     }
+    // MARK: - Stretches, as they are described rather than summed
+
+    /// The timeline and both documents describe a sleep from one clipped stretch.
+    /// The clip is the part that must not exist twice: a stretch that began before
+    /// the doula arrived is reported from the moment she was there to watch it.
+    func testAStretchIsClippedToTheShiftAtBothEnds() {
+        let shift = ShiftWindow(
+            startedAt: makeDate("2026-09-04 22:00", Zone.newYork),
+            endedAt: makeDate("2026-09-05 06:00", Zone.newYork))
+        let straddling = SleepSnapshot(
+            babyID: babyA,
+            startAt: makeDate("2026-09-04 21:00", Zone.newYork),
+            endAt: makeDate("2026-09-04 23:00", Zone.newYork))
+
+        let stretch = SleepMath.stretch(
+            of: straddling, clippedTo: shift,
+            asOf: makeDate("2026-09-05 06:00", Zone.newYork))
+
+        XCTAssertEqual(stretch?.start, makeDate("2026-09-04 22:00", Zone.newYork))
+        XCTAssertEqual(stretch?.end, makeDate("2026-09-04 23:00", Zone.newYork))
+        XCTAssertEqual(stretch?.seconds, 3600)
+        XCTAssertEqual(stretch?.isOpen, false)
+    }
+
+    /// An open session has an `end` — the clip fell somewhere — but it is not a
+    /// waking, and `isOpen` is what stops a caller printing it as one.
+    func testAnOpenStretchEndsAtTheClipAndSaysSo() {
+        let shift = ShiftWindow(
+            startedAt: makeDate("2026-09-04 22:00", Zone.newYork),
+            endedAt: makeDate("2026-09-05 06:00", Zone.newYork))
+        let open = SleepSnapshot(
+            babyID: babyA,
+            startAt: makeDate("2026-09-05 05:40", Zone.newYork), endAt: nil)
+
+        let stretch = SleepMath.stretch(
+            of: open, clippedTo: shift,
+            asOf: makeDate("2026-09-05 14:00", Zone.newYork))
+
+        XCTAssertEqual(stretch?.isOpen, true)
+        XCTAssertEqual(stretch?.end, makeDate("2026-09-05 06:00", Zone.newYork),
+                       "clipped to the shift, not grown against now")
+        XCTAssertEqual(stretch?.seconds, 1200)
+    }
+
+    /// A session contributing nothing to the window is not a stretch at all — a
+    /// zero-length row on the timeline is a record of nothing.
+    func testStretchesSkipSessionsThatContributedNoTimeAndAreSortedOldestFirst() {
+        let shift = ShiftWindow(
+            startedAt: makeDate("2026-09-04 22:00", Zone.newYork),
+            endedAt: makeDate("2026-09-05 06:00", Zone.newYork))
+        let sessions = [
+            SleepSnapshot(babyID: babyA,
+                          startAt: makeDate("2026-09-05 03:00", Zone.newYork),
+                          endAt: makeDate("2026-09-05 04:00", Zone.newYork)),
+            // Entirely before the shift.
+            SleepSnapshot(babyID: babyA,
+                          startAt: makeDate("2026-09-04 19:00", Zone.newYork),
+                          endAt: makeDate("2026-09-04 20:00", Zone.newYork)),
+            SleepSnapshot(babyID: babyA,
+                          startAt: makeDate("2026-09-04 23:00", Zone.newYork),
+                          endAt: makeDate("2026-09-05 00:30", Zone.newYork)),
+            // Another baby's.
+            SleepSnapshot(babyID: babyB,
+                          startAt: makeDate("2026-09-05 01:00", Zone.newYork),
+                          endAt: makeDate("2026-09-05 02:00", Zone.newYork)),
+        ]
+
+        let stretches = SleepMath.stretches(
+            of: sessions, forBaby: babyA, clippedTo: shift,
+            asOf: makeDate("2026-09-05 06:00", Zone.newYork))
+
+        XCTAssertEqual(stretches.count, 2)
+        XCTAssertEqual(stretches.map(\.seconds), [5400, 3600])
+    }
+
 }

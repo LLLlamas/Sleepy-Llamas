@@ -173,4 +173,35 @@ final class ReachabilityTests: MoonlogUITestCase {
             "still showing the previous household's shift")
         XCTAssertFalse(cardButton("Feed", for: "Mia").exists, "Nguyen's cards followed")
     }
+    /// Save looked like a bar the width of the sheet and answered like the word
+    /// printed on it. `.plain` hit-tests a button's *contents*, and the contents
+    /// were an `HStack` holding one `Text`, so the width the `.infinity` frame
+    /// bought was layout and nothing else: **measured at 38×20pt inside a 370×56pt
+    /// bar**. Every log of the night ends on this control.
+    ///
+    /// The frame is asserted as well as the tap, because a normalised coordinate is
+    /// taken against the element's *own* frame — a tap "at the edge of Save" lands
+    /// on the word again when the frame has collapsed to it, and passes.
+    func testSaveIsAsBigAsTheBarItLooksLike() {
+        launch()
+        reveal(cardButton("Feed", for: "Mia")).tap()
+
+        let save = app.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5), "no Save")
+        XCTAssertGreaterThan(
+            save.frame.width, app.frame.width * 0.7,
+            "Save answers on the word, not on the bar")
+        XCTAssertGreaterThanOrEqual(save.frame.height, 44, "under the minimum target")
+        // Bottom third of the screen, where a thumb holding the phone can reach it.
+        XCTAssertGreaterThan(
+            save.frame.midY, app.frame.height * 0.66,
+            "Save is stranded out of thumb reach")
+
+        // Well clear of the word, still inside the bar — where a thumb lands.
+        save.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.5)).tap()
+        XCTAssertTrue(
+            app.buttons["Undo"].waitForExistence(timeout: 5),
+            "the edge of the Save bar does not save")
+    }
+
 }

@@ -33,7 +33,8 @@ struct ShiftDetailView: View {
 
                 TimelineSection(
                     entries: ShiftTimeline.entries(
-                        for: shift, unit: family.volumeUnit, now: asOf, editable: false),
+                        for: shift, unit: family.volumeUnit, timeZone: zone,
+                        now: asOf, editable: false),
                     timeZone: zone,
                     // Every baby, not just the active ones: these are lookups for
                     // rows that already exist, and a night logged before a baby was

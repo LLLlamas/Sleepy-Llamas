@@ -820,7 +820,7 @@ private struct Tonight {
         }
 
         self.timeline = ShiftTimeline.entries(
-            for: shift, unit: unit, now: now, editable: true)
+            for: shift, unit: unit, timeZone: self.timeZone, now: now, editable: true)
         self.names = names
         self.accents = accents
         self.lastFeedEntry = lastFeedEntry

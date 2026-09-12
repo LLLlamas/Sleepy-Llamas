@@ -473,4 +473,59 @@ final class HandoffHTMLTests: XCTestCase {
 
         XCTAssertTrue(out.contains("Spit-up, Fussy"), out)
     }
+    // MARK: - The record, not only the shape of the night
+
+    /// The pills stay — they are the shape of the night — and the rows arrive under
+    /// them, because the page is what the family keeps and shows a pediatrician.
+    func testDiaperChangesAreListedWithTheirTimesBesideTheCount() {
+        let events = [
+            EventSnapshot(babyID: mia, kind: .diaper, at: at("2026-09-04 23:12"),
+                          diaperContents: .wet),
+            EventSnapshot(babyID: mia, kind: .diaper, at: at("2026-09-05 02:40"),
+                          diaperContents: .both, stoolColor: .yellow),
+        ]
+        let out = html(babies: [HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)],
+                       events: events)
+        XCTAssertTrue(out.contains("<strong>2</strong> changes in all"), out)
+        XCTAssertTrue(out.contains(">11:12p</span><span class=\"d\">wet diaper<"), out)
+        XCTAssertTrue(out.contains("wet + dirty diaper — yellow"), out)
+    }
+
+    func testANightWithNoDiapersSaysSoOnThePage() {
+        let out = html(babies: [HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)])
+        XCTAssertTrue(out.contains("No diapers logged this shift."), out)
+    }
+
+    func testWeighingsAndPumpSessionsCarryTheirTimes() {
+        let events = [
+            EventSnapshot(babyID: mia, kind: .measurement, at: at("2026-09-05 05:00"),
+                          weightGrams: 3260),
+            EventSnapshot(babyID: EventSnapshot.noBaby, kind: .pump,
+                          at: at("2026-09-05 00:30"), pumpedMl: 90),
+        ]
+        let out = html(babies: [HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)],
+                       events: events, unit: .ml)
+        XCTAssertTrue(out.contains(">5:00a</span><span class=\"d\">3.26 kg<"), out)
+        XCTAssertFalse(out.contains("2 taken"), "one weighing is not counted at you")
+        XCTAssertTrue(out.contains(">12:30a</span><span class=\"d\">90 ml<"), out)
+    }
+
+    /// The two documents describe one night. A stretch is phrased identically in
+    /// both, so a parent reading the page and a doula reading the text back are
+    /// never comparing two different sentences.
+    func testAStretchIsPhrasedTheSameOnThePageAsInTheText() {
+        let sessions = [
+            SleepSnapshot(babyID: mia, startAt: at("2026-09-04 22:42"),
+                          endAt: at("2026-09-05 01:15")),
+        ]
+        let baby = HandoffBaby(id: mia, name: "Mia", dayOfLife: 6)
+        let page = html(babies: [baby], sessions: sessions)
+        let plain = Handoff.text(
+            babies: [baby], shift: shift, caregiver: "Cat", events: [],
+            sessions: sessions, unit: .oz, timeZone: zone,
+            asOf: at("2026-09-05 06:00"))
+        XCTAssertTrue(page.contains("→ 1:15a · 2h 33m"), page)
+        XCTAssertTrue(plain.contains("→ 1:15a · 2h 33m"), plain)
+    }
+
 }

@@ -288,6 +288,14 @@ struct LogSheetChrome<Content: View>: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .frame(height: MoonLayout.tapTarget)
+                // The whole bar, not just the word on it. `.plain` hit-tests the
+                // label's *contents*, and the contents are an `HStack` holding one
+                // `Text` — so the width the `.infinity` frame bought was layout and
+                // nothing else. Measured: **38×20pt inside a 370×56pt bar**, on the
+                // one control every log of the night ends with.
+                .contentShape(
+                    RoundedRectangle(
+                        cornerRadius: MoonLayout.controlCorner, style: .continuous))
             }
             .buttonStyle(.plain)
             .foregroundStyle(canSave ? palette.accentInk : palette.faint)

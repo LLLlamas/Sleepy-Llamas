@@ -1,8 +1,8 @@
 # Status
 
-Updated 2026-09-07.
+Updated 2026-09-08.
 
-**197 unit tests green** (93 `MoonlogCoreTests`, 104 `MoonlogTests`) plus **23
+**225 unit tests green** (121 `MoonlogCoreTests`, 104 `MoonlogTests`) plus **26
 reachability tests** in `MoonlogUITests`. No Release warnings.
 
 **0.1.0 is on TestFlight and is safe to work a real shift on** — local-only, no
@@ -33,6 +33,55 @@ sheets.
 `DayBuckets` and `MoonClock` still have no call site outside `MoonlogCore`.
 `DayBuckets` is what a multi-night trends view will need; `Family.calendar`
 duplicates `MoonClock`.
+
+## The night screen and the handoff, 2026-09-07
+
+- **The tile.** "Day N" is off the card (and out of what VoiceOver says about it).
+  Pressing it no longer dims it — that read as unavailable, not as pressed. The asleep
+  fill is see-through on Night and Deep Night; see the note on Day below. The trailing
+  edge names the sleep: start plus a running elapsed while asleep, and the whole of the
+  last one as `3:42a–4:22a` once awake.
+- **The sun and moon are drawn shapes**, with the moon's z's and the sun's rays moving
+  independently of the glyph and a shake-and-swell on state change. No symbol effect
+  animates a glyph's parts independently, which is why they are not SF Symbols. All of
+  it stops under Reduce Motion. The drift is bounded as of 2026-09-08 — see
+  `decisions.md`.
+- **A diaper looks like a diaper.** `square.on.square` read as "duplicate". The glyph is
+  a drawn shape — leg cutouts, chosen over a tabbed top (a cow's head), a flat top (a
+  plant pot) and a subtracted waistband (good at 22pt, fills in at 11). It travels as a
+  sentinel name through the `String`-carrying value types that already move icons
+  around; `CareGlyph` is the one place that resolves it, and the one place that must
+  keep the sentinel away from `Image(systemName:)`, which renders a silent blank.
+- **Colour on every diaper**, wet included, saved exactly as the swatches show it.
+  A night can now have a colour progression with no dirty diaper at all, so the label
+  is "Stool" or "Colour" by whether a dirty one contributed — decided in
+  `Handoff.diaperColourLabel` and used by both documents and the Summary card, so the
+  three cannot drift.
+- **Feeds repeat.** A row naming the last feed's values, which fills nothing until it
+  is tapped. Nothing is prefilled: an amount nobody chose must not reach the parents.
+- **The handoff reads as a letter.** Both documents open with a greeting and close with
+  a sign-off; the keepsake has the doula's note folded into the letter rather than
+  bolted beside it, gold hairline section rules, an inset keepsake border, four stat
+  tiles including notes, pills, and a per-stretch sleep timeline the app never had.
+  Print keeps its colour (`print-color-adjust: exact`) and the page has no horizontal
+  overflow at 320pt. Rendered and checked in light, dark and PDF — not read off the CSS.
+
+## Times on every record, 2026-09-08
+
+- **Every logged record carries its time** in both handoff documents, and a sleep
+  stretch names its start, its wake and its length rather than a bare duration —
+  on the timeline as well as on the page. **Summary carries the full log** under the
+  totals, read-only. Why, and what it reverses, is in `decisions.md`.
+- **The glyph drift is bounded** rather than `repeatForever`, and the resting frame
+  was recomposed because it is now what the tile shows all night. `decisions.md`.
+- **Save answers on the whole bar.** It was measured at **38×20pt — the size of the
+  word — inside a 370×56pt bar**: `.plain` hit-tests a button's *contents*, so the
+  width bought by `.frame(maxWidth: .infinity)` was layout and nothing else, on the
+  one control every log of the night ends with. A `contentShape` fixes it.
+  `ReachabilityTests` asserts the frame, not just a tap — a normalised coordinate is
+  taken against the element's own frame, so "tap the edge of Save" lands back on the
+  word and passes when the frame has collapsed to it. Verified to fail without the fix.
+  The card controls and Summary's rows were measured too and were already full-size.
 
 ## The 2026-09-07 audit pass
 
@@ -136,9 +185,12 @@ surfaces a throw as an alert; the actor returns snapshots, never `@Model` object
   Border, glyph and badge still carry sage, so identity holds, but the fill is
   contributing lightness and not colour. Fixing it means blending with chroma
   preserved rather than component-wise.
-- **Day's asleep fill has no margin** — 1.1998:1 against the card, over the 1.18 the
-  test demands and under the 1.20 the other seven clear. Any future deepening of Day's
-  surfaces will eat it.
+- **Day's asleep fill has no margin** — 1.204:1 against the card, over the 1.18 the test
+  demands and under the 1.20 the other seven clear. Any future deepening of Day's
+  surfaces will eat it, and it is why Day was left alone when the other two themes'
+  asleep fills were made see-through: the whole of Day's remaining room buys 1.189:1,
+  a change no eye can find, at the cost of the last of that margin. Making Day's asleep
+  tile genuinely transparent needs a lighter Day card.
 
 ## Needs the user
 

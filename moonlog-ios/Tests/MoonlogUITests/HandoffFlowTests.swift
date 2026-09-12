@@ -77,4 +77,34 @@ final class HandoffFlowTests: MoonlogUITestCase {
                 || app.staticTexts["No finished nights yet"].exists,
             "pushed a blank screen")
     }
+    /// Summary gave totals and nothing else, so the only place a client could read
+    /// one record against another was the doula's own Tonight screen — which is not
+    /// shared, and is empty the moment the shift ends.
+    func testSummaryCarriesTheNightsLogWithTimes() {
+        launch(["-moonlogTab", "summary"])
+
+        // Scrolled on the scroll view rather than with `reveal`, which swipes the
+        // whole application frame: those swipes start near the home indicator, and
+        // a run of them here left the simulator in a state that failed the *next*
+        // test in this class — `testTheNightStaysOnSummaryAfterTheShiftEnds` could
+        // not find Copy, while passing on its own.
+        let scroll = app.scrollViews.firstMatch
+        XCTAssertTrue(scroll.waitForExistence(timeout: 15), "Summary never appeared")
+        let heading = app.staticTexts["The night, logged"]
+        var swipes = 8
+        while !heading.exists && swipes > 0 {
+            scroll.swipeUp()
+            swipes -= 1
+        }
+        XCTAssertTrue(heading.exists, "Summary carries totals but not the record")
+
+        // A row that is a record, not a total: a sleep row says where the stretch
+        // went, and "→" is only ever printed by one.
+        let aStretch = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS '→' OR label CONTAINS 'still asleep ·'"))
+        XCTAssertTrue(
+            aStretch.firstMatch.exists,
+            "the log is there but a sleep row does not say when it ended")
+    }
+
 }
