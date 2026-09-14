@@ -21,8 +21,7 @@ final class AppearanceTests: MoonlogUITestCase {
         // Relaunched **without** the reset, so the choice is read back from
         // UserDefaults rather than from a store that was just rebuilt.
         app.terminate()
-        app.launchArguments = ["-moonlogSeedDemo", "YES", "-moonlogTab", "settings"]
-        app.launch()
+        relaunch(["-moonlogTab", "settings"])
 
         XCTAssertTrue(
             reveal(app.buttons["Night"]).isSelected,

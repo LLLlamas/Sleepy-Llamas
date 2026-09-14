@@ -258,7 +258,7 @@ private extension TonightView {
     /// record, since its id is not knowable from a launch argument.
     func demoSheet(_ data: Tonight) -> LogSheet? {
         if DemoSeed.editsFirstRecord,
-           let newest = (shift.events ?? []).max(by: { $0.at < $1.at }) {
+           let newest = shift.liveEvents.max(by: { $0.at < $1.at }) {
             return .editEvent(id: newest.id, babyID: newest.babyIDRaw)
         }
         return DemoSeed.requestedSheet(for: data.babies.first?.id)
@@ -334,7 +334,7 @@ private extension TonightView {
     /// from the stored record — a mis-logged feed was previously permanent.
     @ViewBuilder
     func editEventSheet(id: UUID, data: Tonight) -> some View {
-        if let event = (shift.events ?? []).first(where: { $0.id == id }) {
+        if let event = shift.liveEvents.first(where: { $0.id == id }) {
             // From the record, not the sheet request: a pump has no baby to pass in.
             let baby = event.babyIDRaw.flatMap { babyID in
                 data.babies.first(where: { $0.id == babyID })
@@ -420,7 +420,7 @@ private extension TonightView {
 
     @ViewBuilder
     func editSleepSheet(id: UUID, baby: BabyPresentation) -> some View {
-        if let session = (shift.sleepSessions ?? []).first(where: { $0.id == id }) {
+        if let session = shift.liveSleepSessions.first(where: { $0.id == id }) {
             // Captured before the write, for the same reason as an event's payload.
             let before = SleepEntry(startAt: session.startAt, endAt: session.endAt)
             let shiftID = shift.id
@@ -795,8 +795,8 @@ private struct Tonight {
         }
 
         let unit = family.volumeUnit
-        let events = shift.events ?? []
-        let sessions = shift.sleepSessions ?? []
+        let events = shift.liveEvents
+        let sessions = shift.liveSleepSessions
 
         for event in events {
             guard let babyID = event.babyIDRaw else { continue }

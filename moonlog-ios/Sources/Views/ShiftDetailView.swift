@@ -143,8 +143,8 @@ enum HandoffComposer {
             babies: roster(family: family, shift: shift),
             shift: shift.window,
             caregiver: shift.caregiver,
-            events: (shift.events ?? []).compactMap(\.snapshot),
-            sessions: (shift.sleepSessions ?? []).compactMap(\.snapshot),
+            events: shift.liveEvents.compactMap(\.snapshot),
+            sessions: shift.liveSleepSessions.compactMap(\.snapshot),
             unit: family.volumeUnit,
             timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
             asOf: now)
@@ -158,8 +158,8 @@ enum HandoffComposer {
             shift: shift.window,
             caregiver: shift.caregiver,
             note: shift.parentNote,
-            events: (shift.events ?? []).compactMap(\.snapshot),
-            sessions: (shift.sleepSessions ?? []).compactMap(\.snapshot),
+            events: shift.liveEvents.compactMap(\.snapshot),
+            sessions: shift.liveSleepSessions.compactMap(\.snapshot),
             unit: family.volumeUnit,
             timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
             asOf: now)

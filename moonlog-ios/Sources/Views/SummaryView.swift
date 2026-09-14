@@ -122,8 +122,13 @@ struct SummaryView: View {
                 Label("Send as plain text", systemImage: "text.alignleft")
             }
         } label: {
+            // Named, not just drawn. The glyph alone left VoiceOver reading the
+            // symbol out and left the control with nothing a test could ask for —
+            // which is why Share was the one handoff route never driven.
             Image(systemName: "square.and.arrow.up")
         }
+        .accessibilityLabel("Share")
+        .accessibilityIdentifier("summary.share")
     }
 
     private func content(shift: Shift, now: Date) -> some View {
@@ -208,8 +213,8 @@ struct SummaryCards: View {
     @Environment(\.moonTheme) private var theme
 
     var body: some View {
-        let events = (shift.events ?? []).compactMap(\.snapshot)
-        let sessions = (shift.sleepSessions ?? []).compactMap(\.snapshot)
+        let events = shift.liveEvents.compactMap(\.snapshot)
+        let sessions = shift.liveSleepSessions.compactMap(\.snapshot)
         VStack(spacing: 18) {
             shiftHeader(shift, now: now)
             // `shift.roster(of:)`, not `activeBabies`: a baby archived mid-shift

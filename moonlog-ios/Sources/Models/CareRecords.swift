@@ -64,6 +64,63 @@ final class Shift {
         isOpen = false
     }
 
+    /// The records still in the store. **Read these, never `events` /
+    /// `sleepSessions` directly.**
+    ///
+    /// SwiftData leaves a deleted object in its parent's relationship array until
+    /// the context has processed the change, and **reading any property of a
+    /// deleted model traps** — `EXC_BREAKPOINT` raised inside SwiftData, not an
+    /// error anything can catch. Deleting a record killed the app: `Tonight.init`
+    /// reads `babyIDRaw` on every event while `TonightView.body` rebuilds, and the
+    /// rebuild happens before the array has caught up. The stack was
+    /// `LogEvent.babyIDRaw.getter → Tonight.init → TonightView.body`.
+    ///
+    /// It is one line in one place because the same array is walked by the
+    /// timeline, Summary, the shift detail and the handoff, and every one of them
+    /// was a crash waiting for the same delete.
+    /// The events the **store** still has, not the ones this context remembers.
+    ///
+    /// `isDeleted` is not the test. `CareStore` is a `@ModelActor` with its own
+    /// context, so a delete never happens on the context the views read through:
+    /// the flag stays false while the row is already gone, and the relationship
+    /// array still holds the dead object. Reading any stored property of it is an
+    /// **uncatchable `fatalError`** — `BackingData.swift:1039: This model instance
+    /// was invalidated because its backing data could no longer be found the
+    /// store.` Nothing can catch it and nothing can see it coming from the object.
+    ///
+    /// So the live set is asked of the store, and the array is filtered by
+    /// `persistentModelID` — the one property of an invalidated instance that can
+    /// still be read, which is why SwiftData can name it in that very error.
+    ///
+    /// Deleting a record crashed the app: `Tonight.init` reads `babyIDRaw` on every
+    /// event while `TonightView.body` rebuilds, and the rebuild is forced by
+    /// `refreshToken` the instant the actor's write returns — squarely inside the
+    /// window. It is one place because the timeline, Summary, the shift detail and
+    /// the handoff all walk the same array, and every one of them was the same
+    /// crash waiting for the same delete.
+    var liveEvents: [LogEvent] {
+        let all = events ?? []
+        guard let context = modelContext else { return all }
+        let shiftID = id
+        let descriptor = FetchDescriptor<LogEvent>(
+            predicate: #Predicate { $0.shiftIDRaw == shiftID })
+        guard let live = try? context.fetchIdentifiers(descriptor) else { return all }
+        let ids = Set(live)
+        return all.filter { ids.contains($0.persistentModelID) }
+    }
+
+    /// The same rule for sleep. See `liveEvents`.
+    var liveSleepSessions: [SleepSession] {
+        let all = sleepSessions ?? []
+        guard let context = modelContext else { return all }
+        let shiftID = id
+        let descriptor = FetchDescriptor<SleepSession>(
+            predicate: #Predicate { $0.shiftIDRaw == shiftID })
+        guard let live = try? context.fetchIdentifiers(descriptor) else { return all }
+        let ids = Set(live)
+        return all.filter { ids.contains($0.persistentModelID) }
+    }
+
     /// Every baby this shift has anything logged against.
     ///
     /// `babyIDRaw`, not `baby?.id` — attribution has to survive both a `.nullify`
@@ -71,8 +128,8 @@ final class Shift {
     /// same reason the id is denormalised in the first place.
     var loggedBabyIDs: Set<UUID> {
         Set(
-            (events ?? []).compactMap(\.babyIDRaw)
-                + (sleepSessions ?? []).compactMap(\.babyIDRaw))
+            liveEvents.compactMap(\.babyIDRaw)
+                + liveSleepSessions.compactMap(\.babyIDRaw))
     }
 
     /// Who this shift is about: everyone still on the family's roster, plus anyone

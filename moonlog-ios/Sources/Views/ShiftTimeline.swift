@@ -15,8 +15,8 @@ enum ShiftTimeline {
         now: Date,
         editable: Bool
     ) -> [TimelineEntry] {
-        let events = shift.events ?? []
-        let sessions = shift.sleepSessions ?? []
+        let events = shift.liveEvents
+        let sessions = shift.liveSleepSessions
         var out: [TimelineEntry] = []
         out.reserveCapacity(events.count + sessions.count)
 

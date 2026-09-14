@@ -3,52 +3,87 @@
 The pipeline works end to end. This is the ritual and the build history, not a list
 of things still to do — that lives in `docs/status.md`.
 
-## The archive ritual
+## The ritual
 
 ```bash
 cd moonlog-ios
-./scripts/archive.sh    # stamps, archives, and REFUSES a build with debug code in it
+./scripts/ship.sh            # guards, both suites, archive, upload
+./scripts/ship.sh --skip-ui  # skip the ~6-minute reachability suite
+./scripts/ship.sh --no-upload
 ```
 
-It stamps `project.yml` (the source of truth — **never `agvtool`**, see
-`scripts/stamp-build.sh`), archives where Organizer can see it, and greps the Release
-binary for debug-only markers. **Every new `#if DEBUG` launch hook has to be added to
-that grep**, or it ships unguarded and the archive still reports clean. No test can
-catch that; only the binary can be asked.
+One command, in order: it refuses to run off `moonlog-ios` or with anything changed
+outside `moonlog-ios/`, runs the unit suite and the reachability suite, then
+`archive.sh` and `upload.sh`. Every step prints a line while it works and filters its
+own log — a raw `xcodebuild` log must never reach a terminal or an agent's context.
+The logs are kept beside the archive.
 
-Run the reachability suite before archiving. `docs/status.md` says why.
+**It does not write the release note or the commit.** Both are prose; a script
+guessing them is worse than a script leaving them.
 
-## Uploading
+### archive.sh
+
+Stamps `project.yml` (the source of truth — **never `agvtool`**, see
+`scripts/stamp-build.sh`), archives where Organizer can see it, and refuses an
+archive that fails any check below. A failed archive is deleted, its log renamed
+`.failed.log`, and **`project.yml` is put back** — no build number is burned by a
+build that never shipped.
+
+The debug-marker list is **derived from the source**, not maintained by hand: an
+`awk` pass collects `"moonlogXxx"` literals inside `#if DEBUG` regions. It used to be
+a hard-coded list, and it had already drifted — `moonlogTab` was never added to it.
+Adding a new hook now needs no bookkeeping. The derivation must stay non-empty and a
+superset of the nine original markers, or the script fails rather than passing
+vacuously.
+
+### upload.sh
+
+```bash
+./scripts/upload.sh                       # newest archive
+./scripts/upload.sh path/to/one.xcarchive
+```
 
 Not through Organizer. `xcodebuild -exportArchive` with `destination: upload` does
 the same thing from the command line and authenticates with the same Xcode account
 session, so cloud-managed distribution signing works exactly as it does in the GUI —
-**no App Store Connect API key is needed**, and there is none on this machine.
-
-```bash
-xcodebuild -exportArchive \
-  -archivePath "$HOME/Library/Developer/Xcode/Archives/<day>/<name>.xcarchive" \
-  -exportOptionsPlist ExportOptions.plist \
-  -exportPath /tmp/export -allowProvisioningUpdates
-```
+**no App Store Connect API key is needed**, and there is none on this machine. It
+refuses an archive with no build log beside it, because that archive was not the one
+`archive.sh` checked.
 
 `ExportOptions.plist` needs `method: app-store-connect`, `destination: upload`,
 `teamID: GYFN949Q5E`, and — load-bearing — **`manageAppVersionAndBuildNumber:
 false`**. Left true, Xcode rewrites the build number and breaks the Unix-timestamp
-scheme `stamp-build.sh` depends on. The build number is a Unix timestamp so it always
-increases, which App Store Connect requires.
+scheme `stamp-build.sh` depends on. `archive.sh` now catches that before the upload
+rather than after, by comparing the archive's `CFBundleVersion` to the stamp.
 
 With `destination: upload` no `.ipa` is left on disk, so verify the archive's own
 binary rather than looking for an export.
 
 ## What every build is checked for
 
+All four are **enforced by `archive.sh`**, not remembered.
+
 | Check | Expected |
 |---|---|
-| Debug-only markers in the Release binary | **0** — every launch-argument hook compiled out |
-| Release build warnings | none |
+| Debug-only markers in the Release binary **and the embedded `MoonlogCore`** | **0** — every launch-argument hook compiled out |
+| Release build warnings | none — matched on the diagnostic shape, so `appintentsmetadataprocessor` chatter does not count |
 | `ITSAppUsesNonExemptEncryption` | `false`, so export compliance never prompts |
 | iCloud / CloudKit entitlement | **absent** — local-only, so the launch-crash trap cannot fire |
+
+## Where the time actually goes
+
+Measured, so the next person optimising this starts from numbers:
+
+| Step | Wall clock |
+|---|---|
+| `xcodebuild archive` | **~12 s** |
+| Unit suite (224 tests) | **~1 s** of testing |
+| Reachability suite (31 tests) | **~5m50s** — the whole cost of a ship |
+| Upload + App Store Connect processing | Apple's; no lever here |
+
+The compile is not the bottleneck and never was. The suite is, because every test
+launches the app; `--skip-ui` is the only lever and it costs the thing the suite
+exists for.
 
 ## Build history
 

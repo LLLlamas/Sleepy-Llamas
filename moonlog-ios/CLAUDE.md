@@ -46,23 +46,28 @@ each other's leftovers.
 Adding a new `Sources/` subdirectory means adding it to `project.yml`; XcodeGen
 errors on a source path that does not exist yet.
 
-Device build (verifies signing):
+There is no separate device build any more. It was run to answer "no Release
+warnings" and to check signing, and `archive.sh` now answers both from the archive's
+own log — it was a second full build of the same configuration for the same
+destination.
+
+To ship to TestFlight:
 
 ```bash
-xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
-  -destination "generic/platform=iOS" -allowProvisioningUpdates build
+./scripts/ship.sh    # guards, both suites, archive, upload — see docs/testflight.md
 ```
 
-To archive for TestFlight:
+One command for the whole ritual. `archive.sh` and `upload.sh` still work alone.
+`archive.sh` lands the archive where Organizer can see it and refuses one that fails
+any of the four checks in `docs/testflight.md`; a failed archive is deleted and
+**`project.yml` is put back**, so no build number is burned by a build that never
+shipped. That guard exists because the demo seed once shipped inside a TestFlight
+build — see the note on `SWIFT_ACTIVE_COMPILATION_CONDITIONS` in `project.yml`. No
+test can catch that; only the binary can be asked.
 
-```bash
-./scripts/archive.sh    # stamps, archives, and REFUSES a build with debug code in it
-```
-
-It lands the archive where Organizer can see it and greps the Release binary for
-debug-only markers. That guard exists because the demo seed once shipped inside a
-TestFlight build — see the note on `SWIFT_ACTIVE_COMPILATION_CONDITIONS` in
-`project.yml`. No test can catch that; only the binary can be asked.
+The debug-marker list is **derived from the source** by scanning `#if DEBUG` regions,
+so a new launch hook needs no bookkeeping. It used to be hand-maintained and had
+already drifted.
 
 **Do not use `agvtool`.** It writes into the generated `.xcodeproj`, so the next
 `xcodegen generate` discards it — and because our Info.plist is generated, it also
@@ -77,6 +82,17 @@ which is the source of truth and is committed.
   operating on value types, tested without a container or a host app.
 - **All writes go through `CareStore`.** A stray `context.insert` elsewhere bypasses
   the invariants CloudKit will not let the schema express. Reads may use `@Query`.
+- **Read `shift.liveEvents` / `liveSleepSessions`, never `events` / `sleepSessions`.**
+  `CareStore` is a `@ModelActor` with its own context, so a delete never happens on
+  the context the views read through: `isDeleted` stays false while the row is
+  already gone, and the relationship array still holds the dead object. Reading any
+  stored property of it is an **uncatchable `fatalError`** — `BackingData.swift:1039:
+  This model instance was invalidated because its backing data could no longer be
+  found the store.` Deleting a record crashed the app, because `refreshToken` forces
+  `TonightView.body` to rebuild the instant the actor's write returns and
+  `Tonight.init` reads `babyIDRaw` on every event. The live accessors ask the store
+  which ids survive and filter on `persistentModelID`, the one property of an
+  invalidated instance that can still be read.
 - **The actor never returns `@Model` objects.** They are not `Sendable`. Return
   `ShiftSummary`, `SleepSnapshot` and friends.
 - **Never set `endAt`/`endedAt` directly** — use `close(at:)`, which keeps the
