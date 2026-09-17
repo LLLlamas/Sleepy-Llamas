@@ -136,7 +136,8 @@ struct TonightView: View {
             ShiftHoursSheet(
                 purpose: purpose,
                 window: shift.window,
-                asleep: data.babies.filter(\.isAsleep).map(\.name)
+                asleep: data.babies.filter(\.isAsleep).map(\.name),
+                plannedEnd: shift.plannedEndAt
             ) { startedAt, endedAt in
                 endShift(startedAt: startedAt, endedAt: endedAt)
             }
@@ -820,7 +821,7 @@ private struct Tonight {
         }
 
         self.timeline = ShiftTimeline.entries(
-            for: shift, unit: unit, timeZone: self.timeZone, now: now, editable: true)
+            for: shift, unit: unit, now: now, editable: true)
         self.names = names
         self.accents = accents
         self.lastFeedEntry = lastFeedEntry
@@ -838,12 +839,6 @@ private struct Tonight {
                 // device resolves a synced duplicate the same way.
                 asleepSince: SleepMath.openSession(in: snapshots, forBaby: baby.id)?.startAt,
                 awakeSince: SleepMath.lastWake(in: snapshots, forBaby: baby.id),
-                lastSleep: SleepMath.lastCompleted(in: snapshots, forBaby: baby.id)
-                    .flatMap { done in
-                        done.endAt.map {
-                            BabyPresentation.SleepSpan(startAt: done.startAt, endAt: $0)
-                        }
-                    },
                 lastFeedAt: lastFeed[baby.id],
                 lastDiaperAt: lastDiaper[baby.id])
         }
@@ -1024,6 +1019,34 @@ extension LogEvent {
         case .medication: return "Medication"
         case .measurement: return "Weight"
         }
+    }
+
+    /// How long this feed ran, or `nil` for one that recorded no time.
+    ///
+    /// **By method, never by adding the three fields up.** A bottle's length is
+    /// `feedDurationSeconds`; a breast feed's is the two sides added, because they
+    /// are consecutive and not concurrent. That is the same either/or
+    /// `Handoff.warmFeed` and `timelineDetail` below already answer with, and the
+    /// flat model holds all three columns whatever the method is — summing them
+    /// would give the trailing edge of a row a length its own subtitle disagrees
+    /// with. A missing method reads as breast, as it does in `warmFeed`.
+    var feedSeconds: Int? {
+        guard kind == .feed else { return nil }
+        if feedMethod?.isBottle == true { return feedDurationSeconds }
+        guard leftSeconds != nil || rightSeconds != nil else { return nil }
+        return (leftSeconds ?? 0) + (rightSeconds ?? 0)
+    }
+
+    /// When this record finished, or `nil` for one that took no time.
+    ///
+    /// Only a feed has a length: `at` is when it started — the sheet pairs a "Time"
+    /// with a "Duration" — so a twenty-minute bottle ran from `at` to twenty minutes
+    /// later, and the row prints both clocks the way a sleep does. Nothing else on
+    /// the timeline is a stretch: a diaper, a note, a weighing and a pump are all
+    /// instants, and a range on one of them would be invented.
+    var timelineEndAt: Date? {
+        guard let seconds = feedSeconds, seconds > 0 else { return nil }
+        return at.addingTimeInterval(TimeInterval(seconds))
     }
 
     func timelineDetail(unit: VolumeUnit) -> String? {

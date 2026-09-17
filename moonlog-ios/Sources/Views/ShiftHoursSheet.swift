@@ -23,6 +23,10 @@ struct ShiftHoursSheet: View {
     /// Named rather than counted, so ending while someone is asleep is a decision
     /// rather than a surprise. Their sleep stays in the record either way.
     let asleep: [String]
+    /// The hour this shift was booked until, set when it was started. Only a
+    /// suggestion for the field below — what gets written is whatever is confirmed
+    /// here. See `Shift.plannedEndAt`.
+    let plannedEnd: Date?
     /// `nil` for the end means "leave it running".
     let onSave: (Date, Date?) -> Void
 
@@ -46,17 +50,31 @@ struct ShiftHoursSheet: View {
         purpose: Purpose,
         window: ShiftWindow,
         asleep: [String] = [],
+        plannedEnd: Date? = nil,
         onSave: @escaping (Date, Date?) -> Void
     ) {
         self.purpose = purpose
         self.window = window
         self.asleep = asleep
+        self.plannedEnd = plannedEnd
         self.onSave = onSave
         _startedAt = State(initialValue: window.startedAt)
-        // Now is the suggestion, never the record. It is pre-filled because it is
-        // right most nights, and editable because the night it is wrong is the
-        // night it matters.
-        _endedAt = State(initialValue: window.endedAt ?? Date())
+        // A suggestion, never the record. It is pre-filled because it is right most
+        // nights, and editable because the night it is wrong is the night it matters.
+        _endedAt = State(
+            initialValue: window.endedAt ?? Self.suggestedEnd(planned: plannedEnd, now: Date()))
+    }
+
+    /// The booked hour when it has arrived, otherwise now.
+    ///
+    /// Leaving on time is the common night, and "6:00" is what the doula means where
+    /// the clock says 6:03 — the totals and the parents' document both clip to this
+    /// window, so those three minutes are sleep nobody watched. A booked end still in
+    /// the future means she is leaving early, and then the clock is the honest answer;
+    /// offering the plan there would also be a time the sheet refuses to save.
+    static func suggestedEnd(planned: Date?, now: Date) -> Date {
+        guard let planned, planned <= now else { return now }
+        return planned
     }
 
     private var isEnding: Bool { purpose == .end }
@@ -76,7 +94,7 @@ struct ShiftHoursSheet: View {
                         "Start", selection: $startedAt,
                         displayedComponents: [.date, .hourAndMinute])
                     if startsInFuture {
-                        advisory("That hasn't happened yet", blocking: true)
+                        Advisory("That hasn't happened yet")
                     }
                 }
                 .listRowBackground(palette.raised)
@@ -87,9 +105,9 @@ struct ShiftHoursSheet: View {
                             "End", selection: $endedAt,
                             displayedComponents: [.date, .hourAndMinute])
                         if endsInFuture {
-                            advisory("That hasn't happened yet", blocking: true)
+                            Advisory("That hasn't happened yet")
                         } else if endsBeforeStart {
-                            advisory("That's before the shift started", blocking: true)
+                            Advisory("That's before the shift started")
                         }
                     }
                     .listRowBackground(palette.raised)
@@ -170,17 +188,5 @@ struct ShiftHoursSheet: View {
         Haptics.commit()
         onSave(startedAt, isEnding ? endedAt : nil)
         dismiss()
-    }
-
-    /// Icon as well as colour, so the warning survives a colour-blind reader and a
-    /// dark nursery. See `docs/design.md`.
-    @ViewBuilder
-    private func advisory(_ text: String, blocking: Bool) -> some View {
-        Label(
-            text,
-            systemImage: blocking ? "exclamationmark.triangle.fill" : "info.circle"
-        )
-        .foregroundStyle(blocking ? palette.stop : palette.warn)
-        .font(.footnote)
     }
 }

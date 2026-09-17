@@ -110,15 +110,9 @@ struct SleepSheet: View {
 
             Section {
                 if endIsBeforeStart {
-                    Label("Wake time must be after the sleep time",
-                          systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(palette.stop)
-                        .font(.footnote)
+                    Advisory("Wake time must be after the sleep time")
                 } else if endIsInFuture {
-                    Label("That wake time is in the future",
-                          systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(palette.stop)
-                        .font(.footnote)
+                    Advisory("That wake time is in the future")
                 } else if let duration {
                     HStack {
                         Text("Slept")

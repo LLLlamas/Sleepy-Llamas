@@ -13,21 +13,10 @@ struct BabyPresentation: Identifiable, Equatable {
     /// have not slept this shift, in which case nothing is claimed about how long
     /// they have been up. Only meaningful while `asleepSince` is `nil`.
     let awakeSince: Date?
-    /// Both ends of the most recent *finished* sleep, which the awake tile names.
-    /// `nil` before this baby has slept at all — the tile then says nothing rather
-    /// than naming a span it does not have.
-    let lastSleep: SleepSpan?
     let lastFeedAt: Date?
     let lastDiaperAt: Date?
 
     var isAsleep: Bool { asleepSince != nil }
-
-    /// A finished sleep, both ends known. A separate type rather than a tuple so it
-    /// can carry `Equatable` into `BabyPresentation` without spelling it out.
-    struct SleepSpan: Equatable {
-        let startAt: Date
-        let endAt: Date
-    }
 
     /// The instant the current state began, whichever state that is.
     var stateSince: Date? { asleepSince ?? awakeSince }
@@ -225,22 +214,23 @@ struct BabyStatusCard: View {
         return "Since \(Fmt.clockAmPm(since, timeZone: timeZone)) · \(hint)"
     }
 
-    /// The trailing edge of the tile: when this sleep started and how long it has
-    /// run, or — once they are up — the sleep they just had.
+    /// The trailing edge of the tile: when the state on it began, and how long it
+    /// has run. One shape in both states — "since 3:42am, 40m" of asleep, or of awake.
     ///
-    /// It used to be the elapsed counter alone, which meant that the moment a baby
-    /// woke the tile forgot the sleep entirely and the only record of it was a row
-    /// further down the screen. "3:42a–4:22a" is the answer to the question asked
-    /// straight after a wake, and it is the one the next feed is timed against.
+    /// The awake tile used to print the finished sleep as a range, "3:42a–4:22a".
+    /// It is off the tile at the user's request: the range is a *past* fact, and
+    /// this line is the only place on the card that says what is true now. The
+    /// sleep is not lost — the timeline row below prints both its clocks, which is
+    /// where a finished sleep belongs.
     ///
-    /// `shortClock` for the finished range and `clockAmPm` for the single start:
-    /// two "am"s inside one range is more letters than the tightest line on the card
-    /// can spare, and the start time on its own is read across a dark room.
+    /// `clockAmPm`, not `shortClock`: the single letter is a column-width economy
+    /// bought for the range that is no longer here, and this time is read across a
+    /// dark room.
     @ViewBuilder
     private func sleepTimes(now: Date) -> some View {
         let alignment: HorizontalAlignment = dynamicTypeSize.isAccessibilitySize
             ? .leading : .trailing
-        if let since = baby.asleepSince {
+        if let since = baby.stateSince {
             VStack(alignment: alignment, spacing: 1) {
                 Text(Fmt.clockAmPm(since, timeZone: timeZone))
                     .font(.caption.weight(.medium))
@@ -252,37 +242,22 @@ struct BabyStatusCard: View {
             }
             .lineLimit(1)
             .layoutPriority(1)
-        } else if let last = baby.lastSleep {
-            Text("\(Fmt.shortClock(last.startAt, timeZone: timeZone))–"
-                + Fmt.shortClock(last.endAt, timeZone: timeZone))
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(palette.soft)
-                .lineLimit(1)
-                .layoutPriority(1)
         }
     }
 
     /// VoiceOver gets the elapsed time as well as the clock time. The spoken
     /// "asleep for 40m" answers the question the doula is actually asking faster
-    /// than "asleep since 3:42am" does, so it leads — but the tile now shows both,
-    /// and a label that names less than the screen does is its own bug.
+    /// than "asleep since 3:42am" does, so it leads — but the tile shows both, and
+    /// a label that names less than the screen does is its own bug.
     ///
-    /// `clockAmPm` rather than the `shortClock` the awake tile prints: "3:42a" is a
-    /// column-width economy, and VoiceOver reads the bare letter aloud.
+    /// One sentence for both states, off `stateSince`, because the tile draws both
+    /// states from `stateSince` too. It read the two separately and drifted: the
+    /// awake branch spoke a finished range the tile no longer shows.
     private func accessibleStatus(now: Date) -> String {
-        if let since = baby.asleepSince {
-            return "\(baby.name) asleep for \(Fmt.ago(since, now: now)), "
-                + "since \(Fmt.clockAmPm(since, timeZone: timeZone))"
-        }
-        let awake: String
-        if let woke = baby.awakeSince {
-            awake = "\(baby.name) awake for \(Fmt.ago(woke, now: now))"
-        } else {
-            awake = "\(baby.name) awake"
-        }
-        guard let last = baby.lastSleep else { return awake }
-        return awake + ". Last slept \(Fmt.clockAmPm(last.startAt, timeZone: timeZone)) "
-            + "to \(Fmt.clockAmPm(last.endAt, timeZone: timeZone))"
+        let state = baby.isAsleep ? "asleep" : "awake"
+        guard let since = baby.stateSince else { return "\(baby.name) \(state)" }
+        return "\(baby.name) \(state) for \(Fmt.ago(since, now: now)), "
+            + "since \(Fmt.clockAmPm(since, timeZone: timeZone))"
     }
 
     private func lastSeen(now: Date) -> some View {

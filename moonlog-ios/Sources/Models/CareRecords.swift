@@ -9,6 +9,14 @@ final class Shift {
     var id: UUID = UUID()
     var startedAt: Date = Date.distantPast
     var endedAt: Date? = nil
+
+    /// When the doula expects to leave, set alongside the start when the shift is
+    /// opened. A plan, never the record: only `close(at:)` writes `endedAt`, and a
+    /// shift that runs past this one stays open. It pre-fills the end sheet, which
+    /// is the one place the difference between "the hours I was booked for" and
+    /// "the time I actually left" gets decided.
+    var plannedEndAt: Date? = nil
+
     @Attribute(.allowsCloudEncryption) var caregiver: String? = nil
 
     /// The doula's own sentences to the parents, written at the end of the night and
@@ -37,6 +45,7 @@ final class Shift {
         id: UUID = UUID(),
         startedAt: Date,
         endedAt: Date? = nil,
+        plannedEndAt: Date? = nil,
         caregiver: String? = nil,
         timeZoneIdentifier: String = TimeZone.current.identifier
     ) {
@@ -44,6 +53,7 @@ final class Shift {
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.isOpen = endedAt == nil
+        self.plannedEndAt = plannedEndAt
         self.caregiver = caregiver
         self.timeZoneIdentifier = timeZoneIdentifier
     }

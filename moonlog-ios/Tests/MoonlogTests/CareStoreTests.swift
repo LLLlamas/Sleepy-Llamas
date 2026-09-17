@@ -1010,4 +1010,48 @@ final class CareStoreTests: XCTestCase {
             leos.startAt, shiftStart.addingTimeInterval(5400),
             "restoring Mia's session must not move Leo's")
     }
+
+    // MARK: - The booked hours
+
+    /// The booked end is the one time in the app that is *supposed* to be in the
+    /// future — a shift starting at 10pm ends at 6am, and future-blocking it would
+    /// make the field unfillable. It is a plan, so it must not close the shift.
+    func testTheBookedEndMayBeInTheFutureAndLeavesTheShiftOpen() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let end = shiftStart.addingTimeInterval(8 * 3600)
+        let id = try await store.startShift(
+            familyID: family, startedAt: shiftStart, plannedEndAt: end, caregiver: nil)
+
+        let stored = try ModelContext(container).fetch(FetchDescriptor<Shift>())
+        let shift = try XCTUnwrap(stored.first { $0.id == id })
+        XCTAssertEqual(shift.plannedEndAt, end)
+        XCTAssertNil(shift.endedAt, "a plan must not close the shift")
+        XCTAssertTrue(shift.isOpen)
+    }
+
+    /// An end before the start is a typo in every case — there is no night that runs
+    /// backwards — and the picker that sets it can produce one in two taps.
+    func testAShiftCannotBeBookedToEndBeforeItStarts() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        do {
+            _ = try await store.startShift(
+                familyID: family, startedAt: shiftStart,
+                plannedEndAt: shiftStart.addingTimeInterval(-60), caregiver: nil)
+            XCTFail("a backwards booking was accepted")
+        } catch CareStoreError.endBeforeStart {
+            // expected
+        }
+        let stored = try ModelContext(container).fetch(FetchDescriptor<Shift>())
+        XCTAssertTrue(stored.isEmpty, "the rejected shift was written anyway")
+    }
+
+    /// No booking at all is the normal state of every shift started before this
+    /// existed, and of one started from a launch argument or the reconciler.
+    func testAShiftWithNoBookedEndIsStillValid() async throws {
+        let (family, _, _) = try await makeFamilyWithTwins()
+        let id = try await store.startShift(
+            familyID: family, startedAt: shiftStart, caregiver: nil)
+        let stored = try ModelContext(container).fetch(FetchDescriptor<Shift>())
+        XCTAssertNil(try XCTUnwrap(stored.first { $0.id == id }).plannedEndAt)
+    }
 }

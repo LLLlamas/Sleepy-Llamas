@@ -151,11 +151,19 @@ struct RootView: View {
                 if let shift {
                     TonightView(family: family, shift: shift)
                 } else {
-                    StartShiftView(familyName: family.name) { startedAt, caregiver in
+                    StartShiftView(
+                        familyName: family.name,
+                        babyNames: family.activeBabies.map(\.name),
+                        onAddBaby: { name, birthAt in
+                            run { _ = try await $0.addBaby(
+                                to: family.id, name: name, birthAt: birthAt) }
+                        }
+                    ) { startedAt, plannedEndAt, caregiver in
                         Haptics.commit()
                         run {
                             _ = try await $0.startShift(
-                                familyID: family.id, startedAt: startedAt, caregiver: caregiver)
+                                familyID: family.id, startedAt: startedAt,
+                                plannedEndAt: plannedEndAt, caregiver: caregiver)
                         }
                     }
                 }

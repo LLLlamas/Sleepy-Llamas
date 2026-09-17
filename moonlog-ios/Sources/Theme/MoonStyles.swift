@@ -78,6 +78,38 @@ struct BabyChip: View {
     }
 }
 
+/// The line a sheet shows under a field it does not like.
+///
+/// Icon as well as colour, so it survives a colour-blind reader and a dark nursery —
+/// `docs/design.md`. `blocking` is the difference between "this cannot be saved" and
+/// "this is unusual": a future timestamp corrupts every "time since" reading that
+/// depends on it, where back-dating into a previous shift is occasionally legitimate
+/// and the totals clip it anyway.
+///
+/// It reads the palette itself rather than taking one, because six sheets were
+/// carrying six copies of the same three modifiers and the seventh copy is how the
+/// warning and the blocking variants drift apart.
+struct Advisory: View {
+    let text: String
+    var blocking = true
+
+    @Environment(\.palette) private var palette
+
+    init(_ text: String, blocking: Bool = true) {
+        self.text = text
+        self.blocking = blocking
+    }
+
+    var body: some View {
+        Label(
+            text,
+            systemImage: blocking ? "exclamationmark.triangle.fill" : "info.circle"
+        )
+        .foregroundStyle(blocking ? palette.stop : palette.warn)
+        .font(.footnote)
+    }
+}
+
 /// The fever flag. The wording matters: the app observes, it does not diagnose, so
 /// this states the reading and defers to the parents.
 struct FeverBadge: View {

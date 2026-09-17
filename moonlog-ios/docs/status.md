@@ -1,8 +1,8 @@
 # Status
 
-Updated 2026-09-08.
+Updated 2026-09-16.
 
-**225 unit tests green** (121 `MoonlogCoreTests`, 104 `MoonlogTests`) plus **26
+**238 unit tests green** (122 `MoonlogCoreTests`, 116 `MoonlogTests`) plus **32
 reachability tests** in `MoonlogUITests`. No Release warnings.
 
 **0.1.0 is on TestFlight and is safe to work a real shift on** — local-only, no
@@ -39,8 +39,9 @@ duplicates `MoonClock`.
 - **The tile.** "Day N" is off the card (and out of what VoiceOver says about it).
   Pressing it no longer dims it — that read as unavailable, not as pressed. The asleep
   fill is see-through on Night and Deep Night; see the note on Day below. The trailing
-  edge names the sleep: start plus a running elapsed while asleep, and the whole of the
-  last one as `3:42a–4:22a` once awake.
+  edge names the state: the "since" time plus a running elapsed, the same shape asleep
+  or awake. The finished sleep it used to print there as `3:42a–4:22a` is off the card
+  as of 2026-09-16 — the timeline row below carries both its clocks. See `decisions.md`.
 - **The sun and moon are drawn shapes**, with the moon's z's and the sun's rays moving
   independently of the glyph and a shake-and-swell on state change. No symbol effect
   animates a glyph's parts independently, which is why they are not SF Symbols. All of
@@ -65,6 +66,38 @@ duplicates `MoonClock`.
   tiles including notes, pills, and a per-stretch sleep timeline the app never had.
   Print keeps its colour (`print-color-adjust: exact`) and the page has no horizontal
   overflow at 320pt. Rendered and checked in light, dark and PDF — not read off the CSS.
+
+## Both ends of a shift, and of a record, 2026-09-16
+
+- **A shift is booked with both its hours.** The start screen asked for one time
+  called "Started"; it now asks for a start and an end, stored as
+  `Shift.plannedEndAt`. A **plan, not a record** — only `close(at:)` writes `endedAt`,
+  so a booked end cannot close a shift — and the one time in the app exempt from
+  future-blocking, because it is always in the future when a shift starts. It pre-fills
+  the end sheet, so confirming at 6:03 writes the 6:00 she meant rather than crediting
+  the parents with three minutes of sleep nobody watched.
+- **Adding a baby is on that screen too**, alongside the roster, against `CLAUDE.md`'s
+  "adding a baby lives in Settings". That rule is about *Tonight*, the logging screen;
+  this is setup before any logging, and arriving to find the second twin missing is
+  when the second card is needed. Same sheet, same write — a second route, not a move.
+- **A row that took time prints both its clocks.** A sleep read `9:28 PM` on the
+  trailing edge and named its wake inside the subtitle, so the length had to be
+  assembled from two places on one row. Both clocks now sit where every row's time
+  sits, and the subtitle keeps the length alone (`Handoff.sleepLength`; the documents
+  keep the `sleepTail` sentence). **A feed is a stretch too** — its "Time" is when it
+  began and its "Duration" how long it ran.
+- **The tile lost its finished range.** `3:42a–4:22a` was a past fact on the one line
+  that says what is true now. The trailing edge is one shape in both states now, off
+  `stateSince`, and the sleep it named is in the row below with both clocks on it.
+  `BabyPresentation.lastSleep` and `SleepSpan` went with it, and VoiceOver's separate
+  awake branch — which spoke the range — is one sentence again.
+- **A DRY pass over the change.** `Handoff.sleepTail` is now `sleepLength` plus the
+  wake it names, so the two cannot phrase a length differently. **A feed's length is
+  read by method, never by adding its three columns up** — the model is flat, so a
+  bottle's row carries `leftSeconds` too, and summing gave the trailing edge a length
+  the row's own subtitle and `Handoff.warmFeed` both disagreed with. The warning line
+  under a bad field is one `Advisory` view in `MoonStyles` instead of six copies of
+  three modifiers across four sheets. `SleepMath.lastCompleted` is private again.
 
 ## Times on every record, 2026-09-08
 

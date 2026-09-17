@@ -173,6 +173,39 @@ final class ReachabilityTests: MoonlogUITestCase {
             "still showing the previous household's shift")
         XCTAssertFalse(cardButton("Feed", for: "Mia").exists, "Nguyen's cards followed")
     }
+
+    /// The screen that opens a night now sets both of its hours and can put the
+    /// second twin on the roster. Every control on it is new, and the one before it
+    /// asked for a single time called "Started".
+    ///
+    /// Okafor is the seed's household between visits, which is the only way to reach
+    /// this screen at all.
+    func testTheStartShiftScreenSetsBothHoursAndReachesAddBaby() {
+        launch(["-moonlogTab", "settings"])
+        reveal(app.buttons["Okafor"]).tap()
+        app.buttons["Tonight"].firstMatch.tap()
+
+        XCTAssertTrue(
+            app.buttons["Start shift"].waitForExistence(timeout: 10), "not the start screen")
+        XCTAssertTrue(app.staticTexts["Start"].exists, "no start picker")
+        XCTAssertTrue(app.staticTexts["End"].exists, "no end picker — the shift has one hour")
+        XCTAssertFalse(
+            app.staticTexts["Started"].exists, "the single 'Started' picker is still here")
+
+        // A second baby arriving mid-booking is the twins case, and the route to it
+        // was Settings only. `isHittable`, not `exists`: this app has shipped a
+        // control that rendered and answered at the width of its own word.
+        let add = reveal(app.buttons["Add baby"])
+        XCTAssertGreaterThan(
+            add.frame.width, app.frame.width * 0.5, "Add baby answers on the words")
+        add.tap()
+        XCTAssertTrue(
+            app.buttons["Add"].waitForExistence(timeout: 5), "Add baby opened nothing")
+        app.buttons["Cancel"].tap()
+
+        // Back on the screen it left, with the shift still unstarted.
+        XCTAssertTrue(app.buttons["Start shift"].waitForExistence(timeout: 5))
+    }
     /// Save looked like a bar the width of the sheet and answered like the word
     /// printed on it. `.plain` hit-tests a button's *contents*, and the contents
     /// were an `HStack` holding one `Text`, so the width the `.infinity` frame

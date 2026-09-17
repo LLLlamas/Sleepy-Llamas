@@ -77,8 +77,8 @@ Measured, so the next person optimising this starts from numbers:
 | Step | Wall clock |
 |---|---|
 | `xcodebuild archive` | **~12 s** |
-| Unit suite (224 tests) | **~1 s** of testing |
-| Reachability suite (31 tests) | **~5m50s** — the whole cost of a ship |
+| Unit suite (238 tests) | **~1 s** of testing |
+| Reachability suite (32 tests) | **~6m** — the whole cost of a ship |
 | Upload + App Store Connect processing | Apple's; no lever here |
 
 The compile is not the bottleneck and never was. The suite is, because every test

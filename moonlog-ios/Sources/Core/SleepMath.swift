@@ -143,11 +143,10 @@ public enum SleepMath {
 
     /// The whole of this baby's most recently finished sleep, not just its end.
     ///
-    /// The card names both ends of it once the baby is awake again — "3:42a–4:22a"
-    /// is the fact a doula reads off to the parents, and it was previously only
-    /// recoverable by scrolling the timeline. Ties on `endAt` break on id, for the
-    /// same reason `openSession` does.
-    public static func lastCompleted(
+    /// `private` since 2026-09-16: the card used to name both of its ends, and with
+    /// that range off the tile `lastWake` is the only thing that asks. Ties on
+    /// `endAt` break on id, for the same reason `openSession` does.
+    private static func lastCompleted(
         in sessions: [SleepSnapshot],
         forBaby babyID: UUID
     ) -> SleepSnapshot? {

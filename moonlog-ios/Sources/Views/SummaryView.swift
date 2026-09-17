@@ -181,8 +181,7 @@ struct SummaryView: View {
         let zone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
         return TimelineSection(
             entries: ShiftTimeline.entries(
-                for: shift, unit: family.volumeUnit, timeZone: zone,
-                now: now, editable: false),
+                for: shift, unit: family.volumeUnit, now: now, editable: false),
             timeZone: zone,
             // Every baby, not only the active ones: a night logged before a baby was
             // archived still has her rows in it, and filtering here would render them

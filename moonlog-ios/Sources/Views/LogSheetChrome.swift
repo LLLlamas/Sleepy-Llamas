@@ -139,17 +139,9 @@ struct LogSheetChrome<Content: View>: View {
                 Section("When") {
                     DatePicker("Time", selection: $at, displayedComponents: [.date, .hourAndMinute])
                     if isFuture {
-                        // Blocking: a future timestamp corrupts every "time since"
-                        // reading that depends on it.
-                        Label("That's in the future", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(palette.stop)
-                            .font(.footnote)
+                        Advisory("That's in the future")
                     } else if isOutsideShift {
-                        // Advisory only — back-dating into a previous shift is
-                        // occasionally legitimate, and totals clip it anyway.
-                        Label("Outside this shift", systemImage: "info.circle")
-                            .foregroundStyle(palette.warn)
-                            .font(.footnote)
+                        Advisory("Outside this shift", blocking: false)
                     }
                 }
                 .listRowBackground(palette.raised)

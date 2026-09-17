@@ -81,20 +81,47 @@ struct OnboardingView: View {
 
 /// Between visits there is no open shift — a normal state, not an error. Start and
 /// end times are set or confirmed by the doula, never read off the clock.
+///
+/// Both ends are asked for here because the hours are booked in advance: the doula
+/// knows at 10pm that she leaves at 6. The end is a **plan**, not the record —
+/// `ShiftHoursSheet` still decides what actually gets written when she leaves — so
+/// unlike the start it is allowed to be in the future, and has to be.
+///
+/// The roster sits on this screen against `CLAUDE.md`'s "adding a baby lives in
+/// Settings", deliberately and at the user's request. That rule is about Tonight,
+/// the logging screen: a mode change does not belong beside buttons pressed forty
+/// times a night. This screen is the opposite — it is the setup that happens once,
+/// before any logging, and arriving to find a twin missing is exactly when the
+/// second card is needed. Settings keeps its copy; this is a second route, not a move.
 struct StartShiftView: View {
     let familyName: String
-    let onStart: (Date, String?) -> Void
+    /// Who is on the roster right now, in card order. Read for display only — the
+    /// names answer "is the second twin here yet" without a trip to Settings.
+    let babyNames: [String]
+    let onAddBaby: (String, Date) -> Void
+    let onStart: (Date, Date, String?) -> Void
 
     @AppStorage("moonlog.lastCaregiver") private var caregiver = ""
     /// Seeded on appear, not at construction. This view is the root whenever no
     /// shift is open, so a `Date()` captured here survives backgrounding — open the
     /// app at 21:50, start the shift at 22:35, and it would record 21:50.
     @State private var startedAt = Date()
+    /// The booked end, seeded the same way and for the same reason. Eight hours is
+    /// the shape of a night shift and the number is wrong on any given night, which
+    /// is why it is a picker and not a constant.
+    @State private var plannedEndAt = Date().addingTimeInterval(Self.defaultLength)
+    @State private var addingBaby = false
     @State private var isStarting = false
 
     @Environment(\.palette) private var palette
 
+    /// Eight hours. A suggestion the doula overrides, never a recorded length.
+    private static let defaultLength: TimeInterval = 8 * 60 * 60
+
     private var isFuture: Bool { startedAt.isMeaningfullyInFuture }
+    /// The end is *expected* to be in the future, so the only thing wrong with it is
+    /// being before the start. `CareStore.startShift` enforces the same rule.
+    private var endsBeforeStart: Bool { plannedEndAt < startedAt }
 
     var body: some View {
         Form {
@@ -109,15 +136,33 @@ struct StartShiftView: View {
             .listRowBackground(Color.clear)
 
             Section("Shift") {
-                DatePicker("Started", selection: $startedAt,
+                DatePicker("Start", selection: $startedAt,
                            displayedComponents: [.date, .hourAndMinute])
                 if isFuture {
-                    Label("That's in the future", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(palette.stop)
-                        .font(.footnote)
+                    Advisory("That's in the future")
+                }
+                DatePicker("End", selection: $plannedEndAt,
+                           displayedComponents: [.date, .hourAndMinute])
+                if endsBeforeStart {
+                    Advisory("That's before the shift starts")
                 }
                 TextField("Caregiver (optional)", text: $caregiver)
                     .textInputAutocapitalization(.words)
+            }
+            .listRowBackground(palette.raised)
+
+            Section("Babies") {
+                ForEach(babyNames, id: \.self) { name in
+                    Text(name).foregroundStyle(palette.ink)
+                }
+                Button {
+                    addingBaby = true
+                } label: {
+                    Label("Add baby", systemImage: "plus.circle.fill")
+                }
+                // The label's *contents* are what a plain button hit-tests, so the
+                // row answered at the width of the words. See `CLAUDE.md`.
+                .contentShape(Rectangle())
             }
             .listRowBackground(palette.raised)
 
@@ -127,17 +172,25 @@ struct StartShiftView: View {
                     isStarting = true
                     onStart(
                         startedAt,
+                        plannedEndAt,
                         caregiver.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             ? nil : caregiver)
                 }
-                .disabled(isFuture || isStarting)
+                .disabled(isFuture || endsBeforeStart || isStarting)
                 .frame(maxWidth: .infinity)
             }
             .listRowBackground(palette.raised)
         }
         .scrollContentBackground(.hidden)
         .moonBackground(palette)
-        .onAppear { startedAt = Date() }
+        .onAppear {
+            startedAt = Date()
+            plannedEndAt = Date().addingTimeInterval(Self.defaultLength)
+        }
+        .sheet(isPresented: $addingBaby) {
+            AddBabySheet(familyName: familyName, onAdd: onAddBaby)
+                .presentationDetents([.medium])
+        }
     }
 }
 

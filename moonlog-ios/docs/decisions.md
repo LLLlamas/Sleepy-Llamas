@@ -4,6 +4,67 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## A shift is booked with both its hours, and the roster is on that screen
+**2026-09-16**
+
+The start screen asked for one time, labelled "Started". The hours are booked in
+advance — the doula knows at 10pm that she leaves at 6 — so it asks for both, and
+the second one is stored as `Shift.plannedEndAt`.
+
+It is a **plan, not a record.** Only `close(at:)` ever writes `endedAt`, so a booked
+end cannot end a shift and a night that runs long stays open. It is also the one time
+in the app deliberately exempt from future-blocking: it is always in the future when
+a shift starts, and rejecting it would make the field unfillable. The rule it does
+carry is that it cannot precede the start, enforced in `CareStore.startShift` like
+every other time rule.
+
+What it buys is the end sheet's pre-fill. Confirming at 6:03 used to write 6:03, and
+the totals and both documents clip to that window — three minutes of sleep nobody
+watched. `ShiftHoursSheet.suggestedEnd` offers the booked hour once it has arrived
+and the clock otherwise, because a booked hour still in the future means she is
+leaving early, and offering it would pre-fill a value the sheet refuses to save.
+
+**Adding a baby is also on this screen**, which `CLAUDE.md` puts in Settings. That
+rule is about *Tonight*: a mode change does not belong beside buttons pressed forty
+times a night. This screen is the opposite — setup that happens once, before any
+logging — and arriving to find the second twin missing is exactly when the second
+card is needed. Settings keeps its copy; this is a second route to the same
+`AddBabySheet` and the same `CareStore.addBaby`, not a move.
+
+*Reverses if:* the booked end starts being read as the record — the tell would be a
+shift that reports hours nobody worked.
+
+---
+
+## A row that took time prints both its clocks; the tile prints one
+**2026-09-16**
+
+Two surfaces describe the same sleep and they were splitting it: the timeline row set
+the start on its trailing edge, where every row's time sits, and the wake time inside
+the subtitle as part of a sentence. Reading how long a sleep ran meant assembling it
+from two places on one row. Both clocks now sit on the trailing edge as
+`9:28 PM → 9:30 PM`, and the subtitle keeps the length alone — `Handoff.sleepLength`,
+the same words as `Handoff.sleepTail` minus the wake it no longer has to name. The
+documents keep `sleepTail`: they are prose, and prose cannot put a clock in a column.
+
+**A feed is a stretch too.** Its "Time" is when it began and its "Duration" is how
+long it ran, so a twenty-minute bottle now reads `9:35 PM → 9:55 PM` like a sleep
+does. A breast feed's length is the two sides added — they are consecutive, not
+concurrent. Everything else on the timeline is an instant and prints one clock; so
+does a sleep still running, whose `end` is only where the clip fell.
+
+**The tile lost its finished range.** `3:42a–4:22a` on the awake card was a past
+fact on the one line that says what is true *now*, and the sleep it named is in the
+timeline row directly below with both its clocks. The trailing edge is one shape in
+both states now — the "since" time and a running elapsed, off `stateSince`, which is
+what the subtitle beside it already read. VoiceOver reads the same sentence for the
+same reason; it had its own awake branch, and that branch spoke the range.
+
+*Reverses if:* the range is wanted back on the card — but then it belongs where the
+state line is not, not on top of it.
+
+---
+
 ## Every logged record carries its time, and the keepsake lists them
 **2026-09-08**
 

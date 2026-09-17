@@ -185,3 +185,10 @@ baby all live in Settings**, not on Tonight — Tonight is for logging, and a mo
 change does not belong next to the buttons pressed forty times a night. The
 client-family picker must stay at the **root** of the Settings stack; see the
 constraint in `docs/design.md`.
+
+**One exception, added deliberately:** `StartShiftView` — the screen shown when no
+shift is open — lists the roster and offers "Add baby". That screen is not the
+logging screen; it is the setup that happens once, before a night begins, and
+arriving to find the second twin missing is exactly when the second card is needed.
+It presents the *same* `AddBabySheet` and calls the *same* `CareStore.addBaby` as
+Settings does. A second route, never a move — do not delete Settings' copy.

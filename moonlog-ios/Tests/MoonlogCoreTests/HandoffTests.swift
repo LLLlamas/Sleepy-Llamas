@@ -521,6 +521,31 @@ final class HandoffTests: XCTestCase {
         XCTAssertTrue(out.contains("10:42p  → 1:15a · 2h 33m"), out)
     }
 
+    /// `sleepLength` and `sleepTail` describe the same stretch for two different
+    /// surfaces, and the length has to be the same words in both — the timeline sets
+    /// the wake time as a clock of its own, the documents fold it into a sentence.
+    /// Read from one place, they could not disagree; they are read from two.
+    func testTheLengthWithoutAWakeMatchesTheSentenceThatCarriesOne() {
+        let stretch = SleepStretch(
+            id: mia, start: at("2026-09-04 22:42"), end: at("2026-09-05 01:15"),
+            isOpen: false)
+        XCTAssertEqual(Handoff.sleepLength(stretch), "2h 33m")
+        XCTAssertEqual(
+            Handoff.sleepTail(stretch, endLabel: "1:15a"), "→ 1:15a · 2h 33m")
+    }
+
+    /// An open stretch's `end` is only where the clip fell, so neither form may
+    /// print it as a waking. The timeline leans on this: it shows one clock rather
+    /// than a range precisely when this says "still asleep".
+    func testAnOpenStretchNamesNoWakeInEitherForm() {
+        let stretch = SleepStretch(
+            id: mia, start: at("2026-09-04 22:42"), end: at("2026-09-04 23:42"),
+            isOpen: true)
+        XCTAssertEqual(Handoff.sleepLength(stretch), "still asleep · 1h so far")
+        XCTAssertEqual(
+            Handoff.sleepTail(stretch, endLabel: "11:42p"), "still asleep · 1h so far")
+    }
+
     /// The rows carry the value and its time; the heading counts them. A heading
     /// naming the latest weight was, on a night with one weighing, the row below it
     /// printed twice — once without a time on it.

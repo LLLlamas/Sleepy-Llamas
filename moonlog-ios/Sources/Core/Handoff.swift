@@ -453,6 +453,15 @@ public enum Handoff {
             }
     }
 
+    /// How long a stretch ran, without naming the waking — for a surface that
+    /// prints the wake time itself rather than folding it into a sentence. The
+    /// timeline sets both clocks on its trailing edge; the two documents do not,
+    /// so they keep `sleepTail`.
+    public static func sleepLength(_ stretch: SleepStretch) -> String {
+        let length = Fmt.spanned(stretch.seconds)
+        return stretch.isOpen ? "still asleep · \(length) so far" : length
+    }
+
     /// Where a stretch went, given the time it began: when the baby woke and how
     /// long it lasted, or that it has not ended yet.
     ///
@@ -461,10 +470,8 @@ public enum Handoff {
     /// is shared. An open session has no end to print — "so far" is the same
     /// honesty the header applies to an open shift.
     public static func sleepTail(_ stretch: SleepStretch, endLabel: String) -> String {
-        let length = Fmt.spanned(stretch.seconds)
-        return stretch.isOpen
-            ? "still asleep · \(length) so far"
-            : "→ \(endLabel) · \(length)"
+        let length = sleepLength(stretch)
+        return stretch.isOpen ? length : "→ \(endLabel) · \(length)"
     }
 
     /// Lower-cased and unpunctuated, because the two documents set it differently —

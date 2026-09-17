@@ -4,6 +4,10 @@ import MoonlogCore
 struct TimelineEntry: Identifiable, Equatable {
     let id: UUID
     let at: Date
+    /// When it finished, for the two kinds that take time — a sleep and a feed with
+    /// a duration on it. `nil` is an instant, or a stretch still running, and the
+    /// row then prints one clock instead of a range.
+    let endAt: Date?
     let babyID: UUID?
     let icon: String
     let title: String
@@ -111,9 +115,17 @@ struct TimelineSection: View {
 
             Spacer()
 
-            Text(Fmt.clock(entry.at, timeZone: timeZone))
+            // Both ends on the trailing edge, where every other row already puts
+            // its one time — so the column still scans as a column, and the answer
+            // to "how long was that" is read off the clocks rather than assembled
+            // from a start here and a wake time in the subtitle.
+            Text(clockRange(entry))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(palette.soft)
+                // Wins its width from the title, which can wrap; a range broken
+                // across the arrow is unreadable.
+                .lineLimit(1)
+                .layoutPriority(1)
 
             if entry.edit != nil {
                 Image(systemName: "chevron.right")
@@ -124,6 +136,12 @@ struct TimelineSection: View {
         .padding(.horizontal, 14)
         .frame(minHeight: MoonLayout.tapTarget)
         .contentShape(Rectangle())
+    }
+
+    private func clockRange(_ entry: TimelineEntry) -> String {
+        let start = Fmt.clock(entry.at, timeZone: timeZone)
+        guard let end = entry.endAt else { return start }
+        return "\(start) → \(Fmt.clock(end, timeZone: timeZone))"
     }
 
     private func accentColor(for entry: TimelineEntry) -> Color {

@@ -256,19 +256,29 @@ actor CareStore {
     /// `startedAt` is set or confirmed by the doula, never read off the clock.
     /// Refuses if one is already open — a second open shift becomes invisible in
     /// every screen and its logs unreachable.
+    ///
+    /// `plannedEndAt` is the hour she is booked until, and is deliberately **not**
+    /// future-checked: it is always in the future when a shift starts. It has to be
+    /// at or after the start, because an end before the start is a typo in every
+    /// case, not a plan.
     func startShift(
         familyID: UUID,
         startedAt: Date,
+        plannedEndAt: Date? = nil,
         caregiver: String?
     ) throws -> UUID {
         return try write {
             guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
             try rejectFuture(startedAt)
+            if let plannedEndAt, plannedEndAt < startedAt {
+                throw CareStoreError.endBeforeStart
+            }
             if try openShift(familyID: familyID) != nil {
                 throw CareStoreError.shiftAlreadyOpen
             }
             let shift = Shift(
                 startedAt: startedAt,
+                plannedEndAt: plannedEndAt,
                 caregiver: caregiver,
                 timeZoneIdentifier: family.timeZoneIdentifier
             )
