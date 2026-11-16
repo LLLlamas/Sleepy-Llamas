@@ -1,0 +1,263 @@
+RESEARCH MEMO — DAYTIME MOONLOG
+Reviewed November 15, 2026. Research only; no app code changes.
+
+RECOMMENDATION
+
+The strongest direction is one Moonlog app with day and night care modes, differentiated by a clear, reviewed handoff between caregivers and parents. A daytime clone with feeds, diapers and naps would enter a crowded market. The stronger promise is:
+
+“Know how your baby’s day went, what helped, and what needs your attention — in one thoughtful handoff.”
+
+This fits Catalina’s service business particularly well: the app can make her care feel organized and personal before it becomes a standalone subscription business. Start as a Sleepy Llamas service tool with 3–5 consenting families, then broaden a successful pilot before building standalone subscriptions.
+
+WHAT ALREADY EXISTS
+
+The native iOS implementation is substantially further along than the older PWA described in MASTER.md.
+
+- Multiple client families, babies and twins: native household models and settings.
+- Explicit caregiver shifts with configurable start/end: Shift model and shift-hours flow.
+- Feeds, diapers, sleep and notes: existing logging sheets and writer.
+- Optional pumping, medication records and weight: existing optional event kinds.
+- Parent-facing written note: ParentNoteSheet and Shift.parentNote.
+- Summary, history and detailed timeline: native Summary and History views.
+- Plain-text sharing and designed HTML keepsake handoff: SummaryView, Handoff and HandoffHTML.
+- Day appearance: existing theme; this is visual appearance, not a daytime product workflow.
+- Separate parent/caregiver identities, roles and shared household access: not implemented.
+- Parent acknowledgment, unresolved questions and versioned approved reports: not implemented.
+- Cross-device sync: private CloudKit path prepared but explicitly deferred.
+
+An important naming distinction: the existing “parent note” is a caregiver’s note to the parents, not a note authored by a parent.
+
+I found no daytime/Talli strategy in the local research and documentation searched. The next-features.md research covers NFC and Apple Watch. It explicitly describes those as unstarted; their presence in documentation should not be mistaken for built features.
+
+Local grounding:
+/Users/septemberllamas/Documents/Claude-2026-MBP/Sleepy-Llamas/moonlog-ios/docs/status.md
+/Users/septemberllamas/Documents/Claude-2026-MBP/Sleepy-Llamas/moonlog-ios/docs/cloudkit.md
+/Users/septemberllamas/Documents/Claude-2026-MBP/Sleepy-Llamas/moonlog-ios/Sources/Views/SummaryView.swift
+/Users/septemberllamas/Documents/Claude-2026-MBP/Sleepy-Llamas/moonlog-ios/Sources/Core/Handoff.swift
+
+The documentation reports a September TestFlight build and passing tests. I inspected sources but did not rerun tests or independently verify current distribution status.
+
+CURRENT COMPETITIVE PICTURE
+
+Prices below are publicly displayed US prices or explicitly described annual-billing equivalents. Checkout offers may differ.
+
+Talli Baby
+- Verified strengths: iOS/Android, configurable events, caregiver access, notes/photos, sleep/feed/diaper tracking.
+- US App Store lists Premium at $3.99/month or $39.99/year.
+- Implication: basic tracking and family sharing are baseline expectations.
+Source: https://apps.apple.com/us/app/talli-baby-tracker-newborn-log/id1383601403
+
+Huckleberry
+- Verified strengths: free logging/reports and multi-device sync; paid prediction and guidance tools.
+- Free tier; Plus $5.74/month billed yearly, Premium $9.99/month billed yearly, as displayed.
+- Implication: a broad consumer tracker competes against a capable free option.
+Source: https://huckleberrycare.com/pricing
+
+Baby Connect
+- Verified strengths: multi-platform tracking including web, caregiver sharing, reports and messages.
+- US listing displays Family $6.99, Professional $14.99 and Family 12 months $49.99; confirm renewal interval at checkout.
+- Implication: a professional caregiver market already exists.
+Source: https://apps.apple.com/us/app/baby-connect-newborn-tracker/id326574411
+
+Nara Baby
+- Verified strengths: calming design, multiple children, caregiver coordination, routines, notes/photos and Watch integration.
+- US listing contains several monthly/lifetime SKUs, including $9.99 monthly and $99.99 lifetime.
+- Implication: a pleasant visual style alone is insufficient differentiation; do not describe Nara as simply free.
+Source: https://apps.apple.com/us/app/nara-baby-pregnancy-tracker/id1444639029
+
+Talli Premium specifically adds customizable inputs/buttons, default-based one-touch logging, event-relative reminders and CSV export. Its product materials already support many daytime activities, so “daytime Talli” is not an unoccupied category.
+Sources:
+https://talli.me/pages/apps-talli-premium
+https://talli.me/pages/apps-talli-baby
+
+A current market change: Talli’s shop says manufacturing is paused and hardware inventory is sold out, while its apps remain available. Older product pages still show purchasable-looking hardware descriptions and prices. Use the current availability notice rather than those older product prices when discussing the opportunity. This is a reason to explore phone-first simplicity, not evidence that all Talli customers are seeking alternatives.
+Source: https://talli.me/shop
+
+I did not find reviewed shift-report publication, revision tracking and explicit parent acknowledgment described on the competitor pages examined. That is a promising differentiation hypothesis, not proof those capabilities are absent everywhere. A hands-on competitor trial should precede any public comparison claim.
+
+PRODUCT RECOMMENDATION
+
+Keep a shared care record and a shared codebase. Offer “Day care” and “Night care” as contexts, rather than splitting data into separate apps.
+
+Day care defaults:
+- Home says “Today.”
+- Naps and daytime activities.
+- Outings, play, comfort strategies and supplies.
+- End-of-day parent handoff.
+- Light appearance suggested.
+
+Night care defaults:
+- Home says “Tonight.”
+- Sleep stretches and overnight care.
+- Overnight settling and morning handoff.
+- Morning parent handoff.
+- Dark appearance suggested.
+
+These are editable preferences. Do not infer shift boundaries from sunrise, midnight or a timer. A caregiver may work an overnight-to-daytime shift or finish earlier than planned.
+
+For launch, focus on parents with an in-home nanny, postpartum doula or regular caregiver for babies under one year. Supporting preschool attendance, classrooms, staff payroll, every possible development milestone and medical management would dilute the initial use case.
+
+Possible positioning: “Moonlog, for every part of their day.” A separate daytime brand can be tested later; no trademark or naming clearance was performed.
+
+WHAT THE EOD EXPERIENCE SHOULD DO
+
+The report needs three layers:
+1. A quick read: current state, latest feed/diaper, sleep total and important open questions.
+2. A personal note: a few caregiver-written sentences about the day and what worked.
+3. The details: a reliable timeline that parents can expand when needed.
+
+Avoid asking parents to interpret a dashboard before finding out whether the baby is still asleep or whether tomorrow’s supplies are running low.
+
+Recommended workflow:
+Logging → Review draft → Caregiver confirms → Published version → Parent acknowledges.
+
+Questions have their own status, rather than making the entire report “unapproved.”
+
+- Draft remains private to the caregiver preparing it.
+- “Review draft” checks the child, coverage window, missing details and still-running timers.
+- The caregiver explicitly confirms the report, then chooses whether to share.
+- “Shared” means the share action was invoked; it does not prove delivery, opening or reading.
+- A connected parent view can record “Opened” and an explicit “Acknowledged.”
+- Acknowledgment means receipt/review, not consent to every care decision, agreement with every recorded fact or a release of responsibility.
+- A parent can ask a question or propose a correction without silently rewriting another person’s record.
+- Changes after publication create a clearly labeled revision and reset acknowledgment for materially changed items.
+
+Use wording like “Reviewed by Catalina at 5:08 PM” and “Acknowledged by Ana at 5:24 PM.” Do not claim a report was reviewed by someone merely because they opened it.
+
+For the first pilot, text/HTML sharing can be paired with an ordinary reply acknowledging receipt. Label that as a manual process; do not present it as automated read receipts or authenticated in-app acknowledgment. Authenticated acknowledgment needs new connected identity, access and persistence services.
+
+ROLES AND OWNERSHIP
+
+Parent/household owner:
+Invite and remove members; see published reports; set care preferences; export family data.
+
+Caregiver:
+Log assigned-family care; review and publish their shift; correct records with attribution.
+
+Additional parent:
+Household-approved parent permissions.
+
+Temporary caregiver:
+Time-bounded access to explicitly selected children and necessary history.
+
+Avoid shared passwords. Do not expose all Catalina’s families when a parent is invited to one household.
+
+Set ownership clearly before implementation: a family should retain its records when a nanny leaves, while the caregiver’s authorship remains attributed. If caregivers need their own professional archive, define that policy explicitly instead of automatically copying a child’s full history into two owners’ accounts.
+
+MISSING DATA AND CORRECTIONS
+
+- Show “amount not recorded,” never convert an unknown feed amount into an apparent zero-volume feed.
+- Show “No diaper changes logged,” not “No diaper changes.”
+- Distinguish “not observed,” “not recorded,” “not applicable” and an explicit zero.
+- In a report covering 8 AM–5 PM, label totals “During this shift.” They are not full-day totals.
+- Keep nursing duration separate from measured bottle volume.
+- If a nap continues beyond departure, report “Asleep since 4:42 PM; still asleep at handoff.” Count only the portion inside the coverage window.
+- Preserve overlap/midnight/time-zone handling and avoid double-counting a nap across caregiver shifts.
+- Keep occurredAt, recordedAt, author, revision and source separately.
+- Resolve wrong-child entries visibly and provide an audit trail after publication.
+- A correction should update the facts and report version; a parent’s question belongs in a separate discussion record.
+
+There is a concrete existing-model gap: native totals currently add amountMl ?? 0. That is reasonable as an arithmetic implementation but insufficient as a parent-facing completeness model. The daytime product should also count measured, unmeasured and unknown-method feeds so its total is honestly qualified.
+
+ILLUSTRATIVE EOD REPORT
+
+Fictional content, intended to demonstrate presentation only.
+
+Mia’s day
+Friday, November 13 · 8:00 AM–5:00 PM
+With Catalina · Reviewed at 5:08 PM · Version 1
+
+AT HANDOFF
+Awake since 4:10 PM
+Last bottle: 3:40 PM · 90 mL
+Last diaper: 4:25 PM · wet
+
+THE DAY AT A GLANCE
+3 bottle feeds · 270 mL measured
+3 naps · 2 hr 35 min during this shift
+5 diaper changes · 4 wet only, 1 wet + dirty
+
+A LITTLE ABOUT TODAY
+“Mia especially enjoyed looking at the trees on our walk. The room felt busy before her second nap, so I dimmed the lights and she settled with her usual song.”
+
+FOR THIS EVENING
+The clean bottles are on the drying rack. There are two spare outfits left in the changing basket.
+
+PLEASE CONFIRM
+Would you like me to bring the stroller on tomorrow’s outing?
+[Yes] [Let’s discuss]
+
+YOUR NOTE OR QUESTION
+[Add a note]
+
+[Acknowledge handoff] [View full timeline]
+
+The report can be warm without generating invented observations. Start with deterministic totals and templates plus the caregiver’s actual writing. If AI polishing is added later, make it opt-in, preserve the original note, and require review before publishing.
+
+TECHNICAL DIRECTION AND SCOPE
+
+Phase 1: reviewed daytime handoffs, one caregiver device.
+
+Reuse the native MoonlogCore calculations, CareStore writer, family/child models, logging flows and HTML/plain-text handoff. Add day/night context, neutral report language, tagged daytime notes, review checklist, persistent report draft and immutable published report snapshots.
+
+This phase can validate whether parents value the handoff without introducing live multiuser data synchronization. Parents should be able to receive a readable report without installing an app.
+
+Before expanding usage, address the documented reliability gaps most relevant to the new flow: draft survival, restorable export, unknown event kinds and undo conflicts. The report snapshot should reference source records and store its version/as-of time.
+
+Phase 2: secure parent view and acknowledgment.
+
+Add individual identities, invitations, household authorization, publication state, questions, acknowledgment records, revocation and revision notifications. A mobile web parent view is useful for mixed iPhone/Android households, even if caregivers initially log in native iOS.
+
+Phase 3: live collaborative logging.
+
+Only after the handoff pilot succeeds, add two caregivers writing concurrently, offline outbox/retries, conflict handling and remotely refreshed views.
+
+Turning on the prepared private CloudKit configuration does not implement Phase 2. Apple distinguishes syncing one user’s private database from sharing with other users; inter-user collaboration requires a sharing/access-management flow such as CKShare and a participant shared database. The repository currently uses .private(...) and does not contain that product flow.
+Source: https://developer.apple.com/documentation/CloudKit/sharing-cloudkit-data-with-other-icloud-users
+
+If the intended customer base includes Android caregivers, a cross-platform backend and web/PWA path deserves evaluation before committing to an Apple-only collaboration layer. Existing Supabase use by the website is not evidence that Moonlog already has a care-record backend.
+
+Privacy recommendations: minimize collected data, keep photos optional, avoid baby health details in analytics or notification previews, explicitly disclose recipients and AI processing, and support deletion/export. Do not market “private” as unique without a precise comparison: Talli’s own policy says it does not sell health/baby-tracking data or use it for advertising and excludes that data from third-party analytics.
+Source: https://talli.me/pages/privacy-policy
+
+MVP VERSUS LATER
+
+MVP:
+Day/night shift context; core logs; activity/comfort/supplies note tags; unknown-data indicators; personal note; review checklist; published report version; copy/share; manual acknowledgment process; usable export/recovery.
+
+Next:
+Secure parent report page, separate accounts, acknowledgment/questions, revision notifications, invitation expiry and access revocation.
+
+Later:
+Live shared logging, photo moments, bilingual reports, custom care templates, multi-caregiver schedules, optional voice entry and agency accounts.
+
+Keep prediction engines, automated parenting advice, medical decision support, physical hardware and agency operations outside the launch scope.
+
+VALIDATION, BUSINESS MODEL AND ROUGH EFFORT
+
+First validate the app as a service tool with 3–5 consenting Sleepy Llamas families. If useful, run a broader two-week pilot with approximately 5 caregivers and 8–10 consenting families. Include twins, rotating caregivers and parents who prefer minimal tracking. Use synthetic data for demonstrations.
+
+Proposed success criteria:
+- At least 80% of scheduled handoffs sent without researcher assistance.
+- Median end-of-shift review under three minutes.
+- Parents can identify current state and open questions within one minute.
+- Fewer “when did she last…?” follow-up texts, compared with each family’s baseline.
+- No wrong-family disclosure or falsely complete totals.
+- At least half of pilot families/caregivers voluntarily want to continue; interview nonusers.
+- Actual willingness to pay or a paid pilot commitment, rather than only positive feedback.
+
+Proposed pricing experiments, not market facts:
+- Include the handoff with Sleepy Llamas care and consulting first.
+- Test a household plan around $4.99–$7.99/month, parents included.
+- Alternatively test a professional plan around $12–$19/month for several active families, with parents receiving reports free.
+- Do not launch both pricing structures simultaneously. Test who experiences the value and who is willing to buy.
+
+Planning estimates for one experienced developer, assuming the current native app builds cleanly and requirements stay narrow:
+- Daytime report prototype and parent interviews: 3–5 working days.
+- Local reviewed-handoff pilot, including snapshots and key reliability work: 2–4 additional weeks.
+- Secure connected parent viewer, roles, questions and acknowledgments: 4–8 additional weeks.
+- Dependable live multiuser/offline logging: 6–10 additional weeks.
+
+These are order-of-magnitude estimates, not a delivery promise; migration, security design, device coverage and real-family pilot failures can expand them.
+
+The best immediate investment is a beautiful reviewed daytime handoff using the app you already have, tested inside the Sleepy Llamas service. That creates a concrete differentiator and useful client experience while the broader Talli competitor hypothesis is validated.

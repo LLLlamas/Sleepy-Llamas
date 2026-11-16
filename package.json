@@ -8,7 +8,9 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check:site": "python3 scripts/check-site.py",
+    "check:publish": "node scripts/check-publish-readiness.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",

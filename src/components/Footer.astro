@@ -1,5 +1,6 @@
 ---
 import { site } from '../config/site';
+import { servicePages, withBase } from '../config/serviceRoutes';
 const year = new Date().getFullYear();
 const base = import.meta.env.BASE_URL.endsWith('/')
   ? import.meta.env.BASE_URL
@@ -30,10 +31,12 @@ const resumeHref = `${base}resume/`;
         <ul role="list">
           <li><a href={sectionHref('about')}>About</a></li>
           <li><a href={sectionHref('services')}>Services</a></li>
+          {servicePages.map((page) => <li><a href={withBase(`${page.slug}/`)}>{page.label}</a></li>)}
           <li><a href={sectionHref('process')}>How It Works</a></li>
-          <li><a href={sectionHref('availability')}>Availability</a></li>
+          <li><a href={sectionHref('your-plan')}>Your written plan</a></li>
+          <li><a href={sectionHref('availability')}>Overnight care</a></li>
           <li><a href={resumeHref}>Resume</a></li>
-          <li><a href={`${base}Moonlog/`}>Moonlog · night log</a></li>
+          <li><a href={`${base}Moonlog/`}>Moonlog · care log</a></li>
           <li><a href={sectionHref('contact')}>Contact</a></li>
         </ul>
       </div>
@@ -41,7 +44,7 @@ const resumeHref = `${base}resume/`;
         <h4>Reach Out</h4>
         <ul role="list">
           <li><a href={`mailto:${site.email}`}>{site.email}</a></li>
-          <li><a href={`tel:${site.phoneHref}`}>{site.phone}</a></li>
+          {site.phone && site.phoneHref && <li><a href={`tel:${site.phoneHref}`}>{site.phone}</a></li>}
           <li><span class="muted">Serving {site.serviceArea}</span></li>
         </ul>
       </div>
@@ -50,7 +53,7 @@ const resumeHref = `${base}resume/`;
 
   <div class="container footer-bottom">
     <span>&copy; {year} {site.brandName}. All rights reserved.</span>
-    <span class="muted">Made with warmth.</span>
+    <a href={`${base}privacy/`}>Privacy &amp; inquiries</a>
   </div>
 </footer>
 

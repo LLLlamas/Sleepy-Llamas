@@ -3,6 +3,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
 import About from '../components/About.astro';
+import FamilySituations from '../components/FamilySituations.astro';
+import ConsultationPreview from '../components/ConsultationPreview.astro';
 import Services from '../components/Services.astro';
 import Process from '../components/Process.astro';
 import Testimonials from '../components/Testimonials.astro';
@@ -15,16 +17,18 @@ import Footer from '../components/Footer.astro';
 
 <BaseLayout>
   <Nav />
-  <main>
+  <main id="main-content">
     <Hero />
     <About />
+    <FamilySituations />
     <Services />
     <Process />
-    <Availability />
+    <ConsultationPreview />
     <Testimonials />
     <Contact />
     <PaymentInfo />
     <FAQ />
+    <Availability />
   </main>
   <Footer />
 </BaseLayout>

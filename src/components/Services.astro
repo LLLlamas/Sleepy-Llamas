@@ -1,369 +1,213 @@
 ---
-const services = [
-  {
-    title: 'Overnight Doula Support',
-    icon: 'heart',
-    description:
-      'In-home overnight doula care focused on recovery, feeding rhythm, and newborn routines. I handle nighttime care while you sleep, heal, and reconnect.',
-    bullets: ['Newborns, infants, and twins', 'Lactation-aware feeding support', 'Overnight logs and handoff'],
-    linkText: 'See my booking availability',
-    linkHref: '#availability',
-  },
-  {
-    title: 'Overnight Sleep Training',
-    featured: true,
-    icon: 'moon',
-    tag: 'Most requested',
-    description:
-      'Gentle overnight sleep support tailored to your baby&rsquo;s temperament, feeding needs, and home rhythm. I work while you rest, then leave a clear morning handoff.',
-    bullets: ['Gentle, responsive methods', 'Custom sleep rhythm', 'Full overnight shifts'],
-    linkText: 'See my booking availability',
-    linkHref: '#availability',
-  },
-  {
-    title: 'Consultation(s)',
-    icon: 'chat',
-    description:
-      'Not sure what you need yet? A consultation is a calm, no-pressure conversation about your baby, your recovery, your schedule, and what support would actually help.',
-    bullets: ['Phone or video', 'Personalized guidance', 'No commitment'],
-    linkText: 'Ask about fit',
-    linkHref: '#contact',
-  },
-];
-
-const packages = [
-  { key: '4-nights', name: 'Starter', nights: 4, timeframe: 'Over 2 weeks', price: 2480, specialPrice: 2600 },
-  { key: '8-nights', name: 'Standard', nights: 8, timeframe: 'Over 2\u20134 weeks', price: 4800, specialPrice: 5200 },
-  { key: '12-nights', name: 'Extended', nights: 12, timeframe: 'Over 2\u20135 weeks', price: 6900, specialPrice: 7500 },
-  { key: '16-nights', name: 'Comprehensive', nights: 16, timeframe: 'Over 6\u20138 weeks', price: 9000, specialPrice: 9800 },
-];
+import { consultingServices, fitCall, consultationAddOns, overnightServices, overnightPackages } from '../config/services';
+import { servicePagePath, withBase } from '../config/serviceRoutes';
+const categoryLabels = {
+  family: 'Everyday family life',
+  newborn: 'Newborn & postpartum',
+  home: 'Hands-on support',
+  training: 'Your care team',
+};
 ---
 
-<section class="section services" id="services">
+<section class="section services" id="services" aria-labelledby="services-heading">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">What I offer</span>
-      <h2>Services &amp; Packages</h2>
+      <span class="eyebrow">Support that meets you where you are</span>
+      <h2 id="services-heading">A conversation. A plan.<br />A little more confidence.</h2>
       <p class="lead">
-        Every family is different. Choose the service that fits, then use a
-        package as the starting point for a custom plan I shape around your
-        baby, your nights, and your recovery.
+        A first baby, another baby, a new nanny, or a routine that needs a rethink.
+        Choose the kind of support you need, and we&rsquo;ll make the next step feel manageable.
       </p>
     </div>
 
-    <!-- Service cards -->
     <div class="services-grid">
-      {services.map((service, i) => (
-        <article class:list={["service-card", "card", "reveal", `reveal-delay-${i + 1}`, service.featured && 'featured']}>
-          {service.tag && <span class="service-tag">{service.tag}</span>}
-          <div class="service-icon" aria-hidden="true">
-            {service.icon === 'moon' && (
-              <svg viewBox="0 0 32 32"><path d="M22 6c-2 4-6 6-10 5 1 6 7 10 13 7 5-2 7-8 5-13-1-3-6-2-8 1Z" fill="currentColor" /></svg>
-            )}
-            {service.icon === 'heart' && (
-              <svg viewBox="0 0 32 32"><path d="M16 27s-11-7-11-15a6 6 0 0 1 11-3 6 6 0 0 1 11 3c0 8-11 15-11 15Z" fill="currentColor" /></svg>
-            )}
-            {service.icon === 'chat' && (
-              <svg viewBox="0 0 32 32"><path d="M6 8a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v9a4 4 0 0 1-4 4h-5l-6 5v-5h-1a4 4 0 0 1-4-4V8Z" fill="currentColor" /></svg>
-            )}
-          </div>
+      {consultingServices.map((service, i) => (
+        <article class:list={['service-card', 'card', 'reveal', `reveal-delay-${Math.min(i + 1, 4)}`, i < 2 && 'call-card', service.featured && 'featured']}>
+          <span class="service-category">{categoryLabels[service.category]}</span>
           <h3>{service.title}</h3>
-          <p set:html={service.description}></p>
+          <p class="service-description">{service.description}</p>
+          <div class="service-rate">
+            <p class="service-price"><span>From</span> ${service.price.toLocaleString()}</p>
+            <p class="service-duration">{service.duration}<span>{service.format}</span></p>
+          </div>
           <ul class="service-bullets" role="list">
-            {service.bullets.map((b) => <li>{b}</li>)}
+            {service.bullets.map((bullet) => <li>{bullet}</li>)}
           </ul>
-          <a href={service.linkHref} class="service-link">{service.linkText} &rarr;</a>
+          <div class="service-actions">
+          {servicePagePath(service.id) && <a class="service-detail-link" href={withBase(servicePagePath(service.id)!)}>What we&rsquo;ll work on together &rarr;</a>}
+          <a href="#contact" class="service-link" data-consult-service={service.id}>
+            {service.linkText} <span aria-hidden="true">&rarr;</span>
+          </a>
+          </div>
         </article>
       ))}
     </div>
 
-    <!-- Packages pricing grid -->
-    <div class="packages-section reveal">
-      <div class="packages-head">
-        <span class="eyebrow">Overnight Packages</span>
-        <h3>Choose the right fit for your family.</h3>
-        <p class="packages-sub">
-          I use these packages as a clear starting point. You can select nights
-          on the calendar, choose a package, and I&rsquo;ll confirm the final plan
-          after I understand your routine and goals.
-        </p>
-      </div>
+    <p class="rates-note reveal">
+      Starting rates shown. I&rsquo;ll confirm your session, scope, and final price with you before booking.
+      Home visits depend on location and availability; any travel fee is agreed in advance.
+    </p>
 
-      <div class="packages-grid">
-        {packages.map((pkg, i) => (
-          <div class:list={["pkg-card", "reveal", `reveal-delay-${i + 1}`, i === 1 && 'pkg-popular']}>
-            {i === 1 && <span class="pkg-badge">Most popular</span>}
-            <h4 class="pkg-name">{pkg.name}</h4>
-            <div class="pkg-nights">{pkg.nights} <span>nights</span></div>
-            <p class="pkg-timeframe">{pkg.timeframe}</p>
-            <div class="pkg-price">${pkg.price.toLocaleString()}</div>
-            <p class="pkg-special">Special care: ${pkg.specialPrice.toLocaleString()}</p>
-            <a href="#availability" class="pkg-cta" data-package={pkg.key}>Start with this package &rarr;</a>
+    <div class="fit-call reveal">
+      <div>
+        <span class="eyebrow">A friendly place to start</span>
+        <h3>{fitCall.title}</h3>
+        <p>{fitCall.description}</p>
+      </div>
+      <div class="fit-action">
+        <span>Complimentary &middot; {fitCall.duration}</span>
+        <a href="#contact" class="btn btn-secondary" data-consult-service={fitCall.id}>Ask for a fit call <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </div>
+
+    <div class="followup-section reveal">
+      <div class="followup-heading">
+        <span class="eyebrow">When you need a little more time</span>
+        <h3>Keep the support going.</h3>
+        <p>For existing clients, with a clear amount of time and a shared plan. Additional sessions are subject to availability.</p>
+      </div>
+      <dl class="followup-list">
+        {consultationAddOns.map((addon) => (
+          <div class="followup-row">
+            <dt>{addon.title}<span>{addon.description}</span></dt>
+            <dd>${addon.price} <span>/ {addon.duration}</span></dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+
+    <p class="scope-note reveal">
+      My support is practical and non-medical. We follow your care team&rsquo;s instructions and make room for referrals when needed.
+      Caregiver coaching is tailored to your household and does not award professional or CPR certification.
+    </p>
+
+    <div class="overnight-section reveal" id="overnight-care">
+      <div class="overnight-heading">
+        <div>
+          <span class="eyebrow">And when you need rest</span>
+          <h3>Overnight care is here, too.</h3>
+        </div>
+        <a href="#availability" class="service-link">Explore overnight availability <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="overnight-options">
+        {overnightServices.map((service) => (
+          <div>
+            <h4>{service.title}</h4>
+            <p>{service.description}</p>
           </div>
         ))}
       </div>
-
-      <p class="packages-note reveal">
-        <strong>Special care</strong> includes twins, cleft palate, G-Tube
-        babies, and other conditions requiring additional attention.
-        Pricing can be adjusted based on your family&rsquo;s needs &mdash;
-        <a href="#contact">reach out</a> and I&rsquo;ll talk it through with you.
-      </p>
-      <p class="packages-disclaimer reveal">
-        All prices are subject to change. Final pricing is confirmed during your consultation.
-      </p>
+      <details class="overnight-details">
+        <summary>View overnight packages <span aria-hidden="true">+</span></summary>
+        <div class="packages-grid">
+          {overnightPackages.map((pkg) => (
+            <article class="pkg-card">
+              <h4 class="pkg-name">{pkg.name}</h4>
+              <p class="pkg-nights">{pkg.nights} <span>nights</span></p>
+              <p class="pkg-timeframe">{pkg.timeframe}</p>
+              <p class="pkg-price">${pkg.price.toLocaleString()}</p>
+              <p class="pkg-special">Additional care: ${pkg.specialPrice.toLocaleString()}</p>
+              <a href="#availability" class="pkg-cta" data-package={pkg.key}>Ask about {pkg.nights} nights <span aria-hidden="true">&rarr;</span></a>
+            </article>
+          ))}
+        </div>
+        <p class="packages-note">
+          Additional-care rates are a starting point for families who need more support, including twins.
+          We&rsquo;ll discuss your instructions, the right fit, and final pricing together.
+        </p>
+      </details>
     </div>
   </div>
 </section>
 
 <style>
-  .services {
-    background: var(--color-blush-200);
-  }
-
-  .section-head {
-    max-width: 680px;
-    margin: 0 auto 2rem;
-    text-align: center;
-  }
+  .service-detail-link { font-size: .88rem; text-decoration: underline; text-underline-offset: .2em; margin: 0; }
+  .services { background: var(--color-blush-200); }
+  .section-head { max-width: 720px; margin: 0 auto 2.5rem; text-align: center; }
   .section-head .lead { margin-inline: auto; }
-
-  .services-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: clamp(1.25rem, 3vw, 2rem);
-    margin-bottom: clamp(2rem, 4vw, 3.5rem);
+  .services-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem; }
+  .service-card { grid-column: span 2; display: flex; flex-direction: column; min-width: 0; }
+  .service-actions { display: grid; align-content: end; justify-items: start; gap: .35rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+  .service-actions .service-link { margin: 0; }
+  @media (min-width: 701px) {
+    .service-card { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; }
+    .service-card > * { min-width: 0; }
+    .service-card .service-rate { align-self: stretch; }
   }
-
-  .service-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  .service-card.call-card { grid-column: span 3; }
+  .service-card.featured { background: linear-gradient(160deg, var(--color-cream), var(--color-blush-100)); border-color: var(--color-maroon-500); }
+  .service-category { color: var(--color-maroon-700); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.85rem; }
+  .service-card h3 { font-size: clamp(1.4rem, 2.2vw, 1.8rem); margin-bottom: 0.65rem; }
+  .service-description { color: var(--color-muted); font-size: 0.94rem; line-height: 1.65; }
+  .service-rate { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin: 1.35rem 0 0; padding: 1rem 0; border-block: 1px solid var(--color-border); }
+  .service-price { color: var(--color-maroon-700); font-family: var(--font-display); font-size: 2rem; line-height: 1.2; margin: 0; white-space: nowrap; }
+  .service-price > span { font-family: var(--font-body); font-size: 0.75rem; color: var(--color-muted); }
+  .service-duration { margin: 0; color: var(--color-maroon-900); font-size: 0.83rem; font-weight: 600; }
+  .service-duration span { display: block; color: var(--color-muted); font-size: 0.77rem; font-weight: 400; margin-top: 0.2rem; }
+  .service-bullets { list-style: none; padding: 0; margin: 1rem 0 1.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
+  .service-bullets li { position: relative; padding-left: 1rem; font-size: 0.85rem; color: var(--color-muted); line-height: 1.55; }
+  .service-bullets li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 5px; height: 5px; border-radius: 50%; background: var(--color-maroon-500); }
+  .service-link { align-self: flex-start; margin-top: auto; padding-block: 0.4rem; color: var(--color-maroon-700); font-weight: 600; font-size: 0.88rem; text-decoration: underline; text-decoration-color: var(--color-maroon-300); text-underline-offset: 4px; }
+  .service-link:hover { text-decoration-color: currentColor; }
+  .rates-note, .scope-note { max-width: 85ch; margin: 1.25rem auto 0; text-align: center; color: var(--color-muted); font-size: 0.8rem; line-height: 1.7; }
+  .fit-call { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-top: 2.5rem; padding: clamp(1.5rem, 3vw, 2.25rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-cream); }
+  .fit-call h3 { margin: 0.3rem 0 0.55rem; }
+  .fit-call p { max-width: 58ch; margin: 0; font-size: 0.92rem; color: var(--color-muted); }
+  .fit-action { display: flex; flex-direction: column; align-items: center; gap: 0.65rem; flex-shrink: 0; }
+  .fit-action > span { font-size: 0.8rem; color: var(--color-muted); }
+  .fit-action .btn { font-size: 0.88rem; }
+  .followup-section { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 2.5rem; align-items: start; margin-top: 3rem; }
+  .followup-heading h3 { margin: 0.4rem 0 0.65rem; }
+  .followup-heading p { font-size: 0.9rem; color: var(--color-muted); max-width: 42ch; }
+  .followup-list { margin: 0; }
+  .followup-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem; padding: 1rem 0; border-bottom: 1px solid var(--color-border); }
+  .followup-row:first-child { padding-top: 0; }
+  .followup-row dt { font-size: 0.9rem; font-weight: 600; }
+  .followup-row dt span { display: block; color: var(--color-muted); font-size: 0.78rem; font-weight: 400; margin-top: 0.3rem; }
+  .followup-row dd { flex-shrink: 0; margin: 0; color: var(--color-maroon-700); font-weight: 600; }
+  .followup-row dd span { display: block; color: var(--color-muted); font-size: 0.75rem; font-weight: 400; }
+  .scope-note { margin-top: 2rem; }
+  .overnight-section { border-top: 1px solid var(--color-maroon-300); margin-top: 3rem; padding-top: 2.5rem; }
+  .overnight-heading { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+  .overnight-heading h3 { margin: 0.35rem 0 0; font-size: 1.8rem; }
+  .overnight-heading .service-link { margin-top: 0; align-self: center; }
+  .overnight-options { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 1.5rem 0; }
+  .overnight-options h4 { font-family: var(--font-body); font-size: 0.96rem; margin-bottom: 0.4rem; }
+  .overnight-options p { color: var(--color-muted); font-size: 0.88rem; max-width: 55ch; }
+  .overnight-details { border-top: 1px solid var(--color-border); }
+  .overnight-details summary { display: flex; align-items: center; justify-content: space-between; padding: 1.15rem 0; color: var(--color-maroon-700); font-size: 0.95rem; font-weight: 600; cursor: pointer; list-style: none; }
+  .overnight-details summary::-webkit-details-marker { display: none; }
+  .overnight-details summary > span { font-size: 1.5rem; line-height: 1; transition: transform 0.2s; }
+  .overnight-details[open] summary > span { transform: rotate(45deg); }
+  .overnight-details summary:focus-visible { outline: 2px solid var(--color-maroon-700); outline-offset: 4px; }
+  .packages-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 0.5rem; }
+  .pkg-card { display: flex; flex-direction: column; align-items: center; padding: 1.5rem 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-cream); text-align: center; }
+  .pkg-name { font-family: var(--font-body); font-size: 0.7rem; color: var(--color-maroon-700); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.8rem; }
+  .pkg-nights { font-family: var(--font-display); color: var(--color-maroon-900); font-size: 2.2rem; line-height: 1; margin: 0 0 0.4rem; }
+  .pkg-nights span { font-family: var(--font-body); font-size: 0.85rem; color: var(--color-muted); }
+  .pkg-timeframe { margin: 0 0 1rem; color: var(--color-muted); font-size: 0.8rem; }
+  .pkg-price { font-family: var(--font-display); color: var(--color-maroon-700); font-size: 1.55rem; margin: 0 0 0.3rem; }
+  .pkg-special { color: var(--color-muted); font-size: 0.73rem; margin: 0 0 1.2rem; }
+  .pkg-cta { margin-top: auto; font-size: 0.8rem; color: var(--color-maroon-700); text-decoration: underline; text-underline-offset: 4px; padding-block: 0.4rem; }
+  .packages-note { max-width: 72ch; color: var(--color-muted); font-size: 0.8rem; text-align: center; margin: 1.25rem auto 0; }
+  @media (max-width: 1000px) {
+    .services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .service-card, .service-card.call-card { grid-column: span 1; }
+    .service-card:last-child { grid-column: 1 / -1; }
+    .followup-section { grid-template-columns: 1fr 1.3fr; gap: 1.5rem; }
+    .packages-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
-  .service-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-medium);
+  @media (max-width: 700px) {
+    .services-grid { grid-template-columns: minmax(0, 1fr); }
+    .service-card, .service-card.call-card, .service-card:last-child { grid-column: auto; }
+    .fit-call { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+    .fit-action { align-items: flex-start; }
+    .followup-section, .overnight-options { grid-template-columns: 1fr; gap: 1rem; }
+    .overnight-heading { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .overnight-heading .service-link { align-self: flex-start; }
   }
-  .service-card.featured {
-    background: linear-gradient(180deg, var(--color-cream) 0%, var(--color-blush-100) 100%);
-    border-color: var(--color-maroon-300);
-  }
-
-  .service-tag {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: var(--color-maroon-700);
-    color: var(--color-cream);
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.75rem;
-    border-radius: var(--radius-pill);
-  }
-
-  .service-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    background: var(--color-blush-200);
-    color: var(--color-maroon-700);
-    display: grid;
-    place-items: center;
-    margin-bottom: 1.25rem;
-  }
-  .featured .service-icon {
-    background: var(--color-maroon-700);
-    color: var(--color-cream);
-  }
-  .service-icon svg { width: 26px; height: 26px; }
-
-  .service-card h3 { margin-bottom: 0.5em; }
-
-  .service-bullets {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-  .service-bullets li {
-    font-size: 0.9rem;
-    color: var(--color-muted);
-    padding-left: 1.1rem;
-    position: relative;
-  }
-  .service-bullets li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.55em;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-maroon-500);
-  }
-
-  .service-link {
-    margin-top: auto;
-    font-weight: 500;
-    font-size: 0.95rem;
-    align-self: flex-start;
-    padding-block: 0.25rem;
-    border-bottom: 1.5px solid transparent;
-    transition: border-color 0.2s var(--ease-out);
-  }
-  .service-link:hover { border-bottom-color: var(--color-maroon-500); }
-
-  /* ── Packages section ────────────────────────── */
-  .packages-section {
-    max-width: 960px;
-    margin: 0 auto;
-  }
-
-  .packages-head {
-    text-align: center;
-    margin-bottom: 2.5rem;
-  }
-  .packages-head h3 {
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    margin-bottom: 0.4em;
-  }
-  .packages-sub {
-    color: var(--color-muted);
-    font-size: 0.95rem;
-    max-width: 52ch;
-    margin: 0 auto;
-  }
-
-  .packages-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-  }
-
-  .pkg-card {
-    background: var(--color-cream);
-    border-radius: var(--radius-lg);
-    padding: 1.25rem 1.15rem;
-    border: 1.5px solid var(--color-border);
-    box-shadow: var(--shadow-soft);
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
-  }
-  .pkg-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-medium);
-  }
-
-  .pkg-popular {
-    border-color: var(--color-maroon-500);
-    box-shadow: var(--shadow-medium);
-    background: linear-gradient(180deg, var(--color-cream) 0%, var(--color-blush-100) 100%);
-  }
-  .pkg-badge {
-    position: absolute;
-    top: -12px;
-    background: var(--color-maroon-700);
-    color: var(--color-cream);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.85rem;
-    border-radius: var(--radius-pill);
-  }
-
-  .pkg-name {
-    font-family: var(--font-body);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-maroon-500);
-    margin: 0 0 0.75rem;
-  }
-
-  .pkg-nights {
-    font-family: var(--font-display);
-    font-size: 2.5rem;
-    font-weight: 500;
-    color: var(--color-maroon-900);
-    line-height: 1;
-    margin-bottom: 0.25rem;
-  }
-  .pkg-nights span {
-    font-size: 1rem;
-    font-weight: 400;
-    color: var(--color-muted);
-  }
-
-  .pkg-timeframe {
-    font-size: 0.82rem;
-    color: var(--color-muted);
-    margin: 0 0 1.25rem;
-  }
-
-  .pkg-price {
-    font-family: var(--font-display);
-    font-size: 1.6rem;
-    font-weight: 600;
-    color: var(--color-maroon-700);
-    margin-bottom: 0.25rem;
-  }
-
-  .pkg-special {
-    font-size: 0.78rem;
-    color: var(--color-muted);
-    margin: 0 0 1.25rem;
-    font-style: italic;
-  }
-
-  .pkg-cta {
-    margin-top: auto;
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: var(--color-maroon-700);
-    padding: 0.55rem 1rem;
-    border: 1.5px solid var(--color-maroon-700);
-    border-radius: var(--radius-pill);
-    transition: all 0.2s var(--ease-out);
-  }
-  .pkg-cta:hover {
-    background: var(--color-maroon-700);
-    color: var(--color-cream);
-  }
-
-  .packages-note {
-    text-align: center;
-    font-size: 0.88rem;
-    color: var(--color-muted);
-    margin-top: 2rem;
-    max-width: 60ch;
-    margin-inline: auto;
-    line-height: 1.6;
-  }
-  .packages-disclaimer {
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--color-muted);
-    opacity: 0.7;
-    margin-top: 0.75rem;
-    font-style: italic;
-  }
-
-  @media (max-width: 900px) {
-    .services-grid { grid-template-columns: 1fr; max-width: 520px; margin-inline: auto; }
-    .packages-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 560px) {
-    .packages-grid { grid-template-columns: 1fr; max-width: 340px; margin-inline: auto; }
+  @media (max-width: 400px) {
+    .packages-grid { grid-template-columns: minmax(0, 1fr); }
+    .followup-row { gap: 0.75rem; }
   }
 </style>

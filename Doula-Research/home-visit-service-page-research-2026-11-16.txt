@@ -1,0 +1,85 @@
+FIRST DAYS HOME VISIT: SERVICE-PAGE RESEARCH AND CONTACT READINESS
+Research date: November 16, 2026
+Prepared for the authorized service-page build. Only this research memo and src/content/first-days-home.ts are owned by this subtask. No rates, accounts, directory profiles, production database records or deployments were changed.
+
+RECOMMENDATION AND IMPLEMENTED CONTENT
+
+Position the First Days Home Visit as a focused, practical session with parents and their helpers: practice everyday newborn care in the family's space, choose a few priorities, organize care around recovery, and leave a written handoff for the next day and night. It is distinct from a medical home visit and from booking a recurring daytime or overnight caregiver.
+
+The copy is implemented as homeVisitPage in src/content/first-days-home.ts, satisfying the shared ServicePageContent interface. It uses serviceId home-consult and slug first-days-home-visit. Pricing and duration display must come from the shared catalogue/template. The current catalogue defines the home visit and included follow-up; it also defines an existing-client extra-home-day add-on. This subtask did not change those values or duplicate rates in copy.
+
+The page includes first-baby questions, second/third-child logistics, practical support around a parent's C-section recovery instructions, participation by partners/grandparents, a three-step visit flow, a written-handoff description, scope boundaries, seven purchase FAQs, related services and two official NYC resource links. It does not invent a client story, promise a sleep outcome, offer clinical treatment, assume immediate availability, or claim all-city travel coverage. Certification is confirmed complete by the owner. Eight years describes overall family-care experience, not eight years of certified postpartum practice.
+
+SEVEN SOURCES AND HOW THEY INFORMED THE PAGE
+
+1) NYC Health, Newborn Home Visiting Program — current official program description.
+https://www.nyc.gov/site/doh/health/health-topics/pregnancy-newborn-visiting.page
+The city describes no-cost in-person/virtual visits for eligible families, with education, screening and referrals and additional professional support. Eligibility depends on program circumstances and geography; it is not universal coverage for every Queens family. The page links this official resource and invites families to check eligibility, rather than claiming private support is their only route. Do not copy a static ZIP-code list into commercial copy where it can drift.
+Evidence category: official service facts. The private service's narrower scope and positioning are our recommendation.
+
+2) NYC Health, Doula Care — current official role description.
+https://www.nyc.gov/site/doh/health/health-topics/doula-care.page
+The city characterizes doula work as non-medical support around childbirth and describes postpartum practical/emotional help. This supports a page about household care, parent rest and baby-care education, while medical treatment/recovery decisions remain with the family's providers. No claims about reducing medical risk or improving clinical outcomes were added to the service page.
+Evidence category: official role description, not a license to provide every service mentioned on the city's website.
+
+3) NYC Birth Village, Postpartum Daytime Support — primary agency offering.
+https://www.nycbirthvillage.com/postpartum-doula-support
+Its public page combines baby-care education, organizing supplies, household support and parent companionship. It describes daytime visits beginning at three hours with a multi-hour commitment per doula, plus prenatal preparation. This makes ongoing daytime postpartum care a relevant adjacent offer, but its package is not the same unit as a single focused consultation/home visit with a written handoff. The most useful lesson is to state exactly what happens during the visit and what continues afterwards. No competitor promise of availability, insurance benefits or medical scope was copied.
+Evidence category: current advertised offer, not independently verified fulfillment, client results or market demand.
+
+4) Queens Doula, Postpartum Support — primary local independent offering.
+https://www.queensdoula.com/postpartum-support
+The page describes three-hour postpartum shifts, a free fit consultation, newborn-care demonstrations, support for the household and adjustment involving older children. It reinforces that parents may compare a paid visit against a free preliminary conversation. Our page therefore separates inquiry/fit from the actual practical service and gives concrete written deliverables. Its recovery/lactation wording should not be reproduced as a blanket treatment promise for Sleepy Llamas.
+Evidence category: primary competitor service description. No inference about bookings or conversion rate.
+
+5) Calynn Doula Service, Newborn Care Assistance — primary NYC service offering.
+https://motherhood-concierge.com/service/newborn-care-assistance/
+The service is framed around the first week and practicing feeding, changing, bathing and soothing in the home. It emphasizes tailoring support to a family's feeding choices. The lesson for our page is to describe ordinary situations parents recognize and allow their own provider plan and preferences to guide practice. We did not copy prose or use its coverage claim as evidence of Catalina's travel availability.
+Evidence category: primary advertised service, not professional guidance for individual babies.
+
+6) Public parent discussion, June 2025, short-term postpartum help after a possible C-section.
+https://www.reddit.com/r/nycparents/comments/1llqed1/finding_a_baby_nurse_vs_postpartum_doula_in_nyc/
+The original poster asks how a baby nurse differs from a postpartum doula, how useful daytime/night support would be while they handle feeding, and what help is practical with limited partner leave and no nearby family. This is qualitative evidence of confusing service categories and uncertainty about how to buy a short period of help. The page responds with concrete scope and visit flow. It does not use anonymous replies as medical advice, verified provider recommendations, or representative demand data.
+Evidence category: self-reported public questions from an individual; paraphrased, not a testimonial.
+
+7) Public parent discussion, March 2026, preparing for a second child in a small NYC apartment.
+https://www.reddit.com/r/nycparents/comments/1rhjljz/tips_for_2_kids_in_a_1br_apt/
+The poster describes the interaction between a newborn's needs, an older child's bedtime and limited space. This supports acknowledging that experienced parents may need help with a new household arrangement. No sleep-location advice or clinical/safety guidance was copied from replies. The page offers to work through household roles and routines using the family's actual space and healthcare guidance.
+Evidence category: one qualitative public account, not search-volume evidence or a care protocol.
+
+RECENT NEEDS TO VALIDATE WITH ACTUAL CLIENTS
+
+These questions are suitable for paid-pilot learning or a fit conversation, not an assertion that every family has them:
+- Does the family need hands-on practice, several hours of relief coverage, a clinical feeding appointment, or a larger support arrangement?
+- Which three tasks are most difficult to carry across the next day/night?
+- Who will actually be present and taking over after the visit?
+- For a second baby, which older-child routines need protecting?
+- Does the family understand what the written handoff and included follow-up provide?
+- Is the stated travel area and response window compatible with their timeline?
+
+The page should help an unsuitable buyer choose the related consultation/coaching service or their clinical team. It should not turn a short inquiry into detailed private medical intake. Its free-program resource is a useful option for eligible families, not a comparison implying paid guidance produces better outcomes.
+
+CONTACT AND PUBLISHING READINESS: READ-ONLY AUDIT
+
+Source facts rechecked on November 16:
+- src/lib/inquiries.ts validates supported services, requires in-person format/location for home-consult and caregiver-training, and permits optional child name/stage. It requires a receipt matching the request UUID before success.
+- The source includes a 15-second timeout/abort path, safe error copy and unchanged-input retry protection. The contact component retains details after failure and offers an explicitly user-sent email draft.
+- Nine current Node tests passed, covering missing backend, normalized saved receipt, backend/malformed/mismatched receipt failure, network error, rate limits, in-person details, validation/honeypot, encoded draft and timeout. Command: node --test tests/inquiries.test.ts.
+- The current repository-wide TypeScript check passed with node_modules/.bin/tsc --noEmit after this page data was added.
+- No local production .env file was found; only .env.example. The two expected public Supabase values were not present in this shell. Only presence/absence was inspected, not secret contents. The Supabase CLI was not found on PATH. This does not establish whether GitHub Actions or the hosted project has working configuration.
+- Existing deployment source reads PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY from GitHub Actions secrets. These are client-facing project values; server SMTP/shared-secret credentials belong only in the existing protected backend configuration.
+- The two new SQL migrations exist locally. The inquiry migration adds a separate private inquiry table/RPC; the availability migration removes private family details from the public result. Earlier isolated PostgreSQL checks in this session passed the inquiry/anonymous-access/rate-limit and calendar privacy regression suites. No production migration or live inquiry was performed for this readiness audit.
+
+An important operational distinction: successful RPC insertion means the inquiry is saved. Owner email queuing is tracked separately through owner_notification and notification_request_id; a queued notification is not proof of email delivery. The source adds no website admin inquiry inbox. The owner needs access to review the saved table in the existing Supabase dashboard and a working notification/review routine.
+
+READY IN SOURCE, STILL NEEDS PRODUCTION VERIFICATION
+
+1. Finish the shared route/template integration and build all service routes. Confirm the home service CTA reaches/preselects home-consult and in-person format on the intended live destination.
+2. Apply the two incremental migrations to the existing configured project through the authorized deployment workflow. Do not rerun the original bootstrap seed over a live project's current configuration: its seed values are demonstration defaults.
+3. Ensure the actual production build has the existing public Supabase URL/anon key, without logging credential contents. Verify the new RPC exists and anonymous direct reads of inquiries are unavailable.
+4. Check owner notification configuration and the existing pg_net/send-email relay. Verify the owner receives or can review a saved request; do not substitute a frontend success message for that check.
+5. In a separately authorized production smoke test, use clearly marked synthetic contact details, verify one durable saved row/receipt and one owner notification, and check retry/failure behavior. No real client information or unsolicited messages are needed.
+6. Verify the selected public domain, canonical, routes, sitemap and source links after deployment. The prior SEO memo's November 15 HTTP findings remain historical evidence, not proof the November 16 deployment has changed: correct-case GitHub project URL was 200, lowercase directory path was 404, live canonical pointed at an unresolved custom domain. Root is checking current publishing/account metadata separately.
+7. Keep the published contact privacy description, response window, travel scope and actual service terms aligned with operation. A request is not an appointment confirmation, immediate support promise or payment collection.
+
+Current conclusion: source handling and automated local checks are materially improved; production inquiry delivery is not established by the evidence available to this subtask. The genuine email-draft fallback remains important until activation is verified. No source claim or research memo should describe the form as fully live-tested merely because the build and unit/database tests pass.

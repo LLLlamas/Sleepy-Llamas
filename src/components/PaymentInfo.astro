@@ -1,98 +1,25 @@
----
-import { site } from '../config/site';
----
-
-<section class="section payment">
+<section class="section payment" id="booking-details">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">After your consultation</span>
-      <h2>Simple, flexible payment.</h2>
-      <p class="lead">
-        There&rsquo;s no upfront commitment to reach out. Once I&rsquo;ve
-        talked and agreed on a plan, I&rsquo;ll send you an invoice &mdash; pay
-        whichever way feels easiest.
-      </p>
+      <span class="eyebrow">Clear from the beginning</span>
+      <h2>Know the plan before you commit.</h2>
+      <p class="lead">We agree on the support, the time and the price in writing. An inquiry is a conversation starter, and a free fit call helps us choose where to begin.</p>
     </div>
-
     <div class="payment-grid reveal reveal-delay-1">
-      <div class="pay-card">
-        <div class="pay-icon" aria-hidden="true">
-          <svg viewBox="0 0 32 32"><path d="M6 10h20v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10Zm2-4h16a2 2 0 0 1 2 2v2H6V8a2 2 0 0 1 2-2Z" fill="currentColor"/></svg>
-        </div>
-        <h3>Venmo</h3>
-        <p class="pay-handle">{site.venmoHandle}</p>
-        <p class="pay-note">Fast, no fees.</p>
-      </div>
-
-      <div class="pay-card">
-        <div class="pay-icon" aria-hidden="true">
-          <svg viewBox="0 0 32 32"><path d="M6 8h20l-4 8 4 8H6l4-8-4-8Z" fill="currentColor"/></svg>
-        </div>
-        <h3>Zelle</h3>
-        <p class="pay-handle">{site.zelleHandle}</p>
-        <p class="pay-note">Direct bank-to-bank.</p>
-      </div>
-
-      <div class="pay-card">
-        <div class="pay-icon" aria-hidden="true">
-          <svg viewBox="0 0 32 32"><path d="M4 12a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-8Zm6 3a1.5 1.5 0 1 0 0 3h12a1.5 1.5 0 1 0 0-3H10Z" fill="currentColor"/></svg>
-        </div>
-        <h3>Credit Card</h3>
-        {site.stripePaymentLink ? (
-          <a href={site.stripePaymentLink} class="pay-handle pay-link" target="_blank" rel="noopener">
-            Pay with card &rarr;
-          </a>
-        ) : (
-          <p class="pay-handle">Link sent with invoice</p>
-        )}
-        <p class="pay-note">Secure checkout via Stripe.</p>
-      </div>
+      <div class="pay-card"><h3>Clear pricing</h3><p class="pay-note">Published prices are starting rates. I confirm scope, travel if needed, and the final total before payment.</p></div>
+      <div class="pay-card"><h3>Defined follow-up</h3><p class="pay-note">Your package explains the calls, written plan and follow-up window included. Additional support is arranged together.</p></div>
+      <div class="pay-card"><h3>A personal confirmation</h3><p class="pay-note">I confirm your appointment and send payment instructions directly. Scheduling and cancellation terms are shared before you pay.</p></div>
     </div>
-
-    <p class="payment-footnote reveal reveal-delay-2">
-      All payments are discussed after your consultation &mdash; never before.
-    </p>
-
-    <!-- Insurance & Benefits -->
-    <div class="benefits reveal reveal-delay-3">
+    <div class="benefits reveal reveal-delay-2">
       <div class="benefits-inner">
-        <div class="benefits-icon" aria-hidden="true">
-          <svg viewBox="0 0 32 32"><path d="M16 3l12 5v8c0 7.5-5.4 12.5-12 15-6.6-2.5-12-7.5-12-15V8l12-5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 16l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
         <div class="benefits-copy">
-          <h3>Insurance &amp; Benefits Reimbursement</h3>
-          <p>
-            Many families use <strong>HSA</strong>, <strong>FSA</strong>, or
-            <strong>Carrot Fertility</strong> benefits to cover doula and sleep
-            training services. I provide a detailed superbill after each billing
-            cycle that you can submit to your plan administrator for reimbursement.
-          </p>
-          <ul class="benefits-list" role="list">
-            <li>
-              <strong>HSA / FSA</strong> &mdash; Doula care often qualifies as an
-              eligible medical expense. Pay with your HSA/FSA debit card or submit
-              your superbill for reimbursement. A Letter of Medical Necessity from
-              your OB or midwife can help.
-            </li>
-            <li>
-              <strong>Carrot Fertility</strong> &mdash; If your employer offers
-              Carrot benefits, submit my info through your Carrot portal and I&rsquo;ll
-              complete the credentialing process. You pay me directly; Carrot
-              reimburses you.
-            </li>
-            <li>
-              <strong>Other benefits</strong> &mdash; Some employers offer doula
-              stipends or wellness reimbursements. Ask your HR team &mdash; you might
-              be surprised!
-            </li>
-          </ul>
-          <p class="benefits-note">
-            Not sure if you&rsquo;re covered? Reach out and I&rsquo;ll help you
-            figure it out &mdash; no charge, no pressure.
-          </p>
+          <h3>Employer benefits and reimbursement</h3>
+          <p>Some plans may reimburse eligible services. Confirm the specific service and provider requirements with your plan administrator before booking. I can provide an accurate itemized receipt; reimbursement is not guaranteed.</p>
+          <p class="benefits-note">HSA, FSA and employer programs have different rules. Parenting advice, caregiver coaching and childcare should not be assumed to qualify.</p>
         </div>
       </div>
     </div>
+    <p class="payment-footnote reveal"><a href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/privacy/`}>Privacy and what to expect before booking &rarr;</a></p>
   </div>
 </section>
 

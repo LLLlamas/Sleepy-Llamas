@@ -1,0 +1,183 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import Contact from '../components/Contact.astro';
+import { consultingServices, consultationAddOns, fitCall } from '../config/services';
+import { withBase } from '../config/serviceRoutes';
+import type { ServicePageContent } from '../lib/servicePage';
+
+interface Props { content: ServicePageContent }
+const { content } = Astro.props;
+const service = consultingServices.find((candidate) => candidate.id === content.serviceId);
+if (!service) throw new Error(`No catalogue service for ${content.slug}`);
+const secondary = consultingServices.find((candidate) => candidate.id === content.secondaryOfferId);
+const homeAddOn = content.serviceId === 'home-consult' ? consultationAddOns.find((item) => item.id === 'extra-home-day') : undefined;
+const pageUrl = new URL(withBase(`${content.slug}/`), Astro.site ?? Astro.url.origin).href;
+const siteUrl = new URL(withBase(''), Astro.site ?? Astro.url.origin).href;
+const serviceNode = {
+  '@type': 'Service', '@id': `${pageUrl}#service`, name: service.title,
+  description: content.description, serviceType: service.title,
+  provider: { '@id': `${siteUrl}#organization` },
+  areaServed: { '@type': 'Place', name: 'Queens and nearby NYC neighborhoods' },
+  url: pageUrl,
+  offers: { '@type': 'Offer', url: `${pageUrl}#contact`,
+    description: `Starting rate for ${service.duration}; scope, travel and final price confirmed before booking.`,
+    priceSpecification: { '@type': 'PriceSpecification', minPrice: service.price, priceCurrency: 'USD' } },
+};
+const breadcrumbNode = {
+  '@type': 'BreadcrumbList', '@id': `${pageUrl}#breadcrumbs`,
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Sleepy Llamas', item: siteUrl },
+    { '@type': 'ListItem', position: 2, name: service.title, item: pageUrl },
+  ],
+};
+---
+
+<BaseLayout title={content.title} description={content.description} canonicalPath={`/${content.slug}/`} schemaNodes={[serviceNode, breadcrumbNode]} mainEntityId={`${pageUrl}#service`}>
+  <Nav contactHref="#contact" />
+  <main id="main-content">
+    <section class="service-hero" aria-labelledby="service-title">
+      <div class="container">
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href={withBase('')}>Home</a><span aria-hidden="true">/</span><span aria-current="page">{service.title}</span></nav>
+        <div class="hero-grid">
+          <div>
+            <span class="eyebrow">{content.eyebrow}</span>
+            <h1 id="service-title">{content.heading}</h1>
+            <p class="lead">{content.intro}</p>
+            <p class="provider">With Catalina Llamas <span aria-hidden="true">·</span> Queens &amp; nearby NYC<br />English &amp; Spanish</p>
+            <a href="#contact" class="btn btn-primary" data-consult-service={service.id}>Request {content.serviceId === 'home-consult' ? 'a home visit' : content.serviceId === 'caregiver-training' ? 'caregiver coaching' : 'a newborn consultation'} &rarr;</a>
+          </div>
+          <aside class="appointment-card" aria-label="Appointment details">
+            <p class="card-kicker">Your time, thoughtfully planned</p>
+            <h2>{service.title}</h2>
+            <p class="appointment-price"><span>From</span> ${service.price.toLocaleString('en-US')}</p>
+            <p class="appointment-duration">{service.duration}<br /><span>{service.format}</span></p>
+            <ul>{service.bullets.map((item) => <li>{item}</li>)}</ul>
+            <p class="rate-detail">Scope, timing and final price are agreed before booking. {['home-consult', 'caregiver-training'].includes(service.id) && 'Travel is confirmed in advance.'}</p>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <nav class="page-jumps" aria-label="On this page"><div class="container"><a href="#for-your-family">Is this for us?</a><a href="#our-session">Our session</a><a href="#your-takeaway">Your takeaway</a><a href="#service-faq">Questions</a><a href="#contact">Ask Catalina</a></div></nav>
+
+    <section class="section situations" id="for-your-family">
+      <div class="container">
+        <span class="eyebrow">Start with your situation</span>
+        <h2>{content.fitHeading}</h2>
+        <div class="situation-grid">{content.situations.map((item) => <article><h3>{item.title}</h3><p>{item.body}</p></article>)}</div>
+      </div>
+    </section>
+
+    <section class="section session" id="our-session">
+      <div class="container session-grid">
+        <div><span class="eyebrow">Time to work through it</span><h2>{content.sessionHeading}</h2><p class="session-note">We begin with your priorities and choose what is realistic for your family. You do not need a perfectly organized list.</p></div>
+        <ol class="session-steps">{content.sessionSteps.map((item, i) => <li><span class="step-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><div><h3>{item.title}</h3><p>{item.body}</p></div></li>)}</ol>
+      </div>
+    </section>
+
+    <section class="section takeaway" id="your-takeaway">
+      <div class="container takeaway-grid">
+        <div><span class="eyebrow">Something useful afterwards</span><h2>{content.deliverable.title}</h2><p class="lead">{content.deliverable.intro}</p><p class="example-note">{content.deliverable.note}</p></div>
+        <div class="takeaway-paper"><p class="paper-kicker">Your written takeaway</p><ul>{content.deliverable.items.map((item) => <li>{item}</li>)}</ul><p class="paper-signature">Made with you, for your family.</p></div>
+      </div>
+    </section>
+
+    {(secondary || homeAddOn) && <section class="section support-options" id="support-options"><div class="container">
+      <span class="eyebrow">Choosing the right amount of support</span>
+      {secondary && <div class="support-card"><div><h2>{secondary.title}</h2><p>{secondary.description}</p><ul>{secondary.bullets.map((item) => <li>{item}</li>)}</ul></div><div class="support-action"><p class="support-price">From ${secondary.price.toLocaleString('en-US')}</p><p>{secondary.duration}</p><a href="#contact" class="btn btn-secondary" data-consult-service={secondary.id}>Ask about this option &rarr;</a></div></div>}
+      {homeAddOn && <div class="support-card"><div><h2>{homeAddOn.title}</h2><p>{homeAddOn.description} We agree on priorities before the visit, subject to availability and travel.</p></div><div class="support-action"><p class="support-price">From ${homeAddOn.price.toLocaleString('en-US')}</p><p>{homeAddOn.duration}</p><a href="#contact" class="btn btn-secondary" data-consult-service={service.id} data-inquiry-context="I would like to ask about an additional home-support visit.">Ask about another visit &rarr;</a></div></div>}
+    </div></section>}
+
+    <section class="section fit-and-scope"><div class="container scope-grid">
+      <div><span class="eyebrow">A clear fit</span><h2>Support with clear expectations.</h2>{content.boundaries.map((item) => <p>{item}</p>)}</div>
+      <aside class="fit-note"><span class="eyebrow">Meet Catalina first</span><h3>A free {fitCall.duration.replace(' minutes', '-minute')} fit call.</h3><p>{fitCall.description}</p><a href="#contact" data-consult-service={fitCall.id}>Ask for an introduction &rarr;</a><p class="fit-small">Certified postpartum doula, with eight years of hands-on family care. <a href={withBase('resume/')}>Read my experience and training.</a></p></aside>
+    </div></section>
+
+    <section class="section service-faq" id="service-faq"><div class="container faq-width"><span class="eyebrow">Before you decide</span><h2>A few questions you may have.</h2><div class="question-list">{content.faqs.map((item) => <details><summary>{item.q}</summary><p>{item.a}</p></details>)}</div></div></section>
+
+    <Contact initialService={service.id} />
+
+    <section class="section related-support"><div class="container">
+      <span class="eyebrow">Other ways to work together</span><h2>Find the support that fits.</h2>
+      <div class="related-links">{content.related.map((item) => <a href={withBase(`${item.slug}/`)}>{item.label} <span aria-hidden="true">&rarr;</span></a>)}<a href={withBase('#services')}>All consultations &amp; support <span aria-hidden="true">&rarr;</span></a></div>
+      {content.resourceLinks?.length && <div class="further-reading"><h3>Useful reading</h3>{content.resourceLinks.map((item) => <p><a href={item.url}>{item.title}</a><br /><span>{item.description}</span></p>)}</div>}
+    </div></section>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .service-hero { padding-block: 1.5rem clamp(3rem,6vw,5rem); background: radial-gradient(ellipse at 95% 95%,var(--color-blush-300),transparent 58%),var(--color-blush-100); }
+  .breadcrumbs { display: flex; flex-wrap: wrap; gap: .65rem; font-size: .78rem; color: var(--color-muted); margin-bottom: clamp(2rem,4vw,3.5rem); }
+  .hero-grid { display: grid; grid-template-columns: 1.25fr .85fr; gap: clamp(2rem,5vw,4.5rem); align-items: center; }
+  h1 { font-size: clamp(2.45rem,4.4vw,3.7rem); line-height: 1.06; letter-spacing: -.035em; max-width: 19ch; margin-bottom: 1.2rem; }
+  h2 { font-size: clamp(1.9rem,3vw,2.6rem); max-width: 25ch; }
+  .hero-grid .lead { line-height: 1.8; }
+  .provider { color: var(--color-maroon-700); font-size: .87rem; margin: 1.3rem 0 1.8rem; }
+  .provider span { padding-inline: .3rem; }
+  .appointment-card { padding: clamp(1.5rem,3vw,2.25rem); background: linear-gradient(135deg, var(--color-maroon-700), var(--color-maroon-900) 78%); color: var(--color-cream); border-radius: 4px 4px 40px 4px; box-shadow: var(--shadow-medium); }
+  .appointment-card h2 { color: var(--color-cream); font-size: 1.6rem; margin-bottom: 1.25rem; }
+  .card-kicker { color: var(--color-blush-300); font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; }
+  .appointment-price { font: 3rem/1.2 var(--font-display); margin: 0; }
+  .appointment-price span { font: .8rem var(--font-body); color: var(--color-blush-300); }
+  .appointment-duration { font-size: .92rem; margin-block: .6rem 1.5rem; }
+  .appointment-duration span { color: var(--color-blush-300); font-size: .83rem; }
+  .appointment-card li::marker { color: var(--color-gold); }
+  .appointment-card ul { padding-left: 1.1rem; font-size: .88rem; line-height: 1.7; }
+  .appointment-card li { margin-bottom: .65rem; }
+  .rate-detail { font-size: .75rem; color: var(--color-blush-300); border-top: 1px solid rgba(255,255,255,.2); padding-top: 1rem; margin-bottom: 0; }
+  .page-jumps { border-block: 1px solid var(--color-border); background: var(--color-cream); }
+  .page-jumps .container { display: flex; flex-wrap: wrap; gap: .5rem 1.6rem; padding-block: 1rem; }
+  .page-jumps a:is(:hover, :focus-visible) { text-decoration: underline; text-underline-offset: .3em; }
+  .page-jumps a { font-size: .85rem; padding-block: .3rem; }
+  .situation-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 2rem; border-top: 1px solid var(--color-border); }
+  .situation-grid article { padding: 1.7rem 1.8rem 1.7rem 0; border-bottom: 1px solid var(--color-border); }
+  .situation-grid article:nth-child(even) { border-left: 1px solid var(--color-border); padding-left: 1.8rem; }
+  .situation-grid h3 { font-size: 1.4rem; }
+  .situation-grid p,.session-note { color: var(--color-muted); font-size: .98rem; line-height: 1.8; margin-bottom: 0; }
+  .session { background: var(--color-cream); }
+  .session-grid,.takeaway-grid,.scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,4rem); }
+  .session-steps { padding: 0; margin: 0; list-style: none; }
+  .session-steps li { display: flex; gap: 1rem; border-bottom: 1px solid var(--color-border); padding-block: 1.3rem; }
+  .session-steps li:first-child { padding-top: 0; }
+  .step-number { color: var(--color-maroon-500); font: 1rem var(--font-display); padding-top: .3rem; }
+  .session-steps h3 { font-size: 1.35rem; }
+  .session-steps p { color: var(--color-muted); font-size: .94rem; margin: 0; }
+  .takeaway { background: var(--color-blush-200); }
+  .takeaway-grid { align-items: center; }
+  .example-note { color: var(--color-muted); font-size: .83rem; }
+  .takeaway-paper { background: var(--color-cream); border: 1px solid var(--color-border); box-shadow: var(--shadow-soft); padding: clamp(1.4rem,3vw,2.3rem); border-radius: 3px; }
+  .paper-kicker { color: var(--color-maroon-700); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .takeaway-paper ul { list-style: none; padding: 0; }
+  .takeaway-paper li { border-top: 1px solid var(--color-border); padding-block: .9rem; font-size: .94rem; }
+  .paper-signature { font: italic 1.2rem var(--font-display); color: var(--color-maroon-700); margin: 1rem 0 0; }
+  .support-options { background: var(--color-cream); }
+  .support-card { display: grid; grid-template-columns: 1.4fr .7fr; gap: 2rem; align-items: center; }
+  .support-card p,.support-card ul { color: var(--color-muted); font-size: .96rem; }
+  .support-card li { margin-bottom: .5rem; }
+  .support-action { text-align: center; }
+  .support-action .support-price { font: 2.3rem var(--font-display); color: var(--color-maroon-700); margin-bottom: .5rem; }
+  .fit-and-scope p { color: var(--color-muted); font-size: .95rem; }
+  .fit-note { border-left: 2px solid var(--color-maroon-300); padding-left: 2rem; }
+  .fit-note a { text-decoration: underline; text-underline-offset: .2em; }
+  .fit-note .fit-small { font-size: .85rem; margin-top: 2rem; }
+  .service-faq { background: var(--color-cream); }
+  .faq-width { max-width: 850px; }
+  .faq-width > .eyebrow { display: block; text-align: center; }
+  .faq-width > h2 { text-align: center; margin-inline: auto; }
+  .question-list { display: grid; gap: .7rem; margin-top: 1.8rem; }
+  details { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1.1rem 1.3rem; background: var(--color-blush-100); }
+  summary { cursor: pointer; color: var(--color-maroon-900); font-weight: 600; font-size: .98rem; }
+  details p { margin: 1rem 0 0; color: var(--color-muted); font-size: .95rem; }
+  .related-support { background: var(--color-blush-200); }
+  .related-links { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; margin-top: 1.6rem; }
+  .related-links a { padding: 1.2rem; background: var(--color-cream); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: .95rem; display: flex; justify-content: space-between; gap: .5rem; }
+  .further-reading { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--color-border); }
+  .further-reading p { font-size: .9rem; }
+  .further-reading a { text-decoration: underline; text-underline-offset: .2em; }
+  .further-reading span { color: var(--color-muted); font-size: .85rem; }
+  @media(max-width:850px) { .hero-grid,.session-grid,.takeaway-grid,.scope-grid,.support-card { grid-template-columns: 1fr; } .hero-grid { max-width: 40rem; margin-inline: auto; } .appointment-card { width: 100%; } .support-action { text-align: left; } .related-links { grid-template-columns: 1fr; } }
+  @media(max-width:560px) { .situation-grid { grid-template-columns: 1fr; } .situation-grid article,.situation-grid article:nth-child(even) { padding: 1.5rem 0; border-left: none; } .hero-grid .btn { width: 100%; } .fit-note { padding-left: 1.2rem; } }
+</style>

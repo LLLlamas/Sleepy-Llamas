@@ -1,15 +1,24 @@
 ---
 import { site } from '../config/site';
+import { consultingServices, fitCall, overnightServices } from '../config/services';
+interface Props { initialService?: string }
+const { initialService = '' } = Astro.props;
+const onlineInquiries = import.meta.env.PUBLIC_INQUIRY_MODE === 'online';
+const initialInPerson = ['home-consult', 'caregiver-training'].includes(initialService);
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const hasPhone = Boolean(site.phoneHref && !site.phoneHref.includes('555'));
+const hasWhatsApp = Boolean(site.whatsapp && !site.whatsapp.includes('555'));
 ---
 
 <section class="section contact" id="contact">
   <div class="container contact-inner">
     <aside class="contact-info reveal">
       <span class="eyebrow">Let&rsquo;s talk</span>
-      <h2>I&rsquo;d love to hear from you.</h2>
+      <h2>Tell me what would make things easier.</h2>
       <p class="lead">
-        Short and sweet &mdash; just the basics so I know how to reach you. I
-        read every message personally and respond {site.responseTime}.
+        A first baby, another baby, a new nanny, or one question that keeps coming up.
+        Share a little about your family and I&rsquo;ll help you choose a next step.
+        I respond {site.responseTime}.
       </p>
 
       <ul class="contact-methods" role="list">
@@ -22,6 +31,7 @@ import { site } from '../config/site';
             <a href={`mailto:${site.email}`}>{site.email}</a>
           </div>
         </li>
+        {hasPhone && (
         <li>
           <div class="icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -31,15 +41,18 @@ import { site } from '../config/site';
             <a href={`tel:${site.phoneHref}`}>{site.phone}</a>
           </div>
         </li>
+        )}
+        {hasWhatsApp && (
         <li>
           <div class="icon whatsapp-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M17.5 14.4l-2-1a1 1 0 0 0-1.2.3l-.5.7a.5.5 0 0 1-.6.2 8 8 0 0 1-3.8-3.8.5.5 0 0 1 .2-.6l.7-.5a1 1 0 0 0 .3-1.2l-1-2a1 1 0 0 0-1-.6h-.1a2 2 0 0 0-2 1.6c-.2 2.2.7 4.6 2.6 6.5s4.3 2.8 6.5 2.6a2 2 0 0 0 1.6-2v-.1a1 1 0 0 0-.7-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.3a.5.5 0 0 0 .6.6l4.3-1.3A10 10 0 1 0 12 2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div>
             <span class="method-label">WhatsApp</span>
-            <a href={`https://wa.me/${site.whatsapp.replace(/\D/g, '')}?text=Hi%20Catalina!%20I'm%20interested%20in%20learning%20more%20about%20your%20overnight%20doula%20services.`} target="_blank" rel="noopener noreferrer">Message on WhatsApp</a>
+            <a href={`https://wa.me/${site.whatsapp.replace(/\D/g, '')}?text=Hi%20Catalina!%20I'd%20like%20to%20ask%20about%20support%20for%20my%20family.`} target="_blank" rel="noopener noreferrer">Message on WhatsApp</a>
           </div>
         </li>
+        )}
         <li>
           <div class="icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -53,90 +66,101 @@ import { site } from '../config/site';
     </aside>
 
     <div class="form-card reveal reveal-delay-1">
-      <form class="contact-form" id="contact-form" novalidate>
-        <div class="field">
-          <label for="client-name">Your name</label>
-          <input type="text" id="client-name" name="clientName" required autocomplete="name" placeholder="Jane Doe" />
-          <div class="field-error" data-for="client-name"></div>
-        </div>
-
-        <div class="field">
-          <label for="child-name">Child&rsquo;s name</label>
-          <input type="text" id="child-name" name="childName" required autocomplete="off" placeholder="e.g. Noah" />
-          <div class="field-error" data-for="child-name"></div>
-        </div>
-
-        <div class="field">
-          <label for="service">Which service are you looking for?</label>
-          <select id="service" name="service" required>
-            <option value="">&mdash; Select a service &mdash;</option>
-            <option value="overnight-doula">Overnight Doula Support</option>
-            <option value="overnight-sleep-training">Overnight Sleep Training</option>
-            <option value="consultation">Consultation(s)</option>
-            <option value="not-sure">Not sure yet</option>
-          </select>
-          <div class="field-error" data-for="service"></div>
-        </div>
-
+      <form class="contact-form" id="contact-form" data-inquiry-mode={onlineInquiries ? 'online' : 'email'} novalidate aria-describedby="contact-privacy">
         <div class="field-row">
+          <div class="field">
+            <label for="client-name">Your name</label>
+            <input type="text" id="client-name" name="clientName" required maxlength="80" autocomplete="name" aria-describedby="error-client-name" />
+            <div class="field-error" id="error-client-name" data-for="clientName"></div>
+          </div>
           <div class="field">
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" />
-            <div class="field-error" data-for="email"></div>
-          </div>
-          <div class="field">
-            <label for="phone">Phone <span class="optional">(optional)</span></label>
-            <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="555-555-1234" />
+            <input type="email" id="email" name="email" required maxlength="254" autocomplete="email" aria-describedby="error-email" />
+            <div class="field-error" id="error-email" data-for="email"></div>
           </div>
         </div>
-
+        <div class="field">
+          <label for="service">What would you like help with?</label>
+          <select id="service" name="service" required aria-describedby="error-service">
+            <option value="" selected={!initialService}>Choose an appointment or service</option>
+            <option value={fitCall.id} selected={initialService === fitCall.id}>{fitCall.title} — free 15-minute fit call</option>
+            {consultingServices.map(service => <option value={service.id} selected={initialService === service.id}>{service.title}</option>)}
+            {overnightServices.map(service => <option value={service.id} selected={initialService === service.id}>{service.title}</option>)}
+            <option value="not-sure">Not sure yet — help me choose</option>
+          </select>
+          <div class="field-error" id="error-service" data-for="service"></div>
+        </div>
         <div class="field-row">
           <div class="field">
-            <label for="ct-weeks">How many weeks of service? <span class="optional">(optional)</span></label>
-            <div class="optional-field">
-              <input type="number" id="ct-weeks" name="weeks" min="1" max="52" placeholder="e.g. 4" />
-              <label class="notsure-label"><input type="checkbox" id="ct-weeks-unsure" /> Not sure yet</label>
-            </div>
+            <label for="contact-format">How would you like to meet?</label>
+            <select id="contact-format" name="format" aria-describedby="error-format">
+              <option value="not-sure" selected={!initialInPerson}>Let&rsquo;s decide together</option>
+              <option value="phone">Phone</option>
+              <option value="video">Video</option>
+              <option value="in-person" selected={initialInPerson}>In person</option>
+            </select>
+            <div class="field-error" id="error-format" data-for="format"></div>
           </div>
           <div class="field">
-            <label for="ct-nights">Nights per week? <br /><span class="optional">(optional)</span></label>
-            <div class="optional-field">
-              <input type="number" id="ct-nights" name="nightsPerWeek" min="1" max="7" placeholder="e.g. 2" />
-              <label class="notsure-label"><input type="checkbox" id="ct-nights-unsure" /> Not sure yet</label>
-            </div>
+            <label for="location">Neighborhood or ZIP <span class="optional">(for visits)</span></label>
+            <input id="location" name="location" maxlength="160" autocomplete="address-level2" aria-describedby="error-location" placeholder="No street address needed" />
+            <div class="field-error" id="error-location" data-for="location"></div>
           </div>
         </div>
-
-        <div class="field">
-          <label class="special-care-check">
-            <input type="checkbox" id="ct-special-care" />
-            <span>My child has special care needs</span>
-          </label>
-          <div class="special-care-detail" id="ct-special-detail" hidden>
-            <input type="text" id="ct-special-notes" name="specialCareNotes" placeholder="e.g. twins, cleft palate, G-Tube&hellip;" maxlength="200" />
+        <div class="field-row">
+          <div class="field">
+            <label for="baby-stage">Child&rsquo;s age(s) or due date <span class="optional">(optional)</span></label>
+            <input id="baby-stage" name="stage" maxlength="100" placeholder="e.g. due in March, 6 weeks, or 3 years" aria-describedby="error-stage" />
+            <div class="field-error" id="error-stage" data-for="stage"></div>
+          </div>
+          <div class="field">
+            <label for="child-name">Child&rsquo;s name <span class="optional">(optional)</span></label>
+            <input id="child-name" name="childName" maxlength="60" autocomplete="off" aria-describedby="error-child-name" />
+            <div class="field-error" id="error-child-name" data-for="childName"></div>
           </div>
         </div>
-
         <div class="field">
-          <label for="notes">Anything else I should know? <span class="optional">(optional)</span></label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Sleep challenges, questions, preferred schedule&hellip;"></textarea>
+          <label for="phone">Phone <span class="optional">(optional)</span></label>
+          <input type="tel" id="phone" name="phone" maxlength="40" autocomplete="tel" aria-describedby="error-phone" />
+          <div class="field-error" id="error-phone" data-for="phone"></div>
         </div>
-
-        <button type="submit" class="btn btn-primary submit-btn" id="submit-btn">
-          <span class="btn-label">Send message</span>
+        <div class="field">
+          <label for="notes">What&rsquo;s on your mind? <span class="optional">(optional)</span></label>
+          <textarea id="notes" name="notes" rows="4" maxlength="2000" aria-describedby="error-notes contact-privacy" placeholder="Your situation, questions, or times that usually work for you."></textarea>
+          <div class="field-error" id="error-notes" data-for="notes"></div>
+        </div>
+        <div class="field">
+          <label for="referral-source">How did you hear about me? <span class="optional">(optional)</span></label>
+          <input id="referral-source" name="referralSource" maxlength="160" aria-describedby="error-referral-source" placeholder="A friend, a class, a search…" />
+          <div class="field-error" id="error-referral-source" data-for="referralSource"></div>
+        </div>
+        <div class="contact-trap" aria-hidden="true">
+          <label for="contact-website">Leave this field empty</label>
+          <input id="contact-website" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+        <p class="contact-error" id="contact-error" role="alert" tabindex="-1" hidden></p>
+        <button type="submit" class="btn btn-primary submit-btn" id="submit-btn" disabled>
+          <span class="btn-label">{onlineInquiries ? 'Send inquiry' : 'Open email inquiry'}</span>
           <span class="btn-spinner" aria-hidden="true"></span>
         </button>
-
-        <p class="form-note">Your message goes straight to me. I&rsquo;ll never share your information.</p>
+        {!onlineInquiries && <p class="form-note">Review and send your inquiry in your email app. This form does not send or save it automatically.</p>}
+        <p class="form-note" id="email-draft-status" role="status" hidden></p>
+        <p class="form-note" id="contact-privacy">Please keep this first message general; no medical records or private care details are needed. An inquiry does not confirm an appointment. For urgent health concerns, contact your care provider. <a href={`${base}privacy/`}>How inquiries are handled</a>.</p>
       </form>
+      <div class="email-fallback" id="email-fallback">
+        <p>Prefer email? <a id="contact-email-draft" href={`mailto:${site.email}`} data-recipient={site.email}>Open email draft</a></p>
+        <p class="form-note">This opens your email app. Review the draft and send it yourself.</p>
+      </div>
+      <noscript><p>You can contact Catalina by opening an email draft above.</p></noscript>
 
-      <div class="form-success" id="form-success" hidden>
+      <div class="form-success" id="form-success" tabindex="-1" role="status" hidden>
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2.5"/>
           <path d="M20 33l9 9 16-18" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <h3>Thank you!</h3>
-        <p>Your message is on its way. I&rsquo;ll reply {site.responseTime}.</p>
+        <h3>Your inquiry is saved.</h3>
+        <p>Thank you for telling me a little about your family. I&rsquo;ll review your request and reply {site.responseTime} to discuss the next step. Your appointment is not confirmed yet.</p>
+        <p class="form-note" id="inquiry-reference"></p>
       </div>
     </div>
   </div>
@@ -223,40 +247,14 @@ import { site } from '../config/site';
   }
   .contact-form[hidden] { display: none; }
 
-  .optional-field { position: relative; }
-  .optional-field input[type="number"] { width: 100%; }
-  .optional-field input[type="number"].greyed { opacity: 0.4; pointer-events: none; }
-  .notsure-label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.78rem;
-    color: var(--color-muted);
-    margin-top: 0.35rem;
-    cursor: pointer;
-  }
-  .notsure-label input { accent-color: var(--color-maroon-700); }
-
-  .special-care-check {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.82rem;
-    color: var(--color-ink);
-    cursor: pointer;
-    padding: 0.4rem 0.75rem;
-    background: var(--color-blush-100);
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--color-border);
-    transition: border-color 0.2s;
-  }
-  .special-care-check:has(input:checked) {
-    border-color: var(--color-maroon-500);
-    background: var(--color-blush-200);
-  }
-  .special-care-check input { accent-color: var(--color-maroon-700); width: 15px; height: 15px; }
-  .special-care-detail { margin-top: 0.4rem; }
-  .special-care-detail[hidden] { display: none; }
+  .contact-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  .contact-error { padding: 0.85rem; border: 1px solid var(--color-maroon-500); border-radius: var(--radius-sm); color: var(--color-maroon-900); }
+  .contact-error[hidden] { display: none; }
+  [aria-invalid="true"] { border-color: var(--color-maroon-500); }
+  .email-fallback { margin-top: 1.25rem; text-align: center; }
+  .email-fallback[hidden] { display: none; }
+  .email-fallback a { text-decoration: underline; text-underline-offset: 0.2em; font-weight: 600; }
+  .email-fallback .form-note { margin-top: 0.35rem; }
 
   @media (max-width: 560px) {
     .field-row { grid-template-columns: 1fr; }
@@ -328,89 +326,140 @@ import { site } from '../config/site';
 </style>
 
 <script>
-  const form = document.getElementById('contact-form') as HTMLFormElement | null;
-  const successBox = document.getElementById('form-success');
-  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  import { getSupabase } from '../lib/supabase';
+  import { inquiryEmailDraft, normalizeInquiry, submitInquiry, validateInquiry, type InquiryInput } from '../lib/inquiries';
 
-  // "Not sure yet" toggles
-  const ctWeeks = document.getElementById('ct-weeks') as HTMLInputElement;
-  const ctWeeksUnsure = document.getElementById('ct-weeks-unsure') as HTMLInputElement;
-  const ctNights = document.getElementById('ct-nights') as HTMLInputElement;
-  const ctNightsUnsure = document.getElementById('ct-nights-unsure') as HTMLInputElement;
-  const ctSpecialCare = document.getElementById('ct-special-care') as HTMLInputElement;
-  const ctSpecialDetail = document.getElementById('ct-special-detail')!;
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  const successBox = document.getElementById('form-success')!;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const errorBox = document.getElementById('contact-error')!;
+  const serviceSelect = document.getElementById('service') as HTMLSelectElement;
+  const formatSelect = document.getElementById('contact-format') as HTMLSelectElement;
+  const locationInput = document.getElementById('location') as HTMLInputElement;
+  const emailDraft = document.getElementById('contact-email-draft') as HTMLAnchorElement;
+  const onlineInquiries = form.dataset.inquiryMode === 'online';
+  let pending = false;
+  let attemptedSignature = '';
+  let attemptedId = '';
 
-  ctWeeksUnsure?.addEventListener('change', () => {
-    ctWeeks.classList.toggle('greyed', ctWeeksUnsure.checked);
-    if (ctWeeksUnsure.checked) ctWeeks.value = '';
-  });
-  ctNightsUnsure?.addEventListener('change', () => {
-    ctNights.classList.toggle('greyed', ctNightsUnsure.checked);
-    if (ctNightsUnsure.checked) ctNights.value = '';
-  });
-  ctSpecialCare?.addEventListener('change', () => {
-    if (ctSpecialCare.checked) ctSpecialDetail.removeAttribute('hidden');
-    else { ctSpecialDetail.setAttribute('hidden', ''); (document.getElementById('ct-special-notes') as HTMLInputElement).value = ''; }
-  });
-
-  // Label color change for select (CSS :placeholder-shown doesn't work on selects)
-  const serviceSelect = document.getElementById('service') as HTMLSelectElement | null;
-  serviceSelect?.addEventListener('change', () => {
-    const label = serviceSelect.closest('.field')?.querySelector('label');
-    if (label) label.style.color = serviceSelect.value ? 'var(--color-maroon-700)' : '';
-  });
-
-  function setError(id: string, msg: string) {
-    const el = form?.querySelector(`.field-error[data-for="${id}"]`);
-    if (el) el.textContent = msg;
+  function readInput(): InquiryInput {
+    const data = new FormData(form);
+    return normalizeInquiry(Object.fromEntries([
+      'clientName', 'email', 'service', 'format', 'childName', 'stage', 'location', 'phone', 'notes', 'website', 'referralSource',
+    ].map(key => [key, String(data.get(key) || '')])) as unknown as InquiryInput);
   }
+
   function clearErrors() {
-    form?.querySelectorAll('.field-error').forEach((el) => { el.textContent = ''; });
+    document.getElementById('email-draft-status')!.hidden = true;
+    form.querySelectorAll('.field-error').forEach(element => { element.textContent = ''; });
+    form.querySelectorAll('[aria-invalid]').forEach(element => element.removeAttribute('aria-invalid'));
+    errorBox.hidden = true;
   }
-  function validate(): boolean {
+
+  function updateVisitFields() {
+    const inPerson = ['home-consult', 'caregiver-training'].includes(serviceSelect.value);
+    const remote = ['fit-call', 'general-family-consult', 'newborn-postpartum-consult', 'first-weeks-plan'].includes(serviceSelect.value);
+    Array.from(formatSelect.options).forEach((option) => {
+      option.disabled = inPerson ? option.value !== 'in-person' : remote && option.value === 'in-person';
+    });
+    if (inPerson) formatSelect.value = 'in-person';
+    else if (remote && formatSelect.value === 'in-person') formatSelect.value = 'not-sure';
+    locationInput.required = formatSelect.value === 'in-person';
+  }
+  serviceSelect.addEventListener('change', updateVisitFields);
+  formatSelect.addEventListener('change', updateVisitFields);
+  updateVisitFields();
+
+  document.querySelectorAll<HTMLElement>('[data-consult-service]').forEach(link => {
+    link.addEventListener('click', () => {
+      if (pending) return;
+      const service = link.dataset.consultService || '';
+      if (Array.from(serviceSelect.options).some(option => option.value === service)) {
+        form.hidden = false;
+        successBox.hidden = true;
+        document.getElementById('email-fallback')!.hidden = false;
+        serviceSelect.value = service;
+        const context = link.dataset.inquiryContext;
+        const notes = form.elements.namedItem('notes') as HTMLTextAreaElement;
+        if (context && !notes.value.includes(context)) notes.value = [notes.value.trim(), context].filter(Boolean).join('\n\n');
+        updateVisitFields();
+        serviceSelect.focus({ preventScroll: true });
+      }
+    });
+  });
+
+  emailDraft.addEventListener('click', event => {
+    if (pending) { event.preventDefault(); return; }
+    const input = readInput();
+    const title = serviceSelect.selectedOptions[0]?.textContent || input.service;
+    emailDraft.href = inquiryEmailDraft(emailDraft.dataset.recipient || '', input, title);
+  });
+
+  submitBtn.disabled = false;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (pending) return;
     clearErrors();
-    let ok = true;
-    const data = new FormData(form!);
-    const clientName = String(data.get('clientName') || '').trim();
-    const childName = String(data.get('childName') || '').trim();
-    const service = String(data.get('service') || '');
-    const email = String(data.get('email') || '').trim();
-
-    if (!clientName) { setError('client-name', 'Please enter your name.'); ok = false; }
-    if (!childName) { setError('child-name', 'Please enter your child\u2019s name.'); ok = false; }
-    if (!service) { setError('service', 'Please choose a service.'); ok = false; }
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      setError('email', 'Please enter a valid email.'); ok = false;
+    const input = readInput();
+    const errors = validateInquiry(input);
+    if (Object.keys(errors).length) {
+      for (const [field, message] of Object.entries(errors)) {
+        const feedback = form.querySelector<HTMLElement>(`.field-error[data-for="${field}"]`);
+        if (feedback) feedback.textContent = message;
+        form.querySelector<HTMLElement>(`[name="${field}"]`)?.setAttribute('aria-invalid', 'true');
+      }
+      errorBox.textContent = 'Please check the highlighted details before sending.';
+      errorBox.hidden = false;
+      (form.querySelector('[aria-invalid="true"]') as HTMLElement | null)?.focus();
+      return;
     }
-
-    return ok;
-  }
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    submitBtn?.setAttribute('data-loading', 'true');
-    submitBtn?.setAttribute('disabled', '');
-
-    // ------------------------------------------------------------------
-    // TODO: wire up to real form backend (Formspree, Netlify Forms, EmailJS).
-    // For now we simulate a successful submit so the UX is fully testable.
-    // Example with Formspree:
-    //   const res = await fetch('https://formspree.io/f/YOUR_ID', {
-    //     method: 'POST',
-    //     body: new FormData(form!),
-    //     headers: { Accept: 'application/json' }
-    //   });
-    //   if (!res.ok) throw new Error('submit failed');
-    // ------------------------------------------------------------------
-    await new Promise((r) => setTimeout(r, 900));
-
-    submitBtn?.removeAttribute('data-loading');
-    submitBtn?.removeAttribute('disabled');
-
-    // Swap the form for the success panel
-    form?.setAttribute('hidden', '');
-    successBox?.removeAttribute('hidden');
+    if (!onlineInquiries) {
+      if (input.website) return;
+      const status = document.getElementById('email-draft-status')!;
+      status.textContent = 'Your draft is ready. Review and send it from your email app. If no app opens, use the email address alongside this form.';
+      status.hidden = false;
+      emailDraft.click();
+      return;
+    }
+    pending = true;
+    form.setAttribute('aria-busy', 'true');
+    form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(control => { control.disabled = true; });
+    emailDraft.setAttribute('aria-disabled', 'true');
+    submitBtn.disabled = true;
+    submitBtn.dataset.loading = 'true';
+    submitBtn.querySelector('.btn-label')!.textContent = 'Saving your inquiry…';
+    // A retry of unchanged details uses the same ID, avoiding duplicate requests
+    // if the first response was lost after the database committed.
+    const signature = JSON.stringify(input);
+    try {
+      if (signature !== attemptedSignature) {
+        attemptedId = crypto.randomUUID();
+        attemptedSignature = signature;
+      }
+      const reference = await submitInquiry(getSupabase(), input, attemptedId);
+      // A local integration hook only: no analytics service or personal data is sent.
+      document.dispatchEvent(new CustomEvent('sleepyllamas:inquiry-saved', { detail: { service: input.service } }));
+      form.hidden = true;
+      document.getElementById('email-fallback')!.hidden = true;
+      successBox.hidden = false;
+      document.getElementById('inquiry-reference')!.textContent = `Your reference: ${reference.slice(0, 8)}`;
+      successBox.focus();
+      attemptedSignature = '';
+      attemptedId = '';
+    } catch (error) {
+      errorBox.textContent = error instanceof Error && !error.message.includes('fetch')
+        ? error.message
+        : 'We could not confirm your inquiry was saved. Your details are still here. Please retry, or open an email draft below.';
+      errorBox.hidden = false;
+      errorBox.focus();
+    } finally {
+      pending = false;
+      form.removeAttribute('aria-busy');
+      form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(control => { control.disabled = false; });
+      emailDraft.removeAttribute('aria-disabled');
+      submitBtn.disabled = false;
+      delete submitBtn.dataset.loading;
+      submitBtn.querySelector('.btn-label')!.textContent = 'Send inquiry';
+    }
   });
 </script>

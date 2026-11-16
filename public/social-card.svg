@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fdf6f4"/>
+  <rect x="38" y="38" width="1124" height="554" rx="12" fill="none" stroke="#e7cfca" stroke-width="2"/>
+  <circle cx="1015" cy="420" r="190" fill="#f2dcd5"/>
+  <circle cx="1100" cy="370" r="155" fill="#fdf6f4"/>
+  <text x="95" y="132" font-family="Georgia,serif" font-size="39" fill="#531724">Sleepy Llamas</text>
+  <path d="M95 170h65" stroke="#c89b6a" stroke-width="3"/>
+  <text x="95" y="282" font-family="Georgia,serif" font-size="65" fill="#531724">Practical guidance</text>
+  <text x="95" y="365" font-family="Georgia,serif" font-size="65" font-style="italic" fill="#94364a">for your whole family.</text>
+  <text x="95" y="472" font-family="Arial,sans-serif" font-size="27" fill="#695457">With Catalina Llamas · Queens &amp; nearby NYC</text>
+  <text x="95" y="524" font-family="Arial,sans-serif" font-size="24" fill="#695457">Parent consultations · Newborn care · Caregiver coaching</text>
+</svg>

@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { site } from '../config/site';
+const onlineInquiries = import.meta.env.PUBLIC_INQUIRY_MODE === 'online';
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+---
+
+<BaseLayout title={`Privacy & inquiries — ${site.brandName}`} description="How Sleepy Llamas handles consultation inquiries, and what to expect before booking." canonicalPath="/privacy/" includeFaqSchema={false}>
+  <Nav />
+  <main id="main-content" class="section">
+    <article class="container privacy-copy">
+      <a href={base} class="back">&larr; Back to Sleepy Llamas</a>
+      <span class="eyebrow">Before we meet</span>
+      <h1>Your inquiry, your family.</h1>
+      <p class="lead">A short overview is enough to start. You do not need to send detailed medical records, photographs or private information about your children through this form.</p>
+      <h2>What you share</h2>
+      <p>An inquiry includes your name, email, chosen service and the optional information you provide, such as a phone number, family stage, neighborhood, preferred appointment format and a brief question. You can leave a child&rsquo;s name out.</p>
+      <h2>How your request is handled</h2>
+      {onlineInquiries ? <><p>When the online form confirms that a request is saved, the inquiry is stored in Sleepy Llamas&rsquo; booking system, provided through Supabase. It is used to respond, check whether the service fits, and arrange support. Owner notifications may also be sent through email. A saved request is not an appointment confirmation.</p>
+      <p>If the online form cannot save your request, it will say so. The email option opens a draft in your own email app; you decide whether to send it. Opening a draft does not send a message.</p></> : <p>The inquiry form prepares a draft in your own email app. You review and send it yourself; the website does not store the form details or send them automatically. Your sent message is handled through email to respond, check whether the service fits, and arrange support. Opening a draft does not send a message or confirm an appointment.</p>}
+      <h2>Communication and access</h2>
+      <p>Catalina reviews inquiries personally and aims to respond {site.responseTime}. Please share sensitive care information only after you have agreed on an appropriate way to communicate. Contact details from an inquiry are used for that conversation; submitting the form does not sign you up for a marketing newsletter.</p>
+      <p>You can request a copy, correction or deletion of your inquiry by emailing <a href={`mailto:${site.email}`}>{site.email}</a>. Some records may need to be kept to fulfill agreed services or legal obligations.</p>
+      <h2>Before booking or payment</h2>
+      <p>Published rates are starting rates. The service, timing, scope, follow-up, travel charges if any, final price and cancellation or rescheduling terms are confirmed in writing before payment. An inquiry does not reserve a time or create an ongoing on-call service.</p>
+      <h2>Everyday guidance and care</h2>
+      <p>Consultations provide practical family education and support. They do not replace your child&rsquo;s care team or your own healthcare professionals. For an urgent concern, seek appropriate immediate care rather than waiting for a consultation reply.</p>
+      <h2>Using the website</h2>
+      <p>The website loads fonts from Google Fonts. {onlineInquiries ? 'The overnight calendar requests availability from the booking service when you visit.' : 'Overnight availability is confirmed personally by email.'} Any third-party sites you choose to visit, including email or payment services, have their own privacy practices.</p>
+      <p class="privacy-contact">Questions are welcome. <a href={`mailto:${site.email}`}>Email Catalina &rarr;</a></p>
+    </article>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .privacy-copy { max-width: 850px; }
+  .back { display: block; margin-bottom: 2.5rem; }
+  h1 { font-size: clamp(2.4rem,5vw,3.8rem); margin-bottom: 1rem; }
+  h2 { font-size: 1.5rem; margin-top: 2rem; }
+  p { color: var(--color-muted); }
+  p a { text-decoration: underline; text-underline-offset: .2em; }
+  .privacy-contact { border-top: 1px solid var(--color-border); padding-top: 1.5rem; margin-top: 2rem; }
+</style>

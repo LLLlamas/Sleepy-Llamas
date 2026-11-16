@@ -1,0 +1,40 @@
+---
+const situations = [
+  { label: 'The early days', title: 'Home with a new baby', body: 'First-day questions, feeding and soothing routines, sharing the care, and making space for parents to rest. For your first baby or your next one.' },
+  { label: 'The whole household', title: 'A baby. An older sibling. You.', body: 'Talk through the practical pieces: the older child’s day, pickups, meals, different routines, and how another caregiver can help.' },
+  { label: 'A new chapter', title: 'When the routine changes', body: 'Support with daycare transitions, feeding changes, potty training, and the move from crib to bed. We start with your child and the situation in front of you.' },
+  { label: 'Working together', title: 'A confident caregiver handoff', body: 'Help your nanny, partner, or family caregiver learn your routines, practice everyday care, and understand what to record or ask you about.' },
+];
+---
+
+<section class="section family-situations" aria-labelledby="situations-title">
+  <div class="container">
+    <div class="situations-heading reveal">
+      <div><span class="eyebrow">Where are you right now?</span><h2 id="situations-title">Support for the stage<br />your family is in.</h2></div>
+      <p class="lead">Some questions need a conversation. Some routines make more sense when we practice them together. We can choose the right kind of support after we talk.</p>
+    </div>
+    <div class="situations-grid">
+      {situations.map((item, i) => (
+        <article class:list={['situation', 'reveal', `reveal-delay-${i + 1}`]}>
+          <span class="situation-label">{item.label}</span><h3>{item.title}</h3><p>{item.body}</p>
+        </article>
+      ))}
+    </div>
+    <a href="#services" class="situations-link reveal">Explore consultations, caregiver training &amp; in-person support &rarr;</a>
+  </div>
+</section>
+
+<style>
+  .family-situations { background: var(--color-blush-100); }
+  .situations-heading { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 2rem; margin-bottom: 2rem; }
+  .situations-heading h2 { font-size: clamp(2rem, 3.5vw, 2.65rem); }
+  .situations-heading .lead { font-size: 1rem; margin: 0; }
+  .situations-grid { display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--color-border); }
+  .situation { padding: 1.8rem 2rem 1.8rem 0; border-bottom: 1px solid var(--color-border); }
+  .situation:nth-child(even) { padding-left: 2rem; border-left: 1px solid var(--color-border); }
+  .situation-label { text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-maroon-500); font-size: 0.68rem; font-weight: 600; }
+  .situation h3 { font-size: 1.5rem; margin: 0.8rem 0 0.65rem; }
+  .situation p { font-size: 0.92rem; line-height: 1.8; color: var(--color-muted); margin: 0; max-width: 49ch; }
+  .situations-link { display: inline-block; font-size: 0.9rem; font-weight: 600; margin-top: 1.75rem; }
+  @media (max-width: 700px) { .situations-heading { grid-template-columns: 1fr; gap: 0.75rem; } .situations-grid { grid-template-columns: 1fr; } .situation, .situation:nth-child(even) { padding: 1.5rem 0; border-left: none; } }
+</style>

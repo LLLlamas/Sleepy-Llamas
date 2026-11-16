@@ -9,8 +9,8 @@
 #   5. Uploads dist/ as a GitHub Pages artifact
 #   6. Deploys that artifact to GitHub Pages
 #
-# The Supabase URL and anon key are injected as environment variables
-# from GitHub Secrets so they're never in the repo.
+# Email inquiries are the default. Set repository variable PUBLIC_INQUIRY_MODE
+# to online only after activating and verifying the Supabase backend.
 # ============================================================================
 
 name: Deploy to GitHub Pages
@@ -47,11 +47,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate public contact configuration
+        run: npm run check:publish -- --verify-api
+        env:
+          PUBLIC_INQUIRY_MODE: ${{ vars.PUBLIC_INQUIRY_MODE || 'email' }}
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_INQUIRY_MODE == 'online' && secrets.PUBLIC_SUPABASE_URL || '' }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ vars.PUBLIC_INQUIRY_MODE == 'online' && secrets.PUBLIC_SUPABASE_ANON_KEY || '' }}
+
       - name: Build Astro site
         run: npm run build
         env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          PUBLIC_INQUIRY_MODE: ${{ vars.PUBLIC_INQUIRY_MODE || 'email' }}
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_INQUIRY_MODE == 'online' && secrets.PUBLIC_SUPABASE_URL || '' }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ vars.PUBLIC_INQUIRY_MODE == 'online' && secrets.PUBLIC_SUPABASE_ANON_KEY || '' }}
+
+      - name: Verify service pages and SEO output
+        run: npm run check:site
 
       # ----------------------------------------------------------------------
       # Moonlog PWA — built separately and placed at /Sleepy-Llamas/Moonlog/

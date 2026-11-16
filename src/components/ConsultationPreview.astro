@@ -1,0 +1,68 @@
+---
+import { fitCall } from '../config/services';
+---
+
+<section class="section your-plan" id="your-plan">
+  <div class="container">
+    <div class="plan-grid">
+      <div class="plan-intro reveal">
+        <span class="eyebrow">Something to come back to</span>
+        <h2>A conversation you can put into practice.</h2>
+        <p class="lead">You don&rsquo;t need another long list of things you should be doing. We choose what matters most, make room for your family&rsquo;s reality, and write down a few next steps.</p>
+        <ul class="takeaways" role="list">
+          <li><strong>Your priorities.</strong> What you want help with, in your own words.</li>
+          <li><strong>A manageable plan.</strong> Who will do what, and what to try first.</li>
+          <li><strong>A shared understanding.</strong> Notes for your partner, nanny or another caregiver.</li>
+          <li><strong>A chance to clarify.</strong> Follow-up within the window included in your package.</li>
+        </ul>
+        <a href="#contact" class="plan-link" data-consult-service={fitCall.id}>Not sure where to start? Meet Catalina &rarr;</a>
+      </div>
+      <article class="plan-example reveal reveal-delay-1" aria-label="Illustrative written family plan">
+        <div class="example-heading"><span class="example-label">An example, not a client story</span><span class="example-mark" aria-hidden="true">CL</span></div>
+        <h3>A little more room in the evening.</h3>
+        <p class="example-context">A family welcoming a new baby while their older child adjusts.</p>
+        <dl>
+          <div><dt>What matters to you</dt><dd>A calmer handoff at the end of the day, with a little time for each child.</dd></div>
+          <div><dt>What we agree to try</dt><dd>A short caregiver handoff, supplies in one place, and a clearly shared plan for the older child&rsquo;s evening.</dd></div>
+          <div><dt>What needs your input</dt><dd>Which part feels realistic for both parents? What should your nanny know before tomorrow?</dd></div>
+          <div><dt>What happens next</dt><dd>Try the agreed steps and bring your questions to the follow-up included in your package.</dd></div>
+        </dl>
+        <p class="example-signoff">Made for your family, together.</p>
+      </article>
+    </div>
+    <div class="resources reveal">
+      <div class="resources-heading"><span class="eyebrow">A few places to begin</span><h3>Small preparations that help.</h3><p>We can work through these together in a consultation.</p></div>
+      <div class="resource-grid">
+        <details><summary>Before your first day home</summary><p>Put your care team&rsquo;s instructions, appointments and contact numbers in one place. Choose where everyday supplies will live, who can help with meals and errands, and how the adults will share rest. Bring your unanswered questions to your care team.</p></details>
+        <details><summary>When another sibling is adjusting</summary><p>Think about which familiar parts of your older child&rsquo;s day you want to protect. Agree on who handles pickup, meals and bedtime, and where a little individual time can fit. We can make a plan around their age and your household.</p></details>
+        <details><summary>Before your nanny starts</summary><p>Write down family preferences, care team instructions, contact details and outing permissions. Walk through supplies together, make room for questions, and agree on what belongs in the daily handoff.</p></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .your-plan { background: var(--color-cream); }
+  .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,4rem); align-items: center; }
+  .plan-intro h2 { max-width: 16ch; }
+  .takeaways { list-style: none; padding: 0; margin: 1.6rem 0; display: grid; gap: 1rem; color: var(--color-muted); }
+  .takeaways strong { color: var(--color-maroon-900); }
+  .plan-link { display: inline-block; font-weight: 600; padding-block: .6rem; text-decoration: underline; text-underline-offset: .25em; }
+  .plan-example { background: var(--color-blush-100); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: clamp(1.4rem,3vw,2.3rem); box-shadow: var(--shadow-soft); }
+  .example-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+  .example-label { font-size: .75rem; color: var(--color-muted); }
+  .example-mark { font-family: var(--font-display); border: 1px solid var(--color-maroon-300); border-radius: 50%; padding: .65rem; color: var(--color-maroon-700); }
+  .example-context { font-size: .95rem; color: var(--color-muted); }
+  dl { margin: 1.4rem 0; }
+  dl div { border-top: 1px solid var(--color-border); padding-block: .9rem; }
+  dt { color: var(--color-maroon-700); font-size: .78rem; font-weight: 600; margin-bottom: .3rem; }
+  dd { margin: 0; font-size: .95rem; }
+  .example-signoff { font-family: var(--font-display); font-style: italic; margin: .5rem 0 0; color: var(--color-maroon-700); }
+  .resources { border-top: 1px solid var(--color-border); padding-top: 2.5rem; margin-top: 3.5rem; }
+  .resources-heading p { color: var(--color-muted); }
+  .resource-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; align-items: start; }
+  details { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1.1rem; background: var(--color-blush-100); }
+  summary { cursor: pointer; color: var(--color-maroon-900); font-weight: 600; }
+  details p { margin: 1rem 0 0; font-size: .92rem; color: var(--color-muted); }
+  @media(max-width:800px) { .plan-grid,.resource-grid { grid-template-columns: 1fr; } .plan-intro h2 { max-width: 24ch; } }
+</style>

@@ -1,0 +1,209 @@
+SLEEPY LLAMAS: LOCAL SEO AND FIRST-CLIENT STRATEGY
+Research/audit date: November 15, 2026 (America/New_York)
+Scope: research only. No website, directory, account, rate, DNS, or advertising changes were made for this audit. Public HTTP reads and search research were performed. This memo supersedes any older recommendation to create a new DoulaMatch profile: an existing profile was found.
+
+DECISION
+
+If the business continues, invest first in a working, consistent destination and three specific commercial pages. Use personal referrals and complementary providers to win the first five clients while organic visibility develops. Do not begin with a blog subscription, a large borough-page project, or a monthly SEO retainer. There is currently no Search Console, Analytics, keyword-volume, conversion, or revenue evidence available to this audit that demonstrates quantified demand.
+
+The strongest initial proposition is practical support from a known person: a paid newborn consultation, a short home visit, or coaching that gets a family and its nanny working together. A higher consultation rate needs a clear deliverable and credible proof, not just a larger price on a generic “advice” card. The current owner-confirmed completed postpartum certification is authoritative; old public wording describing Catalina as a student is stale and should be reconciled in the next approved profile update.
+
+P0: WHAT IS LIVE VERSUS WHAT EXISTS LOCALLY
+
+Public HTTP checks during this audit:
+- https://llllamas.github.io/Sleepy-Llamas/ returned HTTP 200.
+- https://llllamas.github.io/sleepy-llamas/ returned HTTP 404. The path's capitalization matters here.
+- The working live homepage still shows the older overnight-focused title and positioning. Its HTML canonical points at https://sleepyllamasdoula.com, while its robots meta says index, follow.
+- The custom domain did not resolve through the resolver available to this audit. This is not evidence about ownership or a guarantee that every resolver sees the same result. It is enough to require DNS/HTTPS verification before making it the canonical destination.
+- The GitHub hostname's /robots.txt returned 404. The project path's /robots.txt, /sitemap.xml, and /sitemap-index.xml returned 404. /resume/ returned 200; /privacy/ returned 404.
+These were direct public HEAD/GET checks without credentials. They describe the live deployment at the time, not merely source assumptions or a failure of the web-search tool.
+
+Local source findings:
+- astro.config.mjs still specifies the GitHub Pages host and /Sleepy-Llamas base.
+- BaseLayout now derives canonical URLs from that configured host/base, rather than hardcoding the custom domain. That is a local improvement awaiting deployment, not proof the live canonical is fixed.
+- The local site has three main routes: homepage, resume, privacy. Its commercial services are sections on the homepage, not independent service pages.
+- The local homepage has shifted to whole-family consulting, with visible service scope, written-plan examples, founder context and inquiry handling. Phone/WhatsApp placeholders are hidden. This is stronger conversion material than the old live homepage.
+- public/ currently contains only a favicon. No robots or XML sitemap source/integration was found. No Analytics/Search Console implementation was identified in the source audit. Lack of a Search Console tag is not proof no verified account exists, because DNS verification could be external; no account data was provided.
+- The inquiry source now requires a matching durable database receipt before success, has retry/timeout protection, and offers a user-sent email draft. MASTER lists the remaining production migration/environment/notification checks. Local tests do not substitute for verifying the live request and owner notification.
+
+Immediate recommendation: choose one real destination. Keep the existing correct-case GitHub Pages URL until a custom domain actually works, or activate the owned custom domain properly and align canonical, redirects, internal links and sitemap together. A paid hosting migration is not required just to make these pages discoverable. Do not point canonical tags to an unverified destination and expect them to act like a redirect.
+Google describes canonical tags and redirects as signals for selecting a preferred URL; a canonical is not a promise of indexing or a substitute for a working page.
+https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls
+
+EXISTING DIRECTORY: FIX A REAL REFERRAL PATH BEFORE ADDING MORE LISTINGS
+
+Catalina's public DoulaMatch profile exists. It links to the lowercase URL verified above as 404, uses outdated student wording, and separates eight years of nanny experience from one year of postpartum experience. The owner confirms certification is complete; those different experience categories are not a contradiction. The directory's postpartum rate describes a different service/unit from a paid consultation. Reconcile labels and current offerings rather than automatically making the numbers match. No client testimonials were shown. Update the existing profile after owner review, not by creating a duplicate.
+https://doulamatch.net/profile/42729/catalina-llamas
+
+SEARCH-INTENT FINDINGS: OBSERVED RESULTS, NOT A RANKING OR VOLUME REPORT
+
+Queries examined included postpartum doula consultation Queens/NYC, newborn first-days-home help, parent consultant sibling routines NYC, and nanny onboarding/coaching for private families NYC. Search results vary by user, place and time. This was a retrieval snapshot, not a standardized Queens-localized rank tracker or Google Maps audit. No monthly search volumes, CPCs, competitor traffic, or rank positions were measured.
+
+1. Postpartum doula + consultation has commercial relevance but a major ambiguity.
+Queens Doula offers postpartum support and describes its initial consultation as a free fit conversation. East River Doula Collective similarly uses a complimentary interview/consultation step. Sleepy Llamas must distinguish “free 15-minute fit call” from “paid 60-minute consultation with a written plan.” Otherwise a person seeking a free interview can arrive at a paid offer feeling misled, even if the service is valuable.
+https://www.queensdoula.com/postpartum-support
+https://www.eastriverdoulas.nyc/postpartum-doulas
+
+2. “First days home” combines paid practical care with free public/clinical support.
+Searches returned private newborn-care assistance and NYC's Newborn Home Visiting Program. The city's page describes no-cost support for eligible families. A paid home visit needs to state its particular scope: booked time with Catalina, hands-on household/newborn practice, family priorities, a written handoff and bounded follow-up. Do not imply paid coaching replaces a medical visit, free eligibility-based resources, or extended childcare coverage.
+https://motherhood-concierge.com/service/newborn-care-assistance/
+https://www.nyc.gov/site/doh/health/health-topics/pregnancy-newborn-visiting.page
+
+3. Parent consulting is broader than the service we want to sell.
+Results included ordinary parenting consultations, clinical services and family therapy. Beyond the Bump's dedicated parent-consulting page groups concrete problems such as daily rhythms, sleep, feeding and preschool decisions; NYU's page describes clinical early-childhood mental-health services. For Sleepy Llamas, “family routines,” “new sibling,” and “caregiver communication” are more useful qualifiers than an unqualified “family consultant” promise. Do not pursue clinical behavior-treatment or therapy queries without that professional service.
+https://www.beyondthebumpnyc.com/parent-consulting
+https://nyulangone.org/locations/child-study-center/early-childhood-mental-health-service
+
+4. Nanny training is frequently a job-seeker or professional-course query.
+Tiny Treasures markets professional newborn-care training. Kids & Kaboodles offers nanny hiring/career consultation, while Bottles and Bytes describes in-home parent/nanny alignment and caregiver coaching. These pages demonstrate distinct offer categories, not the size or profitability of any category. Sleepy Llamas should target the employing family with “nanny onboarding,” “caregiver handoff,” and “in-home caregiver coaching,” and explicitly explain that this is family-specific coaching rather than a job-placement service, CPR qualification, or professional certification course.
+https://www.tinytreasuresnyc.com/pro-newborn-care-course
+https://www.kidsandkaboodlesnyc.com/consultation-services
+https://bottlesandbytes.com/consultation
+
+THREE COMMERCIAL PAGES TO BUILD FIRST, IN ORDER
+
+Paths below are proposed site-relative URLs. On the present deployment they would sit below /Sleepy-Llamas/. Do not publish both project-path and custom-domain versions without a consistent canonical/redirect plan.
+
+1) /newborn-postpartum-consultations/
+Proposed title: “Newborn & Postpartum Consultations | Queens & NYC | Sleepy Llamas”
+Intent: “newborn care consultation NYC,” “postpartum doula consultation Queens,” “virtual postpartum consultation,” plus first-time/second-time parent questions within scope.
+Offer: the paid newborn session and continuity package. Clearly separate the free fit call in a smaller secondary CTA. Describe what is covered, how the parent prepares, the actual written deliverable, when it arrives, included follow-up, and who should use a different provider. CTA should say “Request a newborn consultation” while the workflow remains a request rather than instant confirmed scheduling.
+Proof needed: founder portrait, completed certification wording, relevant care experience and a clearly labeled fictional/anonymized written-plan sample. Link to the home visit when practice in the family's space would help.
+Reason for first place: established category language, close fit to the trained service, and a page that can convert referrals even before search sends traffic.
+
+2) /nanny-caregiver-coaching/
+Proposed title: “In-Home Nanny & Caregiver Coaching in Queens | Sleepy Llamas”
+Intent: “nanny onboarding NYC,” “help train our nanny,” “caregiver handoff,” and family/nanny routine coaching. These are candidate phrases supported by observed service language, not quantified keywords.
+Offer: family-paid, in-person coaching for the agreed caregivers. State that parents, nanny, grandparent or co-parent can participate. Show the session sequence, what is practiced, how the caregiver's perspective is included, and the shared care guide/handoff outcome. Spell out travel area and final-price confirmation. Avoid making employment-law, placement, or certification promises.
+Proof needed: an example family care guide, an example EOD handoff, and a genuine experience story about maintaining consistent routines. No private nanny performance details.
+Reason for second place: specific buyer and differentiating deliverable; also a useful destination for agencies or families referring a newly hired nanny.
+
+3) /first-days-home-visit/
+Proposed title: “First Days Home Newborn Visit in Queens | Sleepy Llamas”
+Intent: “newborn help at home Queens,” “first days home with baby help,” and “postpartum home visit Queens.” Explain educational/practical scope early because “home visit” can also imply a clinician or public program.
+Offer: one defined visit, chosen family priorities, practical rehearsal, written next steps and the included follow-up; separate an optional extra day from the original visit. Include first and second babies, household setup and parent rest logistics. Do not present it as round-the-clock care or a guaranteed solution to a baby's health/sleep concern.
+Proof needed: a clear sample agenda and a parent-facing next-day plan. Show the genuine travel zone and the process for time-sensitive requests; no guaranteed same-day response unless capacity supports it.
+Reason for third place: concrete buying situation, good referral destination for childbirth educators and relatives, and clear distinction from a remote call.
+
+Each page should have unique substantive content, one useful main heading, a truthful title/description, visible scope and starting price from the shared catalogue, FAQs answering purchase objections, an ordinary crawlable link back to services/about/contact, and a preselected inquiry CTA. Reuse layout/components and rates, not identical paragraphs with a different keyword.
+
+Keep the homepage as the broad parent/family consultation hub. Later, if actual inquiries support it, add /family-routine-consultations/ around sibling transitions, toddler routines and caregiver communication. Do not create many separate pages for every age, behavior, borough, ZIP code or synonymous phrase. A geographically relevant page should add real service information, not just replace a neighborhood name. Google's spam policies address doorway pages and scaled low-value content.
+https://developers.google.com/search/docs/essentials/spam-policies
+
+TECHNICAL PRIORITIES AFTER DOMAIN/DEPLOYMENT IS SETTLED
+
+Indexability and discovery:
+- Verify HTTP 200 for the intended pages, consistent HTTPS, self-referencing canonicals, no accidental noindex, and correct links with the production base path. A robots meta saying index does not establish that Google has indexed the page.
+- Add an XML sitemap with the preferred commercial and public information URLs. Submit it in Search Console. Sitemap absence does not itself block crawling, and a sitemap does not guarantee inclusion.
+- A robots.txt file belongs at the hostname root. Adding public/robots.txt to a GitHub project deployed under /Sleepy-Llamas/ would produce a project-path file, not the root file Google checks. The current 404 root robots response is not an instruction blocking normal crawling. Under this deployment, submit a project-path sitemap directly through the correct Search Console property. If a custom domain becomes the actual root deployment, a root robots file can advertise its sitemap.
+https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+https://developers.google.com/crawling/docs/robots-txt/create-robots-txt
+
+Metadata and internal links:
+- The local default title is brand/tagline only. Make the homepage title describe parent/newborn consultations and Queens naturally; give the three service pages their own titles and descriptions.
+- Add ordinary service-page links in navigation, service cards, relevant resources and footer. Anchor-only homepage sections provide no independent page title or service URL for a search/referral destination.
+- Normalize /resume/ trailing-slash canonical to the actual 200 destination. Use current owner-approved images for social previews; no OG image was found in the current layout. Social preview imagery is conversion/brand work, not a promised ranking boost.
+
+Structured data:
+- The visible FAQ can remain useful to parents. However, Google's current official changelog says FAQ rich results stopped appearing from May 7, 2026, and the feature documentation was removed in June. Do not sell FAQ schema as a route to expanded Google listings. The older “health/government only” explanation is no longer the current state.
+https://developers.google.com/search/updates
+- The local layout uses ProfessionalService; Schema.org describes that generic type as deprecated. serviceType is defined for a Service, so it belongs on service nodes rather than being treated as an Organization property. Prefer a small accurate Organization/Person/Service graph with stable IDs; reflect only real visible offers and credentials. This is an accuracy cleanup, not a claim that the current markup caused a penalty.
+https://schema.org/ProfessionalService
+https://schema.org/serviceType
+- Google's supported LocalBusiness rich-result fields include a physical address requirement. Do not fabricate an office or publish a private home address simply to pass a test. A service-area Google Business Profile and eligibility for a particular web rich result are different questions. Validate graph syntax and the relevant supported feature; do not add invented ratings or client reviews.
+https://developers.google.com/search/docs/appearance/structured-data/local-business
+https://developers.google.com/search/docs/appearance/structured-data/organization
+
+Performance:
+- Core Web Vitals are unknown. No Search Console/CrUX field data or PageSpeed audit was available. A successful build and a visually usable preview do not establish a pass.
+- Check the live mobile page, not only localhost. External Google Fonts, new photos, reveal effects and client calendar code are places to inspect, not proven current failures. Compress/size photographs, reserve image dimensions and avoid unnecessary scripts. Use field data if enough traffic exists; lab diagnostics are useful when it does not.
+https://developers.google.com/search/docs/appearance/core-web-vitals
+
+AI visibility:
+- Ordinary search fundamentals still apply to Google's AI features. A special “AI SEO” schema or llms.txt purchase is not the first task. Original practical examples, clear services, accessible text and credible local identity have more immediate value than bulk generic parenting articles.
+https://developers.google.com/search/docs/appearance/ai-features
+
+LOCAL VISIBILITY AND TRUST
+
+Create or claim the actual business's Google Business Profile only if it provides genuine in-person customer contact. Its home-visit services make a service-area profile plausible; online-only consulting by itself does not qualify. Use one accurate profile, hide a residential address if clients are not served there, and list only places Catalina will actually travel. Do not make citywide coverage or multiple neighborhood locations to chase searches. Google says local results depend largely on relevance, distance and prominence; adding service areas does not remove physical-distance limitations.
+https://support.google.com/business/answer/7039811
+https://support.google.com/business/answer/3038177
+https://support.google.com/business/answer/7091
+
+Operationally, start with Queens and agreed nearby neighborhoods, with final travel/time confirmed. The exact subway/car journey limit, neighborhood list and surcharges require Catalina's real diary and starting point. Do not publish a precise radius from an assumed home address. Phone/video availability can be broader without creating a new local office.
+
+Keep business name, website destination, founder identity, credential language, service descriptions and response windows consistent across the website and existing directory. Completed certification plus eight years of family care can be compelling without describing all eight years as certified postpartum practice. Prioritize a real founder photograph, an issuer/date description, a sample written plan and permissioned client comments. A first-person experience story is valid; it must not be formatted as an invented client endorsement.
+
+Ask all completed clients neutrally for honest reviews. Do not offer discounts/free sessions for Google reviews or selectively ask only people who report being happy. Google prohibits incentivized reviews and selective positive-review solicitation.
+https://support.google.com/contributionpolicy/answer/7400114
+
+MEASUREMENT: SAVED REQUESTS, THEN PAID HOUSEHOLDS
+
+Search Console: verify the correct URL-prefix property for the live GitHub project path; a custom-domain Domain property requires DNS ownership verification. Inspect the homepage and first service pages, submit sitemap, review indexing and Google-selected canonical, and separate branded searches from non-branded service searches. Search Console clicks/impressions are not leads or payments.
+https://support.google.com/webmasters/answer/34592
+https://developers.google.com/search/docs/monitor-debug/search-console-start
+
+A minimal lead register is enough initially: source category, requested service, date, qualified/in-scope, response time, paid yes/no, revenue, delivery/follow-up time and next step. The optional referral-source form field already exists locally. Keep that free text in the private inquiry record, not a public analytics event.
+
+If Analytics is later approved, count generate_lead only after the matching saved receipt, not on CTA click or submit attempt. Deduplicate retries. Keep email-draft-open separate because it proves neither a sent email nor a received lead. Confirm paying customers from payment/service records. Do not send parent/child names, email, phone, care notes, health details or raw free-text referral answers into Analytics. No tracking installation or consent design was performed in this research task.
+https://developers.google.com/analytics/devguides/collection/ga4/reference/events
+
+Traffic scenarios are arithmetic examples, not a forecast of achievable traffic or market size:
+- 100 relevant visits x 2% qualified inquiry x 30% paid = 0.6 paid households, roughly 0–1.
+- 250 relevant visits x 3% inquiry x 40% paid = 3 paid households.
+- 500 relevant visits x 4% inquiry x 50% paid = 10 paid households.
+The actual first 90 days could produce zero organic clients. Ten warm referrals could be more valuable than hundreds of broad informational clicks. Use actual counts alongside rates when samples are small.
+
+FIRST FIVE CLIENTS BEFORE SEO MATURES
+
+1. Repair the existing directory destination and deploy/verify the accepted offer first. Do not buy clicks to the current wrong-case referral URL or an unverified form.
+2. Give 10 appropriate existing/past-family contacts a clear optional forwarding note about one specific service. Ask for introductions with consent, not other parents' private contact details.
+3. Have six targeted conversations with complementary professionals: childbirth educators, birth doulas, feeding specialists for practical follow-through, or nanny agencies needing household onboarding. Learn their actual gaps; do not assume a partnership or pay-for-patient-referral arrangement.
+4. Offer one organizer-approved practical session, for example preparing a family/nanny handoff. The session should be useful even if nobody books; follow-up sign-up is optional.
+5. Send prospects to the relevant commercial page. Ask what they expected, whether the written outcome helped them decide, and what made them hesitate. Request honest reviews after actual service.
+
+Illustrative first-five funnel, not a demand claim: warm introductions produce four qualified leads/two clients; partner conversations produce three leads/one client; an approved small workshop produces three leads/one client; the existing directory/direct search produces five leads/one client. Total 15 qualified leads/five paid households. If the observed close rate is lower, it takes more leads or a revised offer. To reach ten, repeat the source that works; do not assume the first batch will automatically double.
+
+Raising Astoria's published rules limit promotion to direct requests and provide an organizer route for event ideas. Its parent-business directory eligibility must be confirmed rather than presumed. Gensa, the current platform built on Brooklyn Bridge Parents, offers free submissions for free-to-attend family events subject to review; paid listing/ad prices require a quote/account. These are potential routes, not booked opportunities.
+https://www.raisingastoria.org/team-4
+https://www.raisingastoria.org/contact-8
+https://www.gensa.family/for-business
+
+30 / 60 / 90 DAYS WITH REALISTIC GATES
+
+Days 1–30: establish the destination and test the message.
+- Decide public domain; verify real inquiry delivery and owner handling; correct deployed canonicals and the broken directory link through the owner-authorized workflow.
+- Prepare/publish the newborn consultation page first, then caregiver coaching. Add the home-visit page when its travel diary and scope are confirmed.
+- Gather a real portrait, completed certification details and one sample written deliverable. Request client permissions without requiring positive feedback.
+- Establish eligible Business Profile/Search Console access with the owner; do not create duplicates.
+- Start the warm/provider conversations above. A target of two to five paid households is a business experiment, not an expected SEO result.
+Estimated effort: 3–5 hours technical/domain checks, about 3–5 hours per commercial page including copy/build/QA, 2–4 hours assembling proof, plus 4–6 hours of owner conversations. These are planning assumptions, not quotes.
+
+Days 31–60: improve from real questions.
+- Finish the three pages and connect them internally.
+- Review Search Console indexing/canonical choices and actual query impressions. Fix technical exclusion before ordering more content.
+- Run one approved workshop and follow the best provider-introduction source.
+- Review inquiry quality and paid conversion; adjust language if visitors expected free interviews, clinical treatment, job placement or certification courses.
+- Request neutral client reviews and keep directory availability current.
+Estimated ongoing effort: 2–3 hours/week, plus one workshop and follow-up. Keep a small first-stage cash reserve of $0–150 for materials/travel if useful; this is an internal cap, not a quoted channel price. Google Business Profile/Search Console are free tools. Existing directory renewal and any sponsorship require the actual owner/account quote.
+
+Days 61–90: choose what deserves continued investment.
+- Examine qualified inquiries and collected revenue by source, not only rankings or impressions.
+- Publish a family-routine consultation page only if inquiries or observed query patterns justify it. Add one genuinely useful supporting resource drawn from repeated real questions, not a large blog calendar.
+- Consider one limited paid search or directory placement test only after warm prospects understand and buy the offer, live conversion tracking works, and delivery capacity remains. No CPC or lead-cost forecast is available.
+- If the diary fills from referrals, keep SEO maintenance small. If service pages are indexed but visitors repeatedly misunderstand the offer, repair positioning before expanding the site.
+
+NO-GO FOR A MONTHLY SEO RETAINER AT THIS STAGE
+
+Do not commit while the destination/canonical is inconsistent, production inquiries are unverified, there are no commercial service pages, or nobody owns follow-up. If 10 qualified conversations generate no paid clients, review the offer and buyer fit before funding more traffic. That is a management trigger, not a statistical significance claim.
+
+Later, request a narrowly scoped proposal with deliverables: canonical/indexability audit, three-page implementation, Search Console baseline and a lead-outcome report. Any budget is a business choice requiring a real quote; no market retainer price was verified. Ask who owns the accounts and content, what will change, how progress is measured, and how to stop. Reject guaranteed first-place rankings, bulk purchased links, fabricated reviews, mass city pages or special “Google-approved” tools. Google's own guidance says many small local businesses can do much of the work themselves and advertising does not purchase organic placement.
+https://developers.google.com/search/docs/fundamentals/do-i-need-seo
+
+CAN PREPARE NOW / NEEDS OWNER ASSETS OR PRODUCTION ACCESS
+
+Can prepare locally in a later implementation task: three commercial routes from shared service data; titles/descriptions and crawlable links; sitemap generation for the selected destination; structured-data cleanup; a sample plan; and saved-receipt analytics hooks if requested. No such site changes were made in this audit.
+
+Needs owner assets/decisions: portrait and permission, precise proof wording/issuer, actual travel zone and diary, agreed service/cancellation terms, references/review permission, the final destination and verified contact details. Certification itself is confirmed complete; this is about presenting evidence accurately, not blocking on whether it exists.
+
+Needs production/account access and a separate authorized action: DNS/HTTPS or deployment, Supabase migration/environment/notification verification, existing DoulaMatch edits, Business Profile verification, Search Console verification and any Analytics setup or paid placement. This research sent no messages and made no account, rate or website changes.
