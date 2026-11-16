@@ -1,0 +1,41 @@
+Moonlog / daytime Nanny Log: source audit, November 16, 2026
+
+No app changes, native builds, App Store Connect checks or uploads were made.
+
+Current native branch: moonlog-ios, 1376475 (September 16, 2026).
+Version 0.1.0, build 1789610519. Release history records a TestFlight upload;
+current installability/distribution was not checked against Apple.
+
+Built: multiple families and babies/twins; explicit shifts; feeds, diapers,
+sleep and notes; optional pumping, medication records and weight; editing,
+deleting, Undo and wrong-baby correction; history; caregiver-written parent
+notes; text and designed HTML handoffs. Last documented results: 238 unit tests
+and 32 reachability tests, not rerun in this audit.
+
+The separate moonlog-reminders-watch branch at 2cc55fd (September 6) has feed
+reminders/countdowns, notification permission handling and remembered per-family
+shift-hour defaults. Its reminder commits follow that branch's last recorded
+TestFlight stamp. Actual phone delivery and Apple Watch mirroring are unverified.
+It diverges from the current native branch: 24 commits unique to current native,
+7 unique to reminders. It lacks later reliability/UI fixes, including reachable
+Note controls. Selectively port reminder work; do not replace the later app with
+this older branch. Do not merge the native branch into the live website main.
+
+Neither branch implements a watchOS target or WatchConnectivity. NFC is not
+implemented and is explicitly dropped in reminder-branch decisions. CloudKit is
+disabled; its prepared private-store path is not household collaboration. Shared
+handoff documents are not restorable backups. Restorable export/import, draft
+recovery, shared caregiver/parent identities and parent acknowledgement remain
+unbuilt.
+
+Daytime Nanny Log remains a researched proposal. Daytime routines and reviewed,
+versioned EOD reports with parent confirmations are not implemented. The existing
+notes and handoff renderer provide a starting point.
+
+Suggested order: consolidate reminders onto the later native app; verify on real
+phone/Watch; address backup and draft recovery; pilot daytime reviewed handoffs
+with a small number of consenting families before adding shared accounts.
+
+Source evidence: moonlog-ios/docs/status.md, moonlog-ios/docs/testflight.md,
+reminder worktree Sources/Lib/FeedReminders.swift and docs/next-features.md.
+Related research: daytime-moonlog-research-2026-11-15.txt.

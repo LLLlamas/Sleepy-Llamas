@@ -1,20 +1,26 @@
 ---
 // Availability calendar — Supabase-powered.
-// Renders calendar from live data, supports visitor booking + admin mode.
+// Overnight requests only. Consultation inquiries have their own form.
+const onlineInquiries = import.meta.env.PUBLIC_INQUIRY_MODE === 'online';
 ---
 
 <section class="availability-section" id="availability">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">See when I&rsquo;m open</span>
-      <h2>Pick your nights.</h2>
+      <span class="eyebrow">In-person overnight support</span>
+      <h2>Overnight care is here, too.</h2>
       <p class="lead">
-        Tap an open day to start, or tap a second day to select a range. The
-        nights you choose become the first draft of your custom plan, and
-        I&rsquo;ll help match them to the right overnight package.
+        Need hands-on support through the night? {onlineInquiries ? 'Explore overnight dates below.' : 'Ask me about dates and the kind of care your family needs.'}
+        For a parent consultation or caregiver coaching, <a href="#contact">send a consultation inquiry</a>
+        without choosing overnight dates.
       </p>
     </div>
 
+    {!onlineInquiries && <p class="calendar-contact"><a class="btn btn-secondary" href="#contact" data-consult-service="overnight-doula">Ask about overnight care &rarr;</a></p>}
+    <details class="overnight-calendar" hidden={!onlineInquiries}>
+      <summary>View overnight availability &amp; request nights</summary>
+      <p id="calendar-status" role="status" class="calendar-status">Loading overnight availability&hellip;</p>
+      <p class="calendar-contact"><a href="#contact" data-consult-service="overnight-doula">Ask Catalina about overnight care &rarr;</a></p>
     <!-- Admin banner (hidden unless admin mode active) -->
     <div class="admin-banner" id="admin-banner" hidden>
       &#9998; Admin Mode &mdash; Click days to manage. Changes sync to Supabase.
@@ -73,8 +79,7 @@
         <select class="service-select" id="cal-service-select" aria-label="Select a service">
           <option value="">&mdash; Select a service &mdash;</option>
           <option value="overnight-doula">&#128151; Overnight Doula Support</option>
-          <option value="overnight-sleep-training">&#127769; Overnight Sleep Training</option>
-          <option value="consultation">&#128172; Consultation(s)</option>
+          <option value="overnight-sleep-training">&#127769; Overnight Sleep Support</option>
         </select>
       </div>
 
@@ -106,15 +111,16 @@
         <button class="btn-book" id="cal-confirm-btn" type="button" disabled>
           Send booking request &rarr;
         </button>
-        <p class="book-note">No account needed &middot; I&rsquo;ll confirm the custom plan with you &middot; reply within 24 hours</p>
+        <p class="book-note">No account needed &middot; I&rsquo;ll confirm the custom plan with you &middot; reply within two business days</p>
         <p class="book-note" style="font-style:italic;opacity:0.7;margin-top:0.35rem;">All prices are subject to change. Final pricing confirmed during consultation.</p>
       </div>
     </div>
+    </details>
   </div>
 </section>
 
 <!-- Admin FAB -->
-<button class="admin-fab" id="admin-fab" title="Admin login" aria-label="Admin settings">&#9965;</button>
+<button class="admin-fab" id="admin-fab" hidden={!onlineInquiries} title="Admin login" aria-label="Admin settings">&#9965;</button>
 
 <!-- Admin PIN modal -->
 <div class="modal-overlay" id="pin-modal" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title">
@@ -150,7 +156,7 @@
   <div class="modal">
     <div id="vm-form">
       <h3 id="visitor-modal-title">Confirm your request</h3>
-      <p class="vm-intro">I&rsquo;ll email you back within 24 hours.</p>
+      <p class="vm-intro">I aim to reply within two business days.</p>
 
       <div class="vm-summary">
         <span class="vm-line"><span class="vm-line-label">Dates</span><span id="vm-dateline"></span></span>
@@ -175,7 +181,7 @@
         </div>
         <div class="vm-field">
           <label class="vm-label" for="vm-phone">Phone <span class="vm-opt">(optional)</span></label>
-          <input type="tel" id="vm-phone" placeholder="555-555-1234" maxlength="32" autocomplete="tel" />
+          <input type="tel" id="vm-phone" maxlength="32" autocomplete="tel" />
         </div>
       </div>
 
@@ -238,8 +244,8 @@
           <path d="M20 33l9 9 16-18" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </div>
-      <h4>Request sent!</h4>
-      <p>I&rsquo;ll email you within 24 hours to confirm. Check your inbox (and spam folder, just in case).</p>
+      <h4>Request saved.</h4>
+      <p>Your request has been saved. I aim to reply within two business days to discuss the dates. They are not reserved until I confirm them with you.</p>
       <div class="vm-btns" style="justify-content:center">
         <button class="btn-vm-send" id="vm-done-btn" type="button">Done</button>
       </div>
@@ -491,6 +497,7 @@
 
 <script>
   import { getSupabase } from '../lib/supabase';
+  import { overnightPackages, overnightServices } from '../config/services';
 
   /* ════════════════════════════════════════════════════════
      SLEEPY LLAMAS — AVAILABILITY CALENDAR
@@ -498,9 +505,12 @@
      ════════════════════════════════════════════════════════ */
 
   type DayStatus = 'booked' | 'unavailable' | 'available';
-  type DayEntry = { status: DayStatus | 'past'; childName?: string | null; arrivalTime?: string | null; departureTime?: string | null; notes?: string | null };
+  type DayEntry = { status: DayStatus | 'past' | 'unconfirmed'; childName?: string | null; arrivalTime?: string | null; departureTime?: string | null; notes?: string | null };
 
-  const STORAGE_KEY = 'sl_schedule';
+  let schedule: Record<string, DayEntry> = {};
+  let availabilityLoaded = false;
+  // Remove the obsolete public cache, which could contain private booking labels.
+  try { localStorage.removeItem('sl_schedule'); } catch { /* Storage is optional. */ }
   const MONTHS_AHEAD = 3;
   let ADMIN_PIN: string | null = null;
   let currentMonthOffset = 0;
@@ -508,18 +518,10 @@
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
-  const SERVICES: Record<string, { name: string; desc: string }> = {
-    'overnight-doula':           { name: 'Overnight Doula Support', desc: 'In-home overnight doula care focused on recovery, feeding rhythm, and newborn routines while you rest.' },
-    'overnight-sleep-training':  { name: 'Overnight Sleep Training', desc: 'Gentle overnight sleep support tailored to your baby\u2019s temperament, feeding needs, and home rhythm.' },
-    'consultation':              { name: 'Consultation(s)', desc: 'A calm, no-pressure conversation where I help you understand what kind of support would actually help.' },
-  };
-
-  const PACKAGES: { key: string; name: string; nights: number; timeframe: string; price: number; specialPrice: number }[] = [
-    { key: '4-nights',  name: 'Starter',        nights: 4,  timeframe: 'Over 2 weeks',    price: 2480, specialPrice: 2600 },
-    { key: '8-nights',  name: 'Standard',        nights: 8,  timeframe: 'Over 2\u20134 weeks',  price: 4800, specialPrice: 5200 },
-    { key: '12-nights', name: 'Extended',         nights: 12, timeframe: 'Over 2\u20135 weeks',  price: 6900, specialPrice: 7500 },
-    { key: '16-nights', name: 'Comprehensive',    nights: 16, timeframe: 'Over 6\u20138 weeks',  price: 9000, specialPrice: 9800 },
-  ];
+  const SERVICES: Record<string, { name: string; desc: string }> = Object.fromEntries(
+    overnightServices.map((service) => [service.id, { name: service.title, desc: service.description }])
+  );
+  const PACKAGES = overnightPackages;
 
   function suggestPackage(nights: number) {
     // Find the smallest package that covers the selected nights, or the largest if none fit
@@ -548,31 +550,29 @@
   }
   function escHtml(s: string | null | undefined) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] || c)); }
 
-  // ── Local schedule cache ───────────────────
-  function getSchedule(): Record<string, DayEntry> {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
-  }
-  function saveSchedule(s: Record<string, DayEntry>) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+  // Availability is fetched fresh; booking details are never cached for visitors.
+  function getSchedule(): Record<string, DayEntry> { return schedule; }
+  function saveSchedule(value: Record<string, DayEntry>) { schedule = value; }
   function getEntry(key: string): DayEntry {
     if (isPast(key)) return { status: 'past' };
-    const s = getSchedule()[key];
-    if (!s) return { status: 'available' };
-    return s;
+    if (!availabilityLoaded) return { status: 'unconfirmed' };
+    return schedule[key] ?? { status: 'available' };
   }
 
   // ── Supabase cloud sync ────────────────────
-  const supabase = getSupabase();
+  const supabase = import.meta.env.PUBLIC_INQUIRY_MODE === 'online' ? getSupabase() : null;
 
   async function cloudFetch(): Promise<boolean> {
     if (!supabase) return false;
     try {
       const { data, error } = await supabase.rpc('sl_get_availability', { p_from: todayKey(), p_to: rangeEnd(MONTHS_AHEAD) });
       if (error || !data) return false;
-      const map = getSchedule();
+      const map: Record<string, DayEntry> = {};
       (data as any[]).forEach((row: any) => {
-        map[row.day] = { status: row.status, childName: row.child_name, arrivalTime: row.arrival_time?.slice(0,5), departureTime: row.departure_time?.slice(0,5), notes: row.notes };
+        map[row.day] = { status: row.status };
       });
       saveSchedule(map);
+      availabilityLoaded = true;
       return true;
     } catch { return false; }
   }
@@ -619,7 +619,8 @@
 
     for (let day = 1; day <= daysInMonth; day++) {
       const key = toKey(year, month, day);
-      const cell = document.createElement('div');
+      const cell = document.createElement('button');
+      cell.type = 'button';
       cell.textContent = String(day);
       cell.setAttribute('data-key', key);
       applyCellState(cell, key);
@@ -637,7 +638,9 @@
     if (visitorPick.start && key >= visitorPick.start && key <= (visitorPick.end || visitorPick.start)) {
       cell.classList.add(key === visitorPick.start || key === visitorPick.end ? 'range-end' : 'in-range');
     }
-    cell.setAttribute('title', entry.status === 'booked' && entry.childName ? `Booked \u2014 ${entry.childName}` : entry.status);
+    cell.setAttribute('title', entry.status);
+    cell.setAttribute('aria-label', `${fmtPretty(key)}: ${entry.status === 'unconfirmed' ? 'availability not confirmed' : entry.status}`);
+    if (cell instanceof HTMLButtonElement) cell.disabled = entry.status === 'past' || entry.status === 'unconfirmed';
   }
 
   function repaintAll() {
@@ -645,7 +648,7 @@
   }
 
   function handleCellClick(key: string, cell: HTMLElement) {
-    if (isPast(key)) return;
+    if (isPast(key) || !availabilityLoaded) return;
     const entry = getEntry(key);
     const isAdmin = document.body.classList.contains('admin-mode');
 
@@ -775,7 +778,7 @@
 
     bookingSummary.innerHTML = parts.join(' &middot; ');
     bookingSummary.classList.toggle('has-selection', hasDates);
-    const ready = !!(hasDates && svc);
+    const ready = !!(availabilityLoaded && hasDates && svc);
     confirmBtn.disabled = !ready;
     confirmBtn.classList.toggle('ready', ready);
   }
@@ -879,7 +882,7 @@
 
     if (supabase) {
       try {
-        const { error } = await supabase.rpc('sl_create_booking_request', {
+        const { data, error } = await supabase.rpc('sl_create_booking_request', {
           p_service: serviceSelect.value,
           p_client_name: clientName,
           p_client_email: email,
@@ -893,10 +896,12 @@
           p_departure_time: vmDeparture.value || null,
           p_notes: notesParts.join(' | ') || null,
         });
-        if (error) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError(error.message || 'Something went wrong.'); }
+        if (error || !data?.id) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError('Your request could not be saved. Please try again or email Catalina.'); }
       } catch (e: any) { vmSendBtn.disabled = false; vmSendBtn.textContent = 'Send request'; return vmShowError('Network error. Please try again.'); }
     } else {
-      await new Promise(r => setTimeout(r, 900));
+      vmSendBtn.disabled = false;
+      vmSendBtn.textContent = 'Send request';
+      return vmShowError('Your request could not be saved. Please use the consultation inquiry form or email Catalina. Your details are still here.');
     }
 
     vmForm.setAttribute('hidden', ''); vmSuccess.removeAttribute('hidden');
@@ -944,7 +949,7 @@
         ok = data === true;
       } catch { ok = false; }
     } else {
-      ok = pin === '1234'; // offline fallback
+      ok = false; // Admin access requires a verified backend response.
     }
 
     okBtn.disabled = false;
@@ -1128,5 +1133,11 @@
 
   // ── Init ───────────────────────────────────
   renderCalendars();
-  cloudFetch().then(ok => { if (ok) renderCalendars(); });
+  cloudFetch().then(ok => {
+    const status = document.getElementById('calendar-status');
+    if (status) status.textContent = ok
+      ? 'Select an available night or a range. Requests are confirmed personally.'
+      : 'Online availability is unavailable right now. Ask Catalina about nights using the inquiry link above.';
+    renderCalendars();
+  });
 </script>

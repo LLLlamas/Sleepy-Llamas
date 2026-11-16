@@ -46,6 +46,16 @@
    ========================================================================== */
 *, *::before, *::after { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+.skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 300; padding: .7rem 1rem; background: var(--color-cream); border: 2px solid var(--color-maroon-700); transform: translateY(-180%); }
+.skip-link:focus { transform: translateY(0); }
+section[id] { scroll-margin-top: 6rem; }
+button:focus-visible, summary:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-maroon-500);
+  outline-offset: 3px;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -71,6 +81,7 @@ h1, h2, h3, h4 {
   margin: 0 0 0.5em;
 }
 
+h1, h2, h3 { text-wrap: balance; }
 h1 { font-size: 3.8rem; font-weight: 400; }
 h2 { font-size: 2.55rem; }
 h3 { font-size: 1.5rem; }
@@ -165,7 +176,7 @@ input, textarea, select {
 }
 .btn-primary:hover {
   background: var(--color-maroon-900);
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-lift);
   color: var(--color-cream);
 }
@@ -251,6 +262,7 @@ input, textarea, select {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  .hero-anim { animation: none; }
   .reveal {
     opacity: 1;
     transform: none;
@@ -357,6 +369,10 @@ input, textarea, select {
   background: var(--color-maroon-700);
   color: var(--color-cream);
   border-color: var(--color-maroon-700);
+}
+.radio-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-maroon-500);
+  outline-offset: 3px;
 }
 .radio-option:hover {
   border-color: var(--color-maroon-500);

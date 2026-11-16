@@ -1,49 +1,8 @@
 ---
-const faqs = [
-  {
-    q: 'What age is right for sleep training?',
-    a: 'Most babies are ready for gentle sleep-shaping between 4 and 6 months, but supportive habits can begin from birth. During our consultation I&rsquo;ll discuss what&rsquo;s appropriate for your baby&rsquo;s age, temperament, and feeding needs.',
-  },
-  {
-    q: 'Is it safe to sleep train? Will my baby cry it out?',
-    a: 'Safety is the foundation of everything I do. I use gentle, responsive methods &mdash; not cry-it-out. Every plan follows safe-sleep guidelines and respects your baby&rsquo;s emotional needs.',
-  },
-  {
-    q: 'What exactly does a doula do?',
-    a: 'A doula provides non-medical physical, emotional, and informational support before, during, and after birth. I focus on postpartum and overnight support, helping your family rest, heal, and bond in those early weeks.',
-  },
-  {
-    q: 'How much does this cost?',
-    a: 'Pricing depends on the service and the length of support you need. After a free consultation, I&rsquo;ll send you a clear quote with no hidden fees. Payment is invoiced after I understand the plan &mdash; there&rsquo;s no upfront commitment.',
-  },
-  {
-    q: 'How do you schedule overnight visits?',
-    a: 'After your consultation, I&rsquo;ll confirm nights that fit your family. You can see my current availability in the calendar below. I&rsquo;ll confirm your preferred dates by email and guide the next steps.',
-  },
-  {
-    q: 'What if I need to cancel?',
-    a: 'Life with a newborn is unpredictable &mdash; I know. I&rsquo;ll talk about scheduling flexibility during our consultation so you never feel locked in.',
-  },
-  {
-    q: "What's the difference between a night nurse and an overnight doula?",
-    a: 'A night nurse typically focuses on medical-style newborn care, while an overnight doula provides holistic postpartum support &mdash; including emotional guidance, breastfeeding help, and sleep-shaping alongside nighttime baby care. As a certified doula, I blend hands-on overnight support with the warmth and knowledge to help your whole family adjust and thrive.',
-  },
-  {
-    q: 'Can I use my HSA or FSA to pay for doula services?',
-    a: 'Many families use HSA or FSA funds to cover doula care &mdash; it often qualifies as an eligible medical expense. I can provide a detailed receipt for your records. Check with your plan administrator to confirm your specific coverage.',
-  },
-  {
-    q: 'What areas do you serve in New York?',
-    a: 'I provide overnight doula support and sleep training throughout the New York City metro area, including Manhattan, Brooklyn, Queens, the Bronx, Staten Island, and parts of Westchester and northern New Jersey. If you&rsquo;re unsure whether I cover your area, just reach out!',
-  },
-  {
-    q: 'What happens during an overnight visit?',
-    a: 'I typically arrive between 8&ndash;10 PM and stay through 6&ndash;7 AM. During the night, I handle all feedings (bottle or bringing baby to you for breastfeeding), diaper changes, soothing, and sleep training as needed. In the morning, I leave you a brief log of how the night went so you&rsquo;re always in the loop.',
-  },
-];
+import { faqs } from '../config/faqs';
 ---
 
-<section class="section faq">
+<section class="section faq" id="faq">
   <div class="container">
     <div class="section-head reveal">
       <span class="eyebrow">Questions, answered</span>
@@ -60,7 +19,7 @@ const faqs = [
             </svg>
           </summary>
           <div class="faq-answer">
-            <p set:html={item.a}></p>
+            <p>{item.a}</p>
           </div>
         </details>
       ))}

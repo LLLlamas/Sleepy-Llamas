@@ -1,303 +1,76 @@
 ---
-import { site } from '../config/site';
 import { resume } from '../config/resume';
-
-const base = import.meta.env.BASE_URL.endsWith('/')
-  ? import.meta.env.BASE_URL
-  : `${import.meta.env.BASE_URL}/`;
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const resumeHref = `${base}resume/`;
-const credentials = [
-  'Certified Postpartum Doula',
-  'Certified Lactation Support Specialist',
-  'CPR & First Aid Certified',
-  'Early Childhood Education student',
-  'Newborn, twin, and overnight care',
-  'Fluent in Spanish and English',
-];
-
-const careSpecialties = [
-  {
-    title: 'Newborns, infants, and twins',
-    body:
-      'From full-time newborn twin care to overnight doula support, I bring calm routines to the moments when families most need rest.',
-  },
-  {
-    title: 'Specialized care support',
-    body:
-      'Experience with cleft palate care plans, G-tube routines, hearing-aid support, autism support, and therapy exercises under specialist guidance.',
-  },
-  {
-    title: 'Transitions that feel possible',
-    body:
-      'Sleep routines, feeding transitions, daycare transitions, potty training, and crib-to-bed changes handled with patience and consistency.',
-  },
-];
 ---
 
-<section class="section about" id="about">
+<section class="section about" id="about" aria-labelledby="about-title">
   <div class="container about-inner">
-    <div class="about-portrait reveal">
-      <div class="portrait-frame">
-        <span class="profile-kicker">Resume Snapshot</span>
-        <strong>8 years</strong>
-        <p>of hands-on newborn, infant, twin, toddler, postpartum, and household care.</p>
-        <dl class="profile-stats">
-          <div>
-            <dt>Training</dt>
-            <dd>Postpartum doula + lactation support</dd>
-          </div>
-          <div>
-            <dt>Special care</dt>
-            <dd>G-tube, hearing aid, cleft palate, autism, therapy routines</dd>
-          </div>
-          <div>
-            <dt>Language</dt>
-            <dd>Spanish + English</dd>
-          </div>
-        </dl>
-      </div>
-      <div class="portrait-tag">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M12 2l2.5 6 6.5.5-5 4.5 1.5 6.5L12 16l-5.5 3.5L8 13 3 8.5 9.5 8 12 2z"
-            fill="currentColor"
-          />
-        </svg>
-        <span>Certified &amp; Trusted</span>
-      </div>
-    </div>
-
-    <div class="about-copy reveal reveal-delay-1">
-      <span class="eyebrow">About {site.brandName}</span>
-      <h2>Warm support, trained judgment, and real newborn experience.</h2>
+    <div class="about-copy reveal">
+      <span class="eyebrow">Meet Catalina</span>
+      <h2 id="about-title">I get to know the family.<br />Then we find your rhythm.</h2>
       <p class="lead">
-        Hi, I&rsquo;m Catalina. I&rsquo;ve spent {resume.highlights[0].value}
-        caring for newborns, infants, toddlers, twins, and children with
-        specialized developmental or medical needs. My work is practical and
-        tender at the same time: safe routines, thoughtful feeding support,
-        steady overnight care, and enough calm for parents to breathe again.
+        I&rsquo;m Catalina Llamas, a Queens-based nanny, postpartum doula, and house
+        manager. Over {resume.highlights[0].value}, I&rsquo;ve cared for newborn twins,
+        growing toddlers, preschoolers, and children who need extra support &mdash;
+        alongside the parents learning each new stage with them.
       </p>
-
-      <ul class="credentials" role="list">
-        {credentials.map((item) => (
-          <li>
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="check">
-              <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-
+      <p>
+        My work has taken me into homes across Queens and Brooklyn, after earlier
+        years caring for families in Florida. Every home has its own pace, its own
+        ways of doing things, and its own version of a difficult afternoon. I listen
+        for those details before suggesting what could help.
+      </p>
+      <p>
+        Newborn and postpartum care are a particular focus of mine. So is the life
+        around the baby: an older sibling&rsquo;s routine, a parent returning to work,
+        a caregiver learning the household, and a plan that everyone can actually follow.
+      </p>
       <div class="about-actions">
-        <a href="#contact" class="btn btn-secondary">Let&rsquo;s talk</a>
-        <a href={resumeHref} class="about-resume-link">View my interactive resume &rarr;</a>
+        <a href="#contact" class="btn btn-secondary">Tell me about your family</a>
+        <a href={resumeHref} class="about-resume-link">Read my experience &amp; training &rarr;</a>
       </div>
     </div>
+    <aside class="family-story reveal reveal-delay-1" aria-labelledby="story-title">
+      <span class="story-kicker">One family, several chapters</span>
+      <h3 id="story-title">From their first routines<br />to their third baby.</h3>
+      <p>With one Brooklyn family, I cared for two children from infancy through toddlerhood. I was there for feeding changes, potty training, daily outings, and the move from crib to toddler bed.</p>
+      <p>When their third newborn arrived, I returned for overnight postpartum support. I already knew the household and the older children &mdash; and we could build the new plan around the family they had become.</p>
+      <p class="story-note">A chapter from my own care experience.</p>
+      <dl class="experience-notes">
+        <div><dt>8 years</dt><dd>Hands-on care, from newborn days to growing family routines</dd></div>
+        <div><dt>Español &amp; English</dt><dd>Bilingual communication and experience supporting bilingual development</dd></div>
+      </dl>
+    </aside>
   </div>
-
-  <div class="container about-testimonials reveal">
-    <span class="eyebrow">Care strengths</span>
-    <div class="about-quotes">
-      {careSpecialties.map((item, i) => (
-        <article class:list={['about-quote', 'reveal', `reveal-delay-${i + 1}`]}>
-          <h3>{item.title}</h3>
-          <p>{item.body}</p>
-        </article>
-      ))}
-    </div>
+  <div class="container training-strip reveal">
+    <span class="eyebrow">The training behind my care</span>
+    <ul role="list">{resume.training.map((item) => <li>{item}</li>)}</ul>
+    <p class="scope-note">For children with specialized medical or developmental needs, I work within parent and provider instructions. My role is practical family support alongside their care team.</p>
   </div>
 </section>
 
 <style>
-  .about {
-    background: var(--color-blush-100);
-  }
-  .about-inner {
-    display: grid;
-    grid-template-columns: 0.85fr 1.15fr;
-    gap: clamp(2rem, 5vw, 4.5rem);
-    align-items: center;
-  }
-
-  .about-portrait {
-    position: relative;
-    justify-self: center;
-    width: 100%;
-    max-width: 360px;
-  }
-  .portrait-frame {
-    position: relative;
-    aspect-ratio: 5 / 6;
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-medium);
-    background:
-      linear-gradient(160deg, var(--color-cream), var(--color-blush-200));
-    transform: rotate(-1.5deg);
-    transition: transform 0.4s var(--ease-out);
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-  }
-  .about-portrait:hover .portrait-frame {
-    transform: rotate(0deg);
-  }
-  .profile-kicker {
-    color: var(--color-maroon-500);
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: auto;
-  }
-  .portrait-frame strong {
-    color: var(--color-maroon-900);
-    font-family: var(--font-display);
-    font-size: 3rem;
-    font-weight: 500;
-    line-height: 1;
-    margin-bottom: 0.6rem;
-  }
-  .portrait-frame p {
-    color: var(--color-muted);
-    font-size: 0.96rem;
-  }
-  .profile-stats {
-    display: grid;
-    gap: 0.75rem;
-    margin: 1rem 0 0;
-  }
-  .profile-stats div {
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--color-border);
-  }
-  .profile-stats dt {
-    color: var(--color-maroon-700);
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .profile-stats dd {
-    margin: 0.15rem 0 0;
-    color: var(--color-ink);
-    font-size: 0.86rem;
-    line-height: 1.45;
-  }
-  .portrait-tag {
-    position: absolute;
-    bottom: -18px;
-    right: -12px;
-    background: var(--color-maroon-700);
-    color: var(--color-cream);
-    padding: 0.6rem 1.1rem;
-    border-radius: var(--radius-pill);
-    font-size: 0.85rem;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    box-shadow: var(--shadow-lift);
-  }
-  .portrait-tag svg {
-    width: 16px;
-    height: 16px;
-    color: var(--color-gold);
-  }
-
-  .about-copy h2 {
-    margin-bottom: 0.6em;
-  }
-
-  .credentials {
-    list-style: none;
-    padding: 0;
-    margin: 1.75rem 0 2rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.85rem 1.25rem;
-  }
-  .credentials li {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
-    font-size: 0.95rem;
-    color: var(--color-ink);
-  }
-  .credentials em {
-    color: var(--color-muted);
-    font-style: normal;
-    font-size: 0.8rem;
-  }
-  .check {
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    color: var(--color-maroon-500);
-    margin-top: 1px;
-  }
-
-  .about-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem 1.4rem;
-    align-items: center;
-  }
-  .about-resume-link {
-    font-weight: 600;
-    color: var(--color-maroon-700);
-  }
-
-  /* Inline testimonials in About */
-  .about-testimonials {
-    margin-top: clamp(2rem, 4vw, 3.5rem);
-    padding-top: clamp(1.75rem, 3.5vw, 2.75rem);
-    border-top: 1px solid var(--color-border);
-    text-align: center;
-  }
-
-  .about-quotes {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: clamp(1rem, 2.5vw, 1.5rem);
-    margin-top: 1.75rem;
-  }
-
-  .about-quote {
-    background: var(--color-cream);
-    border-radius: var(--radius-lg);
-    padding: 1.15rem 1.1rem 1rem;
-    margin: 0;
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-soft);
-    text-align: left;
-    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
-  }
-  .about-quote:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-medium);
-  }
-
-  .about-quote h3 {
-    font-size: 1.08rem;
-    color: var(--color-maroon-900);
-    margin-bottom: 0.45rem;
-  }
-  .about-quote p {
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--color-muted);
-    margin: 0;
-  }
-
-  @media (max-width: 860px) {
-    .about-inner {
-      grid-template-columns: 1fr;
-    }
-    .credentials { grid-template-columns: 1fr; }
-    .about-portrait { max-width: 280px; }
-    .about-quotes { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; }
-  }
+  .about { background: var(--color-cream); }
+  .about-inner { display: grid; grid-template-columns: 1.15fr 0.85fr; align-items: start; gap: clamp(2rem, 5vw, 4.5rem); }
+  .about-copy h2 { font-size: clamp(2rem, 3.3vw, 2.7rem); margin-bottom: 0.7em; }
+  .about-copy > p:not(.lead) { color: var(--color-muted); font-size: 0.96rem; line-height: 1.8; }
+  .about-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: 1.75rem; }
+  .about-resume-link { font-size: 0.9rem; font-weight: 600; }
+  .family-story { background: var(--color-blush-100); border-left: 2px solid var(--color-maroon-300); padding: clamp(1.4rem, 3vw, 2rem); }
+  .story-kicker { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; color: var(--color-maroon-500); }
+  .family-story h3 { margin-top: 1rem; font-size: 1.7rem; line-height: 1.25; }
+  .family-story > p { color: var(--color-muted); font-size: 0.92rem; line-height: 1.8; }
+  .family-story .story-note { font-size: 0.75rem; font-style: italic; }
+  .experience-notes { margin: 1.75rem 0 0; }
+  .experience-notes div { border-top: 1px solid var(--color-border); padding-block: 0.9rem; }
+  .experience-notes div:last-child { padding-bottom: 0; }
+  .experience-notes dt { font-family: var(--font-display); color: var(--color-maroon-700); font-size: 1.35rem; }
+  .experience-notes dd { margin: 0.25rem 0 0; color: var(--color-muted); font-size: 0.8rem; line-height: 1.65; }
+  .training-strip { margin-top: clamp(2.5rem, 5vw, 4rem); }
+  .training-strip ul { margin: 0; padding: 1.25rem 0; border-block: 1px solid var(--color-border); list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .training-strip li { font-size: 0.8rem; font-weight: 600; color: var(--color-maroon-700); line-height: 1.65; }
+  .scope-note { max-width: 90ch; font-size: 0.78rem; color: var(--color-muted); margin: 1rem 0 0; }
+  @media (max-width: 860px) { .about-inner { grid-template-columns: 1fr; } .family-story { max-width: 580px; } .training-strip ul { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 420px) { .training-strip ul { grid-template-columns: 1fr; gap: 0.75rem; } }
 </style>

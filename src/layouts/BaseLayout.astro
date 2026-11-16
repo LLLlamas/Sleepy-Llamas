@@ -1,23 +1,30 @@
 ---
 import '../styles/global.css';
 import { site } from '../config/site';
+import { buildSiteGraph, serializeJsonLd } from '../lib/seo';
+import { withBase } from '../config/serviceRoutes';
 
 interface Props {
   title?: string;
   description?: string;
   canonicalPath?: string;
-  includeFaqSchema?: boolean;
+  includeFaqSchema?: boolean; // Legacy callers; FAQ rich-result markup is no longer emitted.
+  schemaNodes?: Record<string, unknown>[];
+  mainEntityId?: string;
 }
 
 const {
-  title = `${site.brandName} — ${site.tagline}`,
+  title = `Parent & Newborn Consultations in Queens | ${site.brandName}`,
   description = site.shortDescription,
   canonicalPath = '/',
-  includeFaqSchema = true,
+  schemaNodes = [],
+  mainEntityId,
 } = Astro.props;
 
-const publicSiteUrl = 'https://sleepyllamasdoula.com';
-const canonicalUrl = `${publicSiteUrl}${canonicalPath === '/' ? '' : canonicalPath.replace(/\/$/, '')}`;
+const publicSiteUrl = new URL(withBase(''), Astro.site ?? Astro.url.origin).href;
+const canonicalUrl = new URL(canonicalPath.replace(/^\//, ''), publicSiteUrl).href;
+const socialImage = new URL('social-card.png', publicSiteUrl).href;
+const graph = buildSiteGraph({ baseUrl: publicSiteUrl, canonicalUrl, title, description, mainEntityId, extraNodes: schemaNodes });
 ---
 
 <!doctype html>
@@ -27,7 +34,7 @@ const canonicalUrl = `${publicSiteUrl}${canonicalPath === '/' ? '' : canonicalPa
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#6b1a28" />
-    <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}/favicon.svg`} />
+    <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/favicon.svg`} />
     <title>{title}</title>
 
     <!-- Fonts: Fraunces (display) + Inter (body) -->
@@ -43,73 +50,26 @@ const canonicalUrl = `${publicSiteUrl}${canonicalPath === '/' ? '' : canonicalPa
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
 
-    <!-- Additional SEO meta -->
-    <meta name="keywords" content="overnight doula NYC, baby sleep training New York, postpartum doula, overnight newborn care, gentle sleep training, night doula Manhattan, Brooklyn doula, overnight baby care, certified doula NYC, sleep consultant New York" />
+    <meta property="og:url" content={canonicalUrl} />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href={canonicalUrl} />
 
-    <!-- JSON-LD: ProfessionalService (local business) -->
-    <script type="application/ld+json" set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "ProfessionalService",
-      "name": site.brandName,
-      "description": site.shortDescription,
-      "url": "https://sleepyllamasdoula.com",
-      "email": site.email,
-      "telephone": site.phone,
-      "priceRange": "$$",
-      "areaServed": [
-        { "@type": "City", "name": "New York City" },
-        { "@type": "Borough", "name": "Manhattan" },
-        { "@type": "Borough", "name": "Brooklyn" },
-        { "@type": "Borough", "name": "Queens" },
-        { "@type": "Borough", "name": "Bronx" },
-        { "@type": "Borough", "name": "Staten Island" },
-        { "@type": "AdministrativeArea", "name": "Westchester County" }
-      ],
-      "serviceType": [
-        "Overnight Doula Support",
-        "Overnight Baby Sleep Training",
-        "Postpartum Doula Care",
-        "Newborn Sleep Consultation"
-      ],
-      "knowsAbout": [
-        "Gentle sleep training",
-        "Postpartum recovery support",
-        "Newborn overnight care",
-        "Infant sleep consulting",
-        "Breastfeeding support"
-      ],
-      "hasOfferCatalog": {
-        "@type": "OfferCatalog",
-        "name": "Overnight Care Packages",
-        "itemListElement": [
-          { "@type": "Offer", "name": "Starter Package — 4 Nights", "price": "2480", "priceCurrency": "USD" },
-          { "@type": "Offer", "name": "Standard Package — 8 Nights", "price": "4800", "priceCurrency": "USD" },
-          { "@type": "Offer", "name": "Extended Package — 12 Nights", "price": "6900", "priceCurrency": "USD" },
-          { "@type": "Offer", "name": "Comprehensive Package — 16 Nights", "price": "9000", "priceCurrency": "USD" }
-        ]
-      }
-    })} />
-
-    <!-- JSON-LD: FAQPage (enables rich results in Google) -->
-    {includeFaqSchema && (
-      <script type="application/ld+json" set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          { "@type": "Question", "name": "What age is right for sleep training?", "acceptedAnswer": { "@type": "Answer", "text": "Most babies are ready for gentle sleep-shaping between 4 and 6 months, but supportive habits can begin from birth. During consultation I discuss what's appropriate for your baby's age, temperament, and feeding needs." }},
-          { "@type": "Question", "name": "Is it safe to sleep train? Will my baby cry it out?", "acceptedAnswer": { "@type": "Answer", "text": "Safety is the foundation of everything I do. I use gentle, responsive methods - not cry-it-out. Every plan follows safe-sleep guidelines and respects your baby's emotional needs." }},
-          { "@type": "Question", "name": "What exactly does a doula do?", "acceptedAnswer": { "@type": "Answer", "text": "A doula provides non-medical physical, emotional, and informational support before, during, and after birth. I focus on postpartum and overnight support, helping your family rest, heal, and bond in those early weeks." }},
-          { "@type": "Question", "name": "What's the difference between a night nurse and an overnight doula?", "acceptedAnswer": { "@type": "Answer", "text": "A night nurse typically focuses on medical-style newborn care, while an overnight doula provides holistic postpartum support, including emotional guidance, breastfeeding help, and sleep-shaping alongside nighttime baby care. I blend hands-on overnight support with warmth and practical guidance." }},
-          { "@type": "Question", "name": "Can I use my HSA or FSA to pay for doula services?", "acceptedAnswer": { "@type": "Answer", "text": "Many families use HSA or FSA funds to cover doula care; it often qualifies as an eligible medical expense. Check with your plan administrator to confirm your specific coverage." }},
-          { "@type": "Question", "name": "What areas do you serve in New York?", "acceptedAnswer": { "@type": "Answer", "text": "Overnight doula support and sleep training throughout the NYC metro area, including Manhattan, Brooklyn, Queens, the Bronx, Staten Island, and parts of Westchester and northern New Jersey." }},
-          { "@type": "Question", "name": "What happens during an overnight visit?", "acceptedAnswer": { "@type": "Answer", "text": "I typically arrive between 8-10 PM and stay through 6-7 AM. During the night, I handle all feedings, diaper changes, soothing, and sleep training as needed. In the morning, I leave a brief log of how the night went." }}
-        ]
-      })} />
-    )}
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content={site.brandName} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sleepy Llamas — practical guidance for your whole family, with Catalina Llamas." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <link rel="sitemap" type="application/xml" href={withBase('sitemap.xml')} />
+    <script type="application/ld+json" set:html={serializeJsonLd(graph)} />
+    <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <slot />
 
     <!-- Scroll reveal: add .in-view when an element with .reveal enters the viewport -->

@@ -7,21 +7,21 @@
 export const site = {
   // --- Brand ---
   brandName: 'Sleepy Llamas',
-  tagline: 'Restful nights for your whole family.',
+  tagline: 'Practical guidance for your whole family.',
   shortDescription:
-    'I offer certified overnight doula support and gentle baby sleep support for families in NYC and the greater New York area, with personalized postpartum overnight care delivered with warmth and expertise.',
+    'Family and newborn consultations, home visits, and nanny coaching with Catalina Llamas. Based in Queens, with phone and video support for parents and caregivers.',
 
   // --- Contact (TODO: replace with real values) ---
   email: 'sleepyllamasdoula@gmail.com',
-  phone: '(555) 123-4567',              // TODO
-  phoneHref: '+15551234567',            // TODO — digits only for tel: links
-  serviceArea: 'the New York Area',
-  responseTime: 'within 24 hours',
-  whatsapp: '+15551234567',             // TODO — digits with country code for wa.me link
-  whatsappDisplay: '(555) 123-4567',    // TODO — formatted for display
+  phone: '',                           // Add verified business number to display.
+  phoneHref: '',
+  serviceArea: 'Queens and nearby NYC neighborhoods',
+  responseTime: 'within two business days',
+  whatsapp: '',                        // Add verified WhatsApp number to display.
+  whatsappDisplay: '',
 
   // --- Payment handles (shown AFTER consultation — informational only) ---
-  venmoHandle: '@sleepy-llamas',        // TODO
+  venmoHandle: '',                     // Add verified business handle to display.
   zelleHandle: 'sleepyllamasdoula@gmail.com', // TODO — update if using a different Zelle email
   stripePaymentLink: '',                // TODO — paste a Stripe Payment Link URL when ready
 

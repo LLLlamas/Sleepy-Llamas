@@ -1,5 +1,7 @@
 ---
 import { site } from '../config/site';
+import { servicePages, withBase } from '../config/serviceRoutes';
+interface Props { contactHref?: string }
 
 const base = import.meta.env.BASE_URL.endsWith('/')
   ? import.meta.env.BASE_URL
@@ -7,6 +9,9 @@ const base = import.meta.env.BASE_URL.endsWith('/')
 const sectionHref = (id: string) => `${base}#${id}`;
 const resumeHref = `${base}resume/`;
 const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathname.endsWith('/resume/');
+const { contactHref = sectionHref('contact') } = Astro.props;
+const shortLabels = ['Newborn', 'Caregiver Coaching', 'Home Visits'];
+const currentPath = Astro.url.pathname.replace(/\/$/, '');
 ---
 
 <header class="nav" id="site-nav">
@@ -25,11 +30,9 @@ const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathnam
 
     <nav class="nav-links" aria-label="Primary">
       <a href={sectionHref('about')} data-section="about">About</a>
-      <a href={sectionHref('services')} data-section="services">Services</a>
-      <a href={sectionHref('process')} data-section="process">How It Works</a>
-      <a href={sectionHref('availability')} data-section="availability">Availability</a>
-      <a href={resumeHref} class:list={[isResumePage && 'active']}>Resume</a>
-      <a href={sectionHref('contact')} data-section="contact" class="nav-cta">Contact</a>
+      {servicePages.map((page, i) => <a href={withBase(`${page.slug}/`)} class:list={[currentPath === withBase(page.slug) && 'active']} aria-current={currentPath === withBase(page.slug) ? 'page' : undefined}>{shortLabels[i]}</a>)}
+      <a href={sectionHref('services')} data-section="services">All Services</a>
+      <a href={contactHref} data-section="contact" class="nav-cta">Find your support</a>
     </nav>
 
     <button class="nav-toggle" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">
@@ -40,10 +43,12 @@ const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathnam
   <div class="mobile-menu" id="mobile-menu" hidden>
     <a href={sectionHref('about')} data-section="about">About</a>
     <a href={sectionHref('services')} data-section="services">Services</a>
+    {servicePages.map((page) => <a href={withBase(`${page.slug}/`)} aria-current={currentPath === withBase(page.slug) ? 'page' : undefined}>{page.label}</a>)}
     <a href={sectionHref('process')} data-section="process">How It Works</a>
-    <a href={sectionHref('availability')} data-section="availability">Availability</a>
+    <a href={sectionHref('your-plan')} data-section="your-plan">Your Plan</a>
+    <a href={sectionHref('availability')} data-section="availability">Overnight Care</a>
     <a href={resumeHref} class:list={[isResumePage && 'active']}>Resume</a>
-    <a href={sectionHref('contact')} data-section="contact">Contact</a>
+    <a href={contactHref} data-section="contact">Contact</a>
   </div>
 </header>
 
@@ -163,7 +168,7 @@ const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathnam
     padding-block: 0.25rem;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1040px) {
     .nav-links { display: none; }
     .nav-toggle { display: flex; }
   }
@@ -209,6 +214,7 @@ const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathnam
     toggle.addEventListener('click', () => {
       const isOpen = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', String(!isOpen));
+      toggle.setAttribute('aria-label', isOpen ? 'Open menu' : 'Close menu');
       if (isOpen) {
         menu.removeAttribute('data-open');
         menu.setAttribute('hidden', '');
@@ -222,6 +228,7 @@ const isResumePage = Astro.url.pathname.endsWith('/resume') || Astro.url.pathnam
     menu.querySelectorAll('a').forEach((link) => {
       link.addEventListener('click', () => {
         toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Open menu');
         menu.removeAttribute('data-open');
         menu.setAttribute('hidden', '');
       });

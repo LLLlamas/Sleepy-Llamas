@@ -1,0 +1,166 @@
+SLEEPY LLAMAS: CONSULTING SERVICES AND WEBSITE RESEARCH
+Research date: November 15, 2026
+Prepared from local source files and current public primary sources. No website changes or outreach were made. Public prices are observed offers, not proof of demand, equivalent qualifications or provider availability. All Sleepy Llamas prices below are proposals to test, not changes to existing prices.
+
+RECOMMENDATION
+Position Sleepy Llamas as Catalina's practical newborn and family support: paid consultations, first-days-home visits, caregiver training, and overnight care. The strongest promise is: “We'll work through what's happening, practice what helps, and leave you with a clear plan.” Avoid an unlimited parenting advice hotline or promises to solve medical/developmental problems.
+
+Launch three primary offers: Focused Parent Call, First Days Home Visit, and Caregiver Confidence Session. Offer one bounded First Week Together follow-up bundle. Retain overnight care as a separate established service. Test demand before building a large catalogue or subscription.
+
+EXISTING WEBSITE AND EXPERIENCE
+The source provides a credible foundation: eight years of family care, newborn twins, postpartum recovery support, returning to a family for its third newborn, household organization, bilingual English/Spanish support, and experience following specialist care instructions. The returning-family story is especially useful for second-time/third-time parents: experience with one baby does not eliminate the difficulty of a different baby or changed household.
+
+The buying experience still assumes overnight care:
+- Hero promises restful nights and features “Overnight Sleep Specialist.”
+- Service choices are overnight doula, overnight sleep training, or vague “Consultation(s).”
+- Process describes free consultation leading to 4–16 overnight shifts.
+- Forms ask about nights per week and require the child's name, creating friction for expecting parents.
+- Overnight calendar dominates the page.
+- A parent with one practical question cannot see paid-call price or deliverables.
+
+Credential claims in src/config/resume.ts and visible copy: Certified Postpartum Doula; Certified Lactation Support Specialist; CPR & First Aid Certified; Early Childhood Education student at Hunter College. These are repository claims, not independently verified credentials. No “pending certification” wording was found. Confirm exact credential names, issuer, completion/renewal dates, and any in-progress status before expanding credential prominence. Do not upgrade lactation support certification into IBCLC, nursing or clinical expertise.
+
+Testimonials.astro contains authored care-style statements visibly labeled “Care style,” not attributed client testimonials. Preserve that distinction. Resume “private family notes” also must not become client quotes.
+
+OBSERVED COMPETITOR BENCHMARKS
+1. New Parents Journey, NYC: free 15-minute virtual introduction; $50/30-minute virtual mini consultation; $100/up-to-60-minute virtual consultation plus two email follow-ups; six weekly post-birth calls for $550; home consultations $105/hour with 15-hour package minimum and two-hour visit minimum. Direct evidence that practical advice can be a separate paid product.
+Source: https://newparentsjourney.com/services/
+
+2. City Births, NYC: one three-hour Infant Care and Feeding session; $275 per family, up to two attendees. Benchmark for structured newborn preparation rather than vague advice.
+Source: https://www.citybirths.com/infant-care-and-feeding
+
+3. Emily Musses / The Mama Coach, Queens: newborn package $350–$500 includes one 90-minute consultation, four weekly coaching calls, one month of email support and reference material; upgraded package $500–$650 includes two 90-minute consultations and seven weeks of calls/email. Provider explicitly practices as an RN, so do not imply an equivalent clinical service or qualification.
+Source: https://emily-musses.themamacoach.com/newborns/
+
+4. Rosangela Doula Services, California: home consultation $280; nanny newborn workshop $450 for 2–4 hours, with certificate of attendance and CPR prerequisite. Useful product-format benchmark, not NYC pricing. Do not copy unsupported sleep or insurance claims from the site.
+Source: https://rosangeladoula.com/
+
+5. Boston Newborn Care: three-hour new-parent/caregiver course $300; ten-hour newborn specialist training $500. Distinguishes a family workshop from longer professional training.
+Source: https://www.bostonnewborncare.com/classes
+
+Interpretation: compete on applying information to this family, shared caregiver expectations, practice, and a written handoff. Classes, free public resources and clinicians already provide information.
+
+PROPOSED LAUNCH MENU — PRICING HYPOTHESES
+Free 15-minute fit call: assess service fit, scope, timing and location. Label “fit call” or “meet Catalina,” not “free consultation.” Do not promise individualized care planning here.
+
+A. Focused Parent Call — $125
+Audience: one practical topic such as evening routine, caregiver handoff, setting up the day, visitors or preparing for a transition.
+Includes: intake, 60-minute phone/video appointment, one-page action plan within one business day, one clarification email within seven days. Both parents/co-parents welcome without extra fee. No guaranteed “solution” or clinical assessment.
+
+B. First Days Home Visit — $350
+Audience: families wanting hands-on practice in their space.
+Includes: three-hour home visit, three agreed priorities, practical setup/practice, written family routine/handoff, 20-minute follow-up within seven days. Available within a defined local zone, with travel quoted before booking. Not childcare plus an unlimited household task list.
+
+C. Caregiver Confidence Session — $425
+Audience: parent plus nanny, grandparent or other regular caregiver.
+Includes: three-hour in-home workshop for up to two caregivers, family care instructions, skill practice, communication/handoff template, 20-minute check-in within seven days. Define family participation and privacy clearly.
+
+D. First Week Together — $325
+Audience: expecting/new parents needing bounded continuity, including subsequent babies.
+Includes: 60-minute planning appointment, two 20-minute follow-ups over 14 days, shared family plan, up to two email question rounds. This is one bounded bundle, not a membership or hotline. Can be used instead of a standalone focused call; avoid charging twice for the same initial session.
+
+ADD-ONS — PROPOSED, SUBJECT TO AVAILABILITY
+- Existing-client follow-up call: $45/20 minutes.
+- Additional home support day: $300/three hours; reuse existing family plan and agree priorities in advance.
+- Additional caregiver orientation: quote by duration/group size.
+- Travel beyond local zone: disclose exact fee before booking.
+- Specialized needs: individual fit assessment and provider instructions, not an automatic surcharge implying clinical competence.
+Keep overnight packages and prices separate; do not silently change current prices.
+
+CAPACITY AND UNIT ECONOMICS
+Illustrative total delivery hours include prep, notes, admin, follow-up and travel:
+Focused call: $125 / 1.5 hours = $83/hour gross.
+First-week bundle: $325 / 3.5 hours = $93/hour gross.
+Home visit: $350 / 5 hours = $70/hour gross.
+Caregiver session: $425 / 5 hours = $85/hour gross.
+These exclude payment fees, insurance, taxes, supplies, marketing, unpaid sales time and cancellations. Long travel and elaborate plans can reduce margin. Track actual hours for first ten paid engagements.
+
+Illustrative pilot workload: two calls, two first-week package deliveries and one home visit = $1,250 gross for 15 assumed delivery hours. This is not a revenue forecast; acquisition and business administration take extra time. Avoid daytime promises that compromise recovery after overnight shifts. Publish appointment windows, business-hour response timing, follow-up expiry, rescheduling/cancellation rules, and a policy for prenatal clients whose baby arrives early.
+
+SUPPORT CURRICULUM BY FAMILY MOMENT
+Before arrival: identify support people; organize essential supplies and feeding/diaper stations; discuss visitors, meals, tasks and rest coverage. Deliver “our first days” plan, roles and contact sheet.
+
+First day home: organize discharge instructions and appointments; locate supplies; practice everyday care within scope; set up safe infant sleep space; agree next caregiver handoff. Deliver a short “today/tonight” checklist. Do not interpret discharge instructions as a clinical provider.
+
+Days 2–7: identify what is difficult; adjust household workflow; practice soothing/handling; organize questions for pediatric/obstetric team. Deliver three practical priorities and next check-in.
+
+Second/subsequent baby: coordinate older-child routines, one-on-one time, coverage and co-parent responsibilities; revisit differences from previous experience. Deliver household plan including older child.
+
+Nanny/grandparent begins: align family preferences, written care instructions, safety, outing permissions and communication; practice a clear handoff. Deliver family care guide and sample end-of-day report.
+
+Return to work/new routine: agree caregiver responsibilities, workday communication and end-of-day transition. Deliver repeatable care/handoff routine.
+
+For “do's and do nots,” use “What helps / What to avoid / When to call your care team,” avoiding a shaming rulebook. Teach through demonstration and teach-back. Attendance/completion records are not accredited professional certification. Being CPR certified does not authorize Catalina to certify other people in CPR; refer to a qualified instructor for that training.
+
+WEBSITE INFORMATION ARCHITECTURE
+1. Home: warm introduction, common situations, primary offers, process, real trust evidence.
+2. Parent Calls & First Weeks: focused calls, bounded bundle, sample deliverable, scope/follow-up.
+3. Home Visits: practical support, local zone, travel, realistic three-hour scope.
+4. Nanny & Caregiver Training: audience, curriculum, practice, family guide, truthful completion language.
+5. Overnight Care: existing packages and separate availability.
+6. Meet Catalina: real portrait, verified credentials, experience, approach and consented references.
+7. Resources: small useful library with sources and review dates.
+8. Book / Ask About Fit: direct paid-booking path and optional fit call.
+These can begin as sections; build separate service pages when each has enough original useful content.
+
+HOMEPAGE COPY — DRAFT, NOT A CLAIM SERVICES ALREADY OPERATE
+“A calmer start at home with your baby.
+I'm Catalina. I help parents and caregivers work through the everyday questions, practice newborn care, and build routines that fit their family. Meet with me by phone or video, invite me home, or bring your nanny or another caregiver into the conversation.
+Book a parent call / Explore support.”
+
+Home visit card:
+“You're home. Now what?
+We'll choose what would help most today—organizing the care stations, practicing everyday baby care, or making a plan so everyone knows when they can rest. You'll leave with a short written plan and a follow-up already on the calendar.”
+
+Second-time parents:
+“Another baby, a different beginning.
+You may know how to change a diaper and still need help figuring out two bedtimes, an older child's feelings, and who gets a break. We'll make room for the baby and the family you already have.”
+
+Caregiver workshop:
+“The same care, whoever is on duty.
+Bring your nanny, grandparent or co-parent into a hands-on session. We'll practice the daily routines, clarify your family's preferences, and create a handoff that makes the next person's job easier.”
+
+Put Catalina and the family's situation before the calendar. Keep illustration as supporting art; add a real comfortable portrait, short introduction video and useful care-setup photos without exposing client identities. Do not invent biographical details or first-person personal history beyond source-supported facts without Catalina's approval.
+
+TRUST AND LAUNCH FIXES
+- Replace/hide 555 phone and WhatsApp, placeholder Venmo.
+- Verify real production domain, canonical URLs, deployment base and links; source contains custom-domain/GitHub Pages mismatch.
+- Add verified credential issuer/date details and real portrait.
+- Preserve care-style statements as authored statements; request references only through an authorized process and use with consent.
+- Rename Consultation(s); separate free fit and paid guidance.
+- Do not require child name for expecting-parent inquiries. Ask optional age/due month, practical goal, preferred format, location if relevant, best contact.
+- Keep overnight date selection separate from consult scheduling.
+- Update metadata and structured data alongside visible services; overnight-only claims are duplicated in BaseLayout.astro.
+- Replace broad geographic coverage with feasible home-visit zone.
+- Publish real terms, response windows, privacy and cancellation policy.
+- Clarify night nurse: a nickname is not a nursing credential; only licensed nursing services should be represented as nursing care.
+
+BENEFITS CLAIMS NEED REWRITE
+PaymentInfo currently broadly suggests HSA/FSA/Carrot reimbursement for doula and sleep training. FSAFEDS explicitly distinguishes emotional support, parenting information, childcare and housekeeping (listed as not eligible) from its narrow itemized medical-care category with additional documentation. That federal program is not every plan, but contradicts blanket eligibility promises.
+Use: “Some employer benefits may reimburse eligible services. Confirm your specific service and provider requirements with your plan before booking. I can provide an accurate itemized receipt; reimbursement is not guaranteed.”
+Never reclassify coaching or childcare as clinical care to obtain reimbursement. Do not promise immediate Carrot credentialing or a member's eligibility.
+Primary sources:
+https://www.fsafeds.gov/explore/hcfsa/expenses?q=doula&take=100
+https://web.get-carrot.com/terms-conditions
+
+SCOPE AND CLINICAL ESCALATION
+DONA describes postpartum doula work as nonmedical support. Use this framework for service agreement/referral network; actual certifier may impose its own rules.
+https://dona.org/wp-content/uploads/2025/10/DONA-Postpartum-Standards-of-Practice-2025.pdf
+
+Practical curriculum includes safe sleep and knowing when to contact professionals, while avoiding diagnosis, medication dosing, wound assessment, feeding treatment plans or promises to resolve medical issues. NIH guidance supports back sleeping, firm/flat/level infant sleep surface and separate infant sleep space.
+https://safetosleep.nichd.nih.gov/safe-sleep/environment
+
+Distinguish:
+1. Practical coaching: household workflow, daily care education, communication, rest coverage, implementing existing instructions.
+2. Clinical referral: symptoms, feeding pain or concerning intake/output, recovery complications, mental-health concerns, individualized medical/developmental assessment.
+3. Urgent concern: stop routine consultation flow and direct family to immediate appropriate care; do not wait for a package follow-up.
+
+AAP parent guidance treats fever in babies three months or younger as immediate pediatrician contact. CDC identifies urgent maternal warning signs during pregnancy and the year afterward. Link to maintained guidance; do not publish home-treatment protocols.
+https://www.healthychildren.org/english/health-issues/conditions/fever/pages/fever-and-your-baby.aspx
+https://www.cdc.gov/hearher/maternal-warning-signs/index.html
+
+Maintain a resource path for families outside budget/scope. NYC provides no-cost newborn home visiting for eligible families with education and referral support. Complementary referral option, emphasizing why paid service must deliver personal convenience, continuity and application.
+https://www.nyc.gov/site/doh/health/health-topics/pregnancy-newborn-visiting.page
+
+VALIDATION
+Run ten paid pilot engagements across calls, visits and caregiver sessions. Record original problem, actual work time, referrals, follow-up usage, satisfaction with written plan, and willingness to buy exact offer again. Begin with focused calls and first-days-home visits, derive bundle from recurring needs, and offer caregiver sessions as scoped workshop. Expand into group/agency training only after learning actual needs. Services can be tested before daytime app is ready. A reviewed caregiver handoff later connects the service to Moonlog.

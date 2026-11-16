@@ -1,0 +1,85 @@
+NEWBORN & POSTPARTUM CONSULTATION PAGE — RESEARCH AND CONTENT DECISIONS
+Reviewed November 16, 2026. Research conducted before drafting the new service content.
+Scope: own-provider service pages, adjacent offers, 2025/2026 parent-facing material, and public parent questions. Qualitative research only; no search-volume, conversion, market-size or demand estimates. Rates remain in the shared catalogue and were not changed.
+
+RECOMMENDATION
+
+Build /newborn-postpartum-consultations/ around a concrete purchasing situation: a parent wants help turning scattered questions and available helpers into a workable first-days plan. Explicitly include returning parents managing a baby and older children. The page should explain what happens in the paid session, what the written plan contains, the included follow-up, and when a home visit or clinical provider is the better fit.
+
+A personal plan is not unique by itself; adjacent providers already sell it. Sleepy Llamas must make that plan tangible and support it with Catalina's real care history, completed postpartum doula certification confirmed by the user, defined time and follow-up, and a direct inquiry path. The completed credential's issuing organization has not been verified; do not attach DONA or another issuer to Catalina. Eight years refers to hands-on FAMILY care, not eight years of certified doula practice.
+
+SERVICE-PAGE COMPARISONS
+
+1. Jane Frost — Postpartum Services (NYC)
+https://www.janefrostdoula.com/postpartum-services
+Current page; no reliable publication date displayed. It separates a three-hour postpartum visit from a two-hour virtual prenatal planning session. The planning offer includes a tailored printable plan and discusses helpers, rest, older children and boundaries. The visit includes a complimentary consultation plus remote support, education and household support.
+Buyer expectation: a planning session can be a real paid deliverable, distinct from hands-on care. An offer should name sibling/partner involvement and the document parents receive.
+Our decision: show concrete plan sections and explain remote versus hands-on help. Do not imitate this provider's scope or imply matching inclusions or qualifications.
+
+2. The Mothergood — Postpartum Doula (Sunnyside, Queens)
+https://www.themothergood.com/postpartum-doula
+Current undated page. It separates a complimentary 30-minute discovery call from a paid 90-minute virtual planning session, publicly displayed at $125. Planning includes a personal postpartum plan, preparation and helpers. It also sells standalone three-hour visits and longer in-person packages, with remote support windows stated. The page welcomes first and subsequent babies and discusses siblings and household assistance.
+Buyer expectation: free discovery is about fit; substantive individualized planning is paid. Packages need clear contact windows and meaningful differences.
+Our decision: state the free 15-minute introduction's purpose, keep paid planning primary, and make the continuity package's two calls/two email rounds explicit from the shared catalogue. These adjacent prices do not justify Sleepy Llamas's price or prove willingness to pay. Do not import bodywork/herbal services or implied health outcomes from this offer.
+
+3. The Mama Coach — Emily Musses, Newborn & Postpartum (Queens/NYC)
+https://emily-musses.themamacoach.com/newborns/
+Current page; no reliable publication date shown. Describes nurse-led newborn support, in-home or virtual. The standard package includes a 90-minute consultation, four weeks of weekly coaching calls, one month of email support and an eBook, displayed at $350–$500. A larger package and hourly support are also described. It provides a separate free 15-minute call.
+Buyer expectation: time, contact frequency, reference material and format are concrete comparison criteria. Some competing newborn services are clinical or nurse-led.
+Our decision: explain the actual consultation and included clarification email, rather than call it unlimited support. Do not use clinical assessment language or present Catalina as equivalent to a registered nurse, IBCLC or medical provider. The package is not a like-for-like price benchmark.
+
+RECENT EDITORIAL / PROFESSIONAL MATERIAL
+
+4. American Academy of Pediatrics, HealthyChildren — The 4th Trimester: Navigating Your First Few Months With a New Baby
+https://www.healthychildren.org/English/ages-stages/baby/Pages/The-4th-Trimester-Navigating-Your-First-Few-Months-With-a-New-Baby-.aspx
+By Natasha K. Sriraman; page updated July 28, 2026. Discusses newborn adjustment, feeding, soothing, parents' rest/support and clinical care when needed. Its framing includes partners and adoptive parents, not only a mother-baby pair. This is educational material, not evidence that parents will purchase a particular consultation.
+Our decision: practical care coordination and parental support are substantive topics, and any health concerns belong with the family's clinical providers. Link the article as further reading, not as an endorsement or a replacement for care. Avoid reproducing medical instructions or statistics in sales copy.
+
+5. DONA International — Postpartum Doula Standards of Practice
+https://dona.org/wp-content/uploads/2026/01/DONA-Postpartum-Standards-of-Practice-2025.pdf
+The document itself says last revised September 2025 (the January 2026 URL is not its revision date). Its scope covers nonmedical family adjustment, practical/emotional/informational support and referrals; it excludes diagnosing and treating. It applies to DONA's practitioners/candidates and does not verify Catalina's issuer or membership.
+Our decision: describe a practical, nonmedical consultation, explicitly distinguish it from medical/mental-health/clinical feeding assessment and avoid fixed feeding or sleep promises. Do not borrow credential initials or claim this organization has approved Sleepy Llamas.
+
+PUBLIC PARENT QUESTIONS — QUALITATIVE INPUT, NOT DEMAND PROOF
+
+These were inspected as publicly indexed search excerpts. Direct thread fetching did not succeed for the two selected examples; no claim is made to have read the complete discussions. Do not use their comments as medical guidance, testimonials, representative survey data or purchase-intent evidence. No usernames, contact details, direct quotations or detailed personal histories are retained.
+
+6. r/NewParents, August 24, 2025 — first-time parent asking how to prepare with little baby-care experience
+https://www.reddit.com/r/NewParents/comments/1myuokp
+The indexed question expresses uncertainty about what to do once a first baby arrives. The purchasing-language hypothesis is wanting to ask ordinary practical questions without embarrassment, rather than needing an encyclopedic course.
+Our decision: invite a short list of immediate questions and describe working through a realistic next day. Do not guarantee confidence or characterize all new parents this way.
+
+7. r/NewParents, November 8, 2026 — returning parent asking whether extra postpartum help is necessary with a second baby
+https://www.reddit.com/r/NewParents/comments/1xr2xuf/do_i_really_need_an_extra_help_postpartum_with_my/
+The indexed question concerns arranging help for a second baby with an older child in the household. It illustrates a distinct coordination question even when parents have cared for a newborn before.
+Our decision: explicitly include older siblings, who handles existing routines, and the division of support. Do not promise that a remote consultation supplies hands-on childcare or that this anecdote demonstrates local demand.
+
+CURRENT-SOURCE CORRECTION
+
+8. Boober's current closure notice
+https://getboober.com/
+The current first-party homepage says Boober has closed, has been formally dissolved, and is no longer accepting bookings or making referrals. It mentions technical support through November 13, 2026. Older indexed class and service pages remain discoverable.
+Our decision: do not treat older Boober pages as a current competitor offer, active booking destination or referral source. Birth Day Presence is described as an independent continuing organization, but its current services were not independently assessed in this memo.
+
+ADDITIONAL BILINGUAL PARENT RESOURCE
+
+American Academy of Pediatrics / HealthyChildren, Spanish — La primera semana de su recién nacido: cómo prepararse y qué esperar
+https://www.healthychildren.org/Spanish/ages-stages/prenatal/delivery-beyond/Paginas/bringing-baby-home.aspx
+Search-indexed page shows updated May 19, 2025. Include as optional Spanish-language further reading because Catalina's documented experience includes Spanish and English. The public page should link to the resource without reproducing feeding/medical directions.
+
+COPY AND IMPLEMENTATION DECISIONS
+
+- Primary intent: newborn/postpartum consultation, practical first-days preparation, virtual/phone discussion and Queens/nearby NYC relevance. Keep geographic claims proportional: no invented borough coverage or nationwide professional authorization.
+- Heading: a first-days plan with room for the whole family. Use distinct commercial content, not a generic parenting article or a list of keywords.
+- Fit situations: preparing before birth; already home with practical questions; second/third baby and older siblings; helpers whose responsibilities need clarification.
+- Session process: identify priorities; walk through practical care/support logistics alongside existing provider instructions; agree on next steps and questions requiring a specialist.
+- Deliverable: priorities, adaptable daytime/nighttime care handoffs, who helps with what, sibling/visitor/household arrangements, and questions for the clinical team. No unverified guaranteed document delivery interval; confirm timing before booking.
+- Follow-up: preserve the shared primary offer's one clarification email within seven days. The First Weeks Together secondary offer keeps its shared defined calls/email rounds and 14-day period. It is not a promise of unlimited messaging, same-day answers or round-the-clock access.
+- Free fit call: 15 minutes to meet, discuss needs and choose service/timing. The personalized plan belongs to the paid session. CTAs must say request/ask while appointments are manually confirmed.
+- Clinical boundary: no diagnosis, medication/feeding prescriptions, newborn sleep-training outcome guarantees, therapy or urgent response. Ask health providers about symptoms and feeding adequacy rather than attempting remote triage through the inquiry form.
+- Premium proof: documented newborn twins and C-section-recovery-support experience, returning to a Brooklyn family for their third newborn, completed certification without invented issuer, readable sample plan, and specific scope/follow-up. More adjectives, borrowed testimonials or staged family photos do not establish value.
+- Conversion validation: record which situation/offer prompted inquiries, whether parents understand the call/home-visit distinction, what was unclear about the deliverable, and whether paid clients found the plan usable. Do not mistake page traffic or forum discussion for willingness to pay.
+
+IMPLEMENTATION CONTRACT
+
+Create only src/content/newborn-postpartum.ts exporting newbornPage, satisfying ServicePageContent imported from ../lib/servicePage. serviceId newborn-postpartum-consult; secondaryOfferId first-weeks-plan. Rates stay dynamically sourced from src/config/services.ts; no prices hardcoded in content. Related pages: nanny-caregiver-coaching and first-days-home-visit. Root owns shared template, routes, SEO wiring, build and launch. No outreach, commits, deployments or changes to other source files.

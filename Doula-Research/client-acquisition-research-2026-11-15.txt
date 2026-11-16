@@ -1,0 +1,165 @@
+SLEEPY LLAMAS: HOW TO GET THE FIRST TEN CONSULTING CLIENTS
+Research date: November 15, 2026
+Prepared as strategy research. No messages were sent, listings created, ads purchased, or website code changed.
+
+RECOMMENDATION
+
+Start as a trusted local person with a small, clear paid offer, then make that offer easy for existing families and complementary professionals to refer. The best initial mix is warm family introductions, a small referral network, one permission-based community workshop, and free/low-cost high-intent listings. Treat social content as proof that helps referrals convert. Do not make Instagram follower growth or a consumer app launch the dependency for earning service revenue.
+
+Use three buying situations rather than a generic promise of “parent advice”:
+1. “We are bringing our first baby home and want someone to show us the practical routine.”
+2. “We have a specific care/routine problem and need a calm plan we can actually follow.”
+3. “Our nanny is starting and we want everyone caring for the baby consistently.”
+For second-time parents, emphasize dividing attention, revisiting what worked before, sibling logistics, and coordinating caregivers. For the nanny offer, sell to the employing family first; family-specific onboarding is easier to explain than launching a new professional certification course.
+
+POSITIONING THAT THE EXISTING MATERIAL CAN SUPPORT
+
+Repository source src/config/resume.ts describes Catalina as Queens-based with eight years of nanny/postpartum doula/household experience, English and Spanish, infant and twin care, and repeat work for a family having a third baby. Those are strong reasons to believe in practical, personal support. These are statements in supplied project materials, not independently authenticated credentials. Confirm the exact qualifications and current status before using certification badges. Do not suggest she is a pediatric clinician or that she diagnoses feeding, sleep, postpartum recovery, or medical problems.
+
+A useful draft positioning sentence:
+“Practical newborn support with Catalina: a calm call, a home visit, or a shared routine for you and your nanny. Based in Queens, with virtual support available.”
+
+Start the in-person service area with a realistic travel limit from Catalina's actual location, for example appointments within an agreed 45-minute journey. This is a proposed operating rule, not a statement about where she already works. Expand only when the travel premium and diary allow it. A wide NYC/NJ/Westchester claim can create expensive travel and unfulfillable expectations.
+
+FIX THE PATH TO A REAL INQUIRY BEFORE BUYING TRAFFIC
+
+Code audit, not a live production outage finding:
+- src/components/Contact.astro lines 396-414 has a TODO for the real backend, a commented-out example POST, and a simulated delay followed by a success screen. A prospect using this component can see success without this code sending an inquiry.
+- src/components/Availability.astro uses the real sl_create_booking_request Supabase RPC when its client exists. If it does not, the alternate branch waits and still shows success. src/lib/supabase.ts returns null when the two public environment values are absent. Production configuration and actual database/email delivery were not tested here.
+- src/config/site.ts still has 555 phone/WhatsApp placeholders and TODO payment handles. The email is populated; delivery to it was not tested.
+- astro.config.mjs currently targets GitHub Pages under /Sleepy-Llamas, while the referral mailto text points at sleepyllamasdoula.com. Verify the canonical public destination and all referral links; do not assume either domain deployment from source alone.
+- The “Testimonials” component currently presents founder-written care-style statements, not attributed client reviews. Keep those statements clearly identified as care style, and obtain permission for real client quotes later.
+
+Minimum launch acceptance check: one real test inquiry from a phone reaches the correct inbox or booking record; the sender gets an accurate acknowledgment; an owner notification and response process are demonstrated; an unsuccessful submission stays visibly unsuccessful; and a separate real contact method works. First-contact questions should be light: parent name, email, baby age/due window, broad need, location for visits, and preferred times. Requiring a baby's name at first contact adds avoidable friction for prenatal clients.
+
+CHANNELS, PRIORITY, AND VERIFIED COSTS
+
+1) Existing and previous family relationships: highest initial trust.
+Proposed action: ask a small number of appropriate past/current families for an introduction or permission to share a short new-service note. Give them a specific sentence and link to forward. They forward it themselves; do not request friends' private phone numbers. Prior employment does not automatically mean they endorse the new consulting offer. Cash cost can be $0; time is real. Target: four of the first ten clients. This target is a hypothesis, not research-proven demand.
+
+2) Complementary local professionals: best repeatable referral hypothesis.
+Priority partner types: birth doulas who do not provide this follow-up, childbirth educators, IBCLCs for nonclinical household support around their feeding plan, pelvic-health practices, prenatal yoga studios, and nanny placement agencies needing family-specific onboarding. Ask what their clients already request before pitching.
+Verified local examples to research further, not claimed partners:
+- Birth Matters NYC in Astoria offers group/private/online childbirth education and links to doula support. It already includes newborn/postpartum education, so propose complementary in-home practice or overflow support rather than implying it has a service gap. https://www.birthmattersnyc.com/
+- Tiny Treasures is an NYC household staffing agency and also sells newborn-care training. It is both a potential partner and a competitor. A plausible proposal is family-specific onboarding following placement, not generic training that duplicates its course. https://www.tinytreasuresnyc.com/about and https://www.tinytreasuresnyc.com/pro-newborn-care-course
+- Queens Public Library advertises Baby Basics and New Mamas programming. It is a public resource and possible educational collaboration prospect, not a sales lead list or presumed referral source. Use its official process to ask whether a practical workshop would be welcome. https://connect.queenslibrary.org/9146
+No referral fees, access to patient lists, or partnerships are assumed. Target: two early clients from four qualified introductions generated by partner conversations.
+
+3) Google Business Profile: free, high-intent infrastructure.
+Google says Business Profile is free. In-person services that visit customers can qualify; online-only businesses cannot. For a genuine home-visit business, use one accurate service-area profile, hide the residential address when clients are not served there, use the real operating location for verification, and list actual places served. No rented virtual-office shortcut. Verification and rankings are not guaranteed. Virtual consulting can coexist with the in-person business; a separate online-only Moonlog brand does not thereby qualify for its own local profile.
+Sources: https://business.google.com/us/business-profile/
+https://support.google.com/business/answer/7039811
+https://support.google.com/business/answer/3038177
+https://support.google.com/business/answer/9157481
+Proposed profile content: real portrait, exact verified credentials, services, approximate fees, realistic hours/response time, and a tracked booking link. Build dedicated helpful service pages; do not create dozens of near-identical borough pages. Do not promise local ranking results in 30 days.
+
+4) DoulaMatch: inexpensive high-intent test.
+The public fee schedule currently lists $25/year for the first three years, then $40/year for most doulas; it lists $15/year for Black and Indigenous doulas. Eligibility and the applicable rate must be checked for Catalina rather than inferred. This is a paid profile, not a free directory. The site supports experience, qualifications, service information and availability. A postpartum support listing can generate leads, but consulting-only conversion is unproven.
+https://doulamatch.net/pricing
+https://doulamatch.net/
+Recommendation: a small test if the actual services/profile eligibility fit; don't buy several directories at once.
+
+5) Raising Astoria: a local community with explicit promotion limits.
+The official site describes a free volunteer-run parent community. Its guidelines limit self-promotion to direct requests and direct businesses to its Parent Resource Directory. The directory is explicitly for Astoria parent businesses; Catalina's eligibility as a parent business is not established. Ask the organizer before applying or joining as a provider. Its event page explicitly invites suggestions and sponsorship inquiries. No workshop partnership, free listing fee, or admission is assumed.
+https://www.raisingastoria.org/
+https://www.raisingastoria.org/team-4
+https://www.raisingastoria.org/services-2
+https://www.raisingastoria.org/contact-8
+Best test: request permission for a short practical educational session, with an optional separate sign-up for follow-up. Never join a peer-support chat to scrape leads or send unsolicited DMs.
+
+6) Gensa / former Brooklyn Bridge Parents: use the current commercial route.
+Gensa's current business page says it is built on Brooklyn Bridge Parents, which served Brooklyn families until 2026. It offers listings, editorial/sponsorship formats, and events. Vendor account creation is free; advertising/listing prices are behind the dashboard or supplied on inquiry, so no rate is verified. Its page says events free for families are free to submit, subject to editorial review; that is not a guarantee of publication or permission to operate at a venue. Suitable as an eventual workshop listing or tightly bounded placement, not the first expensive campaign.
+https://www.gensa.family/for-business
+
+7) Park Slope Parents and Mommybites: promising audiences, costs/access unresolved.
+The official PSP membership information points to advertising; the relevant commercial rate and provider-posting permission were not verified. Do not confuse buying parent membership with permission to advertise. https://parkslopeparents.clubexpress.com/content.aspx?club_id=210589&module_id=247108&page_id=22
+Mommybites explicitly offers sponsored articles, newsletters, online parenting-class sponsorships, and event opportunities. Public page does not quote a rate. Ask for audience geography, newborn-family share, price, and attributable results before selecting a package. https://mommybites.com/newyork/advertising/
+Treat both as quote-required tests after the core offer converts through warm channels.
+
+8) Paid search and broad social: later, conditional.
+No local CPC, conversion benchmark, or Local Services Ads eligibility for this business was verified. Do not assume doula services qualify for Google's Local Services Ads because Business Profile does. A small conventional Search campaign could eventually test explicit local service intent; set a hard budget and landing page tied to one offer. Start with contextual search rather than sensitive-health retargeting. Google restricts advertiser-curated audiences around sensitive health categories; avoid uploading client lists or using baby-care logs as ad audiences. https://support.google.com/adspolicy/answer/16701855
+
+FIRST TEN CLIENTS: A HYPOTHESIS TO TEST OVER 60–90 DAYS
+
+A qualified lead means someone with an in-scope need, a location/time that can be served, and willingness to consider the stated fee. Count distinct households once; a repeat call is repeat revenue, not a new client.
+
+Illustrative funnel, deliberately visible assumptions:
+- 20 individual warm introduction requests -> 8 opted-in qualified introductions -> 4 paid households.
+- 12 carefully selected partner contacts -> 6 useful conversations -> 4 qualified introductions -> 2 paid households.
+- One approved workshop: 18 registrations -> 10 attendees -> 4 qualified inquiries -> 2 paid households.
+- Search/profile/directories combined -> 5 qualified inquiries -> 2 paid households.
+Total: 21 qualified leads and 10 paid households, approximately 48% lead-to-paid conversion. This is an ambitious warm-lead test plan, not an established benchmark. Search may contribute zero initially. If conversion is 25%, 21 leads produce about five clients and reaching ten requires roughly 40 qualified leads. No claim is made that the named communities will supply those leads.
+
+The workshop should solve a narrow task: “A calmer first evening home: setting up the feeding/diaper station, dividing parent rest, and handing care to another adult.” Keep scope practical, defer medical specifics to the family's clinical team, and leave time for questions. Offer one useful takeaway. Follow-up booking is optional; do not make access to the takeaway conditional on buying.
+
+30 / 60 / 90 DAYS
+
+Days 1–30: prove trust and delivery.
+- Confirm actual work availability and three in-scope offers with fixed deliverables.
+- Complete inquiry-delivery checks and the real contact details.
+- Create a one-page provider introduction, an example care plan, and a fictional/anonymized handoff clearly marked as a sample.
+- Have 8–10 warm conversations and 4–6 partner conversations; keep notes on exact language clients use.
+- Establish eligible Google/DoulaMatch profiles, with owner approval of claims and personal details.
+- Aim for 3 paid pilot households and feedback. A limited pilot price may be offered without any review obligation; avoid free extensive consultations.
+
+Days 31–60: repeat the offer clients understood.
+- Complete one approved partner/community workshop.
+- Publish 3 useful pages answering the recurring buying situations, including English/Spanish support only if delivery capacity exists in both.
+- Request honest feedback from all completed clients using the same neutral process.
+- Aim for 6 cumulative paid households; record delivery time, follow-up load, and contribution per package.
+
+Days 61–90: choose one scalable source.
+- Aim for 10 cumulative paid households, not ten simultaneous clients.
+- Choose the best two sources based on paid bookings and owner time.
+- If warm leads convert and the diary has room, run one paid placement OR a small search test, not both simultaneously.
+- Raise or restructure any package that creates too much unpaid follow-up/travel.
+- Reserve recurring weekly support windows; pause promotion when capacity is full.
+
+TINY BUDGET AND CAPACITY ASSUMPTIONS
+
+Proposed first-month marketing cash cap: $250, excluding site work, insurance, operating software, taxes, and professional training. Example allocation: DoulaMatch $25 if applicable; simple printed leave-behind cards $30 (estimate); workshop materials/transport $45 (estimate); $50 contingency; up to $100 reserved for a later approved test only if inquiry tracking works. Spend can be below the cap. Gensa, PSP, or Mommybites sponsorship rates are unverified and not covered by an assumed $100 buy.
+
+Founder capacity assumption while maintaining other work: approximately six service-delivery hours plus four sales/admin hours per week. Confirm this with Catalina. Start with limited bookable windows. Do not advertise continuous availability, unlimited messaging, or immediate emergency advice.
+
+Illustrative economics using the proposed launch menu; these are example assumptions, not a forecast:
+- 60-minute call at $125, with prep, notes and follow-up bringing total delivery time to 1.5 hours. Assume $5 variable cost. $120 contribution before owner labor, fixed overhead, tax, and acquisition.
+- Three-hour home visit at $350, with travel, prep and follow-up bringing total delivery time to five hours. Assume $25 variable travel/payment/material cost. $325 contribution before owner labor, overhead, tax, and acquisition.
+- Six calls + four visits = $2,150 revenue; 29 delivery hours; $130 variable costs.
+- If acquisition consumes $200 cash plus 16 owner hours valued at $35/hour, full acquisition cost is $760, or $76 per acquired household. Cash CAC alone is $20 and hides substantial labor.
+- Valuing all 45 acquisition+delivery hours at $35/hour gives $1,575 of owner labor. After the $130 variable costs, $200 cash acquisition costs and $1,575 labor valuation, $245 remains before fixed overhead and tax. This illustrates why bounded follow-up, travel limits, referrals and repeat work matter. It is not a profit forecast.
+For paid advertising, set the allowable CAC from first-purchase contribution after owner delivery time, not from optimistic lifetime value. Until repeat purchases are measured, do not use them to justify an unprofitable first booking.
+
+MEASUREMENT WITHOUT A COMPLEX CRM
+
+One simple register can record lead ID, date, referral source, specific referring partner (with permission), requested offer, qualified yes/no and reason, fit call booked/attended, paid date, collected revenue, delivery hours, follow-up minutes, and outcome/next step. Track cancellations and refunds. Keep sensitive baby/family care details out of the marketing register.
+
+Use a source field (“How did you hear about Catalina?”) plus source-specific links. A successful click or front-end success screen is not a received lead. Count lead-received only after actual durable receipt; count client-paid from the confirmed payment record. Weekly review: qualified leads, response time within published availability, lead-to-booked, attended-to-paid, cash CAC, full CAC including time, contribution per owner hour, and referral/repeat share. With a handful of leads, report counts as well as percentages.
+
+Practical decision rules: if 10 qualified conversations yield zero paid bookings, revisit need/offer/price before more traffic; if four home visits consume far more hours than estimated, fix geography and scope; if a paid test reaches its $100 cap without a qualified lead, stop and inspect intent/landing page before adding money. These are proposed management rules, not statistical confidence thresholds.
+
+TRUST, REVIEWS, AND PERMISSION
+
+Ask for an honest review after service from all clients, not just happy ones. Do not trade a discount, free visit, or referral reward for a Google review. Google prohibits incentives and selective solicitation of positive reviews. https://support.google.com/contributionpolicy/answer/7400114
+Separately request written permission for any website quote, photo, case example, or name attribution; offer initials or general context. Never publish a baby's name, care log, medical history, identifiable home image, or nanny performance discussion as marketing material without the appropriate permission. Founder-written care descriptions can stand on their own until real reviews exist.
+
+DRAFT OUTREACH COPY — NOTHING SENT
+
+Warm family note:
+“Hi [name], I'm opening a small number of Sleepy Llamas appointments for practical newborn support: focused calls, first-days-home visits, and helping parents and nannies build one shared routine. If someone you know is looking for this, you're welcome to forward [link]. No pressure at all, and thank you for thinking of me.”
+
+Complementary provider note:
+“Hi [name], I'm Catalina, a Queens-based nanny and postpartum doula [use exact verified credential wording]. I'm developing practical home visits and focused parent calls around newborn routines and caregiver handoffs. I follow the family's provider guidance and refer clinical questions back to the appropriate professional. Do your families ask for hands-on help after class or an appointment? If useful, I'd love to learn about your referral process and share a short outline. No client information needed.”
+
+Community organizer note:
+“Hi [name], would a short, practical session on setting up the first evening home be useful for your community? I can cover organizing supplies, sharing parent rest, and preparing a caregiver handoff. I'd follow your rules on promotion and sign-ups; any future consultation would be optional. If another topic fits better, I'd appreciate knowing what families ask for.”
+
+Review request:
+“Thank you for working with me. If you'd like to share an honest account of your experience, here's [review link]. Positive or critical feedback is welcome, and there is no obligation. Please leave out any private details about your child or family.”
+
+HOW MOONLOG FITS
+
+Use a sample EOD handoff as tangible evidence of organized care. A family receiving a visit can opt to try the app and give product feedback; app participation should not be required for a useful consultation. App users can separately choose to learn about support, with an explicit local-service eligibility check. Do not assume downloads are qualified consulting leads, use care records for targeting, or market a parent-approved summary as a clinical assessment. The service business can supply useful workflow observations; the app remains a separate product with separate adoption and pricing validation.
+
+WHAT STILL NEEDS USER INPUT OR LIVE VERIFICATION
+
+Actual weekly availability; affordable travel zone; certification issuers/current standing; usable phone/payment details; deployed inquiry delivery; which past families are appropriate to approach; whether Catalina qualifies for parent-business communities; directory approval; real sponsor quotations; and whether the three buying situations generate willingness to pay. The recommended sequence is designed to learn these with a few paid clients before substantial ad spend.
