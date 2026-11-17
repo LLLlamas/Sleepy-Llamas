@@ -17,7 +17,24 @@ final class HandoffFlowTests: MoonlogUITestCase {
             app.alerts.buttons["End shift"].tap()
         }
 
-        app.buttons["Summary"].firstMatch.tap()
+        // Ending now awaits the durable write. A tab can exist behind the sheet
+        // before it can receive a tap; tapping then produces hit point {-1,-1}
+        // and never selects Summary. Wait for the real UI transition, not time.
+        let endedSheet = app.navigationBars["End shift"]
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: endedSheet)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 15), .completed,
+                       "the saved end-shift sheet did not dismiss")
+        let summaryTab = app.buttons["Summary"].firstMatch
+        let tappable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND hittable == true"), object: summaryTab)
+        XCTAssertEqual(XCTWaiter.wait(for: [tappable], timeout: 15), .completed,
+                       "Summary is still obstructed after ending the shift")
+        summaryTab.tap()
+        let selected = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "selected == true"), object: summaryTab)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed,
+                       "the Summary tab was not actually selected")
         XCTAssertTrue(
             app.buttons["Copy"].waitForExistence(timeout: 10),
             "Copy vanished with the shift")
