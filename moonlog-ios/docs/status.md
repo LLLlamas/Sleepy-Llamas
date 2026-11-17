@@ -21,22 +21,16 @@ build number, export compliance false, no iCloud entitlement and a valid signatu
 The exact archive is in Xcode Organizer's November 16 archives. It was built from
 `980fe82` with only the scripted build-number stamp applied.
 
-**Upload blocked; this build is not on TestFlight.** Apple's export rejected the
-request with `PLA Update available`: the account holder must accept the latest
-Developer Program License Agreement. It also reported no iOS Distribution
-certificate; retry the existing archive after the agreement is accepted, then
-resolve signing only if that error remains. No certificate or account was changed.
-The last recorded successful upload remains **0.1.0 (1789610519)**.
+**Uploaded successfully to App Store Connect.** After the account holder accepted
+Apple's updated Developer Program License Agreement, retrying the same archive
+succeeded. The agreement and distribution-signing errors cleared without rebuilding
+or manually changing certificates. The upload log records `** EXPORT SUCCEEDED **`.
 
-Retry `./scripts/upload.sh` with this exact archive path:
-
-```text
-~/Library/Developer/Xcode/Archives/2026-11-16/Moonlog 2026-11-16, 23.51.30.xcarchive
-```
-
-Do not rebuild just to retry the upload. Apple acceptance and subsequent TestFlight
-processing/availability must be verified separately. Existing local website edits
-were preserved; this release was built in an isolated checkout.
+Apple's subsequent TestFlight processing and tester availability have not been
+verified. The latest accepted upload is now **0.1.0 (1794891089)**. Do not upload
+this same build again just to check processing. The archive remains in Xcode
+Organizer under November 16. Existing local website edits were preserved; this
+release was built in an isolated checkout.
 
 ## Current working source: reminders and daytime Nanny Log
 
