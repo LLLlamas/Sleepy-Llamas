@@ -147,4 +147,98 @@ final class DayReportReachabilityTests: MoonlogUITestCase {
         XCTAssertTrue(app.buttons["Copy report"].exists)
         // Deliberately stop at the menu; selecting a destination is a user action.
     }
+    private func openClosedCorrections() {
+        // The editor's review section is above any current published copy.
+        app.swipeDown(); app.swipeDown()
+        reveal(app.buttons["report.correctFacts"]).tap()
+        XCTAssertTrue(app.navigationBars["Correct care log"].waitForExistence(timeout: 8))
+        XCTAssertFalse(cardButton("Feed", for: "Mia").exists,
+                       "the historical editor offers new care instead of corrections")
+    }
+
+    private func publishReviewedRevision(_ expected: Int) {
+        check("report.reviewed")
+        let button = reveal(app.buttons["report.publish"])
+        waitUntilEnabled(button, "reviewed ended shift cannot publish")
+        button.tap()
+        let status = reveal(app.staticTexts["report.publishedStatus"])
+        XCTAssertTrue(status.label.contains("revision \(expected)"))
+    }
+
+    func testEndedFactsCanBeCorrectedUndoneAndPublishedAsANewRevision() {
+        launch(dayArguments(ended: true))
+        openReport()
+        publishReviewedRevision(1)
+        reveal(app.buttons["report.optionalReceipt"]).tap()
+        let parent = reveal(reportField("report.parentName"))
+        parent.tap(); parent.typeText("Audit Parent")
+        app.buttons["report.receiptDoneEditing"].tap()
+        check("report.received")
+        reveal(app.buttons["report.saveReceipt"]).tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "1 optional in-person receipt")).firstMatch.waitForExistence(timeout: 8))
+
+        openClosedCorrections()
+        let latest = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "timeline.record.")).firstMatch
+        XCTAssertTrue(reveal(latest).label.localizedCaseInsensitiveContains("diaper"), "fixture newest row changed")
+        latest.tap()
+        XCTAssertTrue(app.navigationBars["Edit diaper"].waitForExistence(timeout: 5))
+        app.buttons["Wet"].tap()
+        app.buttons["Save"].tap()
+        let undo = app.buttons["Undo"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 8), "closed-shift correction did not expose Undo")
+        undo.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "undone")).firstMatch.waitForExistence(timeout: 5))
+
+        // Apply a real factual change after proving the reverse path works.
+        reveal(latest).tap()
+        XCTAssertTrue(app.navigationBars["Edit diaper"].waitForExistence(timeout: 5))
+        app.buttons["Wet"].tap(); app.buttons["Save"].tap()
+        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 8))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.navigationBars["End-of-day report"].waitForExistence(timeout: 5))
+        let changed = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Draft or care log changed" )).firstMatch
+        reveal(changed)
+        XCTAssertFalse(app.buttons["report.optionalReceipt"].exists, "old receipt was carried onto changed facts")
+        app.swipeDown()
+        publishReviewedRevision(2)
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "1 optional in-person receipt")).firstMatch.exists,
+                       "revision 1 receipt became a receipt of revision 2")
+
+        let old = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Revision 1 ·")).firstMatch
+        reveal(old).tap()
+        XCTAssertEqual(app.staticTexts["report.revisionTitle"].label, "Revision 1")
+        reveal(app.staticTexts["Optional in-person receipt · Audit Parent"])
+    }
+
+    func testClosedCorrectionsKeepCoverageEditableWithoutNewLogsOrReminders() {
+        launch(dayArguments(ended: true))
+        openReport(); openClosedCorrections()
+        app.buttons["More"].tap()
+        XCTAssertFalse(app.buttons["End shift"].exists, "closed shift can be ended a second time")
+        app.buttons["Shift times"].tap()
+        XCTAssertTrue(app.navigationBars["Shift times"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Start"].exists)
+        XCTAssertTrue(app.staticTexts["End"].exists, "ended coverage has no end correction")
+        app.buttons["Cancel"].tap()
+        let feed = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[c] %@", "timeline.record.", "bottle")).firstMatch
+        reveal(feed)
+        revealClear(feed, of: app.tabBars.firstMatch).tap()
+        let opened = app.navigationBars["Edit feed"].waitForExistence(timeout: 5)
+        if !opened { print("CLOSED FEED ROUTE HIERARCHY\n" + app.debugDescription) }
+        XCTAssertTrue(opened)
+        XCTAssertFalse(app.steppers["feed.reminder"].exists, "past correction can create a new reminder")
+        app.buttons["Cancel"].tap()
+    }
+
+    func testErasingWhileAClosedCorrectionIsOpenDoesNotReadDeletedModels() {
+        launch(dayArguments(ended: true))
+        openReport(); openClosedCorrections()
+        app.buttons["Settings"].firstMatch.tap()
+        reveal(app.buttons["Erase everything and start over"]).tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5))
+        app.alerts.buttons["Erase everything"].tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "family you")).firstMatch.waitForExistence(timeout: 15),
+                      "a retained closed editor crashed or kept the erased family alive")
+    }
+
 }

@@ -29,4 +29,15 @@ final class ReminderReachabilityTests: MoonlogUITestCase {
         reveal(app.buttons["Dismiss reminder notice"]).tap()
         XCTAssertFalse(warning.exists)
     }
+    func testExistingFeedEditLoadsWhenNoReminderRequestsExist() {
+        launch()
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[c] %@", "timeline.record.", "bottle")).firstMatch
+        reveal(row)
+        revealClear(row, of: app.tabBars.firstMatch).tap()
+        XCTAssertTrue(app.navigationBars["Edit feed"].waitForExistence(timeout: 8),
+                      "editing a saved feed is stuck waiting for an empty reminder list")
+        XCTAssertTrue(app.steppers["feed.reminder"].exists)
+        app.buttons["Cancel"].tap()
+    }
+
 }

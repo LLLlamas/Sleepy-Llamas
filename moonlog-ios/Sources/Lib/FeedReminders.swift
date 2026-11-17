@@ -3,6 +3,57 @@ import MoonlogCore
 import SwiftData
 import UserNotifications
 
+/// Narrow boundary lets lifecycle tests delay OS acceptance without touching real
+/// notifications. Authorization and pending reads remain the system's responsibility.
+@MainActor
+protocol FeedNotificationRequests {
+    func add(_ request: UNNotificationRequest) async throws
+    func removePending(_ identifiers: [String])
+    func removeDelivered(_ identifiers: [String])
+    func removeAllPending()
+    func removeAllDelivered()
+}
+
+@MainActor
+private final class SystemFeedNotificationRequests: FeedNotificationRequests {
+    private var center: UNUserNotificationCenter { .current() }
+    func add(_ request: UNNotificationRequest) async throws { try await center.add(request) }
+    func removePending(_ identifiers: [String]) { center.removePendingNotificationRequests(withIdentifiers: identifiers) }
+    func removeDelivered(_ identifiers: [String]) { center.removeDeliveredNotifications(withIdentifiers: identifiers) }
+    func removeAllPending() { center.removeAllPendingNotificationRequests() }
+    func removeAllDelivered() { center.removeAllDeliveredNotifications() }
+}
+
+/// Erasing the app's records also erases their notification content immediately.
+/// An add already awaiting the OS must not resurrect an erased family's notice.
+@MainActor
+final class FeedNotificationLifecycle {
+    private let requests: any FeedNotificationRequests
+    private(set) var epoch: UInt64 = 0
+
+    init(requests: any FeedNotificationRequests) { self.requests = requests }
+
+    func cancelAll() {
+        epoch &+= 1
+        requests.removeAllPending()
+        requests.removeAllDelivered()
+    }
+
+    func add(_ request: UNNotificationRequest, scheduledAtEpoch expected: UInt64) async throws {
+        guard expected == epoch else { throw CancellationError() }
+        defer {
+            if expected != epoch {
+                // cancelAll may run while add is suspended. Remove only this old ID;
+                // a newly created family's unrelated requests must remain untouched.
+                requests.removePending([request.identifier])
+                requests.removeDelivered([request.identifier])
+            }
+        }
+        try await requests.add(request)
+        guard expected == epoch else { throw CancellationError() }
+    }
+}
+
 /// Schedules the silent "remind me in X" notification for a feed. The *when* and the
 /// *wording* are `FeedReminder` in Core; this is only the half that has to talk to iOS.
 ///
@@ -37,6 +88,7 @@ import UserNotifications
 enum FeedReminders {
 
     private static var center: UNUserNotificationCenter { .current() }
+    private static let lifecycle = FeedNotificationLifecycle(requests: SystemFeedNotificationRequests())
 
     /// The identity that makes the whole design work: one pending request per feed event.
     static func identifier(for eventID: UUID) -> String { eventID.uuidString }
@@ -86,15 +138,17 @@ enum FeedReminders {
         babyName: String,
         feedAt: Date,
         afterMinutes: Int,
-        timeZone: TimeZone
+        timeZone: TimeZone,
+        expectedEpoch: UInt64
     ) async throws {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-moonlogReminderSaveFailure") {
             throw ReminderError.notAuthorized
         }
         #endif
-        // One `now` for both the eligibility check and the interval, so the two cannot
-        // disagree about whether the fire date is still in the future.
+        // Resolve the chosen absolute deadline before querying OS authorization.
+        // Remaining time is rechecked after that suspension point below.
+        let schedulingEpoch = expectedEpoch
         let now = Date.now
 
         // Core owns this arithmetic and is tested on it, including the spring-forward
@@ -134,11 +188,6 @@ enum FeedReminders {
         // the clock does in between, so crossing a DST boundary — or the doula's phone
         // picking up a new zone mid-shift — must not move it. A calendar trigger would
         // re-resolve its components against the new zone.
-        let interval = fireAt.timeIntervalSince(now)
-        // `UNTimeIntervalNotificationTrigger` raises an ObjC exception, not a Swift
-        // error, for a non-positive interval — uncatchable, so it is worth a guard even
-        // though `scheduleDate` returning non-nil already implies `interval > 0`.
-        guard interval > 0 else { throw ReminderError.alreadyElapsed }
 
         // Re-checked here rather than trusted from when the sheet opened: permission can
         // be revoked in Settings while a feed is being typed. **Unverified belief, worth
@@ -151,6 +200,13 @@ enum FeedReminders {
             throw ReminderError.notAuthorized
         }
 
+        let interval = fireAt.timeIntervalSince(Date.now)
+        // `UNTimeIntervalNotificationTrigger` raises an ObjC exception, not a Swift
+        // error, for a non-positive interval — uncatchable, so it is worth a guard even
+        // though the earlier eligibility check accepted it. The deadline may have
+        // elapsed while the asynchronous authorization query was in flight.
+        guard interval > 0 else { throw ReminderError.alreadyElapsed }
+
         let request = UNNotificationRequest(
             identifier: identifier(for: eventID),
             content: content,
@@ -159,8 +215,15 @@ enum FeedReminders {
         // A previous delivery must not keep displaying an old baby/time after retime.
         center.removeDeliveredNotifications(withIdentifiers: [identifier(for: eventID)])
         // Replaces any pending request under the same identifier — this *is* retime.
-        try await center.add(request)
+        try await lifecycle.add(request, scheduledAtEpoch: schedulingEpoch)
     }
+
+    /// Called directly by the confirmed erase action before its asynchronous store
+    /// write. Privacy cleanup does not depend on a later SwiftUI observation task.
+    static func cancelAll() { lifecycle.cancelAll() }
+
+    /// Capture before the database write, not only when scheduling starts.
+    static var schedulingEpoch: UInt64 { lifecycle.epoch }
 
     static func cancel(_ eventID: UUID) async {
         let id = identifier(for: eventID)

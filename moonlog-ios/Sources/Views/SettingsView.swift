@@ -89,6 +89,9 @@ struct SettingsView: View {
         }
         .alert("Erase everything?", isPresented: $confirmingErase) {
             Button("Erase everything", role: .destructive) {
+                // Clear OS-held names even if the app is closed before database
+                // observation can launch its eventual reconciliation task.
+                FeedReminders.cancelAll()
                 Haptics.warn()
                 run { try await $0.eraseEverything() }
             }
@@ -580,8 +583,9 @@ struct SettingsView: View {
             return "Records sync to your iCloud account, so they survive losing this "
                 + "phone."
         case .localOnly:
-            return "Records stay on this phone, and are carried by the phone's own "
-                + "backup. Deleting the app deletes them."
+            return "Records stay on this phone. Device backups may include them if "
+                + "backup is configured; the app does not make its own backup. "
+                + "Deleting the app deletes its records."
         }
     }
 

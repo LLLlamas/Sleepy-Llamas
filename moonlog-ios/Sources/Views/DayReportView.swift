@@ -5,18 +5,19 @@ import MoonlogCore
 /// phone are separate stages. Nothing here claims a message was delivered.
 struct DayReportView: View {
     private let shiftID: UUID
-    private let familyName: String
-    private let startedAt: Date
-    private let timeZoneIdentifier: String
+    @State private var familyName: String
+    @State private var startedAt: Date
+    @State private var timeZoneIdentifier: String
     @State private var shiftOpen: Bool
 
     init(family: Family, shift: Shift) {
         self.shiftID = shift.id
-        self.familyName = family.name
-        self.startedAt = shift.startedAt
-        self.timeZoneIdentifier = shift.timeZoneIdentifier
+        _familyName = State(initialValue: family.name)
+        _startedAt = State(initialValue: shift.startedAt)
+        _timeZoneIdentifier = State(initialValue: shift.timeZoneIdentifier)
         _shiftOpen = State(initialValue: shift.isOpen)
     }
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.careStore) private var store
     @Environment(\.palette) private var palette
     @State private var state: DayReportState?
@@ -27,11 +28,13 @@ struct DayReportView: View {
     @State private var error: String?
     @State private var showingReceipt = false
     @State private var draftSaveTask: Task<Void, Never>?
+    @State private var writer = DayReportDraftWriter()
+    @State private var confirmingReload = false
     @FocusState private var editingField: String?
 
-    private var dirty: Bool { state.map { $0.draft.normalized != draft.normalized } ?? false }
+    private var dirty: Bool { state != nil && (writer.needsSave(draft) || writer.hasPendingWrites || writer.conflicted) }
     private var current: DayReportPublication? {
-        guard !dirty, let facts else { return nil }
+        guard !dirty, state?.draft.normalized == draft.normalized, let facts else { return nil }
         return state?.currentPublication(for: facts.fingerprint)
     }
 
@@ -82,6 +85,12 @@ struct DayReportView: View {
                         .moonBackground(palette).navigationTitle("Review care log")
                     } label: { Label("Review names, hours and care log", systemImage: "list.bullet.clipboard") }
                     .accessibilityIdentifier("report.reviewFacts")
+                    if !shiftOpen {
+                        NavigationLink {
+                            ClosedShiftCorrectionsView(shiftID: shiftID)
+                        } label: { Label("Correct recorded care log", systemImage: "square.and.pencil") }
+                        .accessibilityIdentifier("report.correctFacts")
+                    }
                     Button("Refresh care log") { load() }.disabled(busy)
                     Toggle("I reviewed the notes and care log", isOn: $reviewed)
                         .accessibilityIdentifier("report.reviewed")
@@ -131,6 +140,12 @@ struct DayReportView: View {
                 Section {
                     Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(palette.stop)
                     Button(state == nil ? "Retry loading" : "Refresh care log and retry") { load() }
+                    if dirty {
+                        Button("Copy entered notes") {
+                            UIPasteboard.general.string = [draft.caregiverName, draft.summary, draft.eveningNotes, draft.questions].joined(separator: "\n\n")
+                        }
+                        Button("Reload saved draft", role: .destructive) { confirmingReload = true }
+                    }
                 }.listRowBackground(palette.raised)
             }
         }
@@ -138,7 +153,12 @@ struct DayReportView: View {
         .scrollDismissesKeyboard(.interactively)
         .scrollContentBackground(.hidden).moonBackground(palette)
         .navigationTitle("End-of-day report").navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { leaveAfterSaving() } label: { Label("Back", systemImage: "chevron.left") }
+                    .disabled(busy).accessibilityIdentifier("report.back")
+            }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") { editingField = nil }.accessibilityIdentifier("report.doneEditing")
@@ -147,12 +167,17 @@ struct DayReportView: View {
         .task { load() }
         .onChange(of: draft) { _, _ in
             reviewed = false
+            writer.edited()
             scheduleDraftSave()
         }
         .onDisappear {
             draftSaveTask?.cancel()
             if dirty { persistDraftOnExit() }
         }
+        .alert("Reload the saved draft?", isPresented: $confirmingReload) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reload", role: .destructive) { load(discardEnteredChanges: true) }
+        } message: { Text("This discards the unsaved notes shown here. Copy them first if you want to keep or merge them.") }
         .sheet(isPresented: $showingReceipt) {
             if let current {
                 ParentReceiptSheet(publication: current) { name, note in
@@ -174,58 +199,107 @@ struct DayReportView: View {
         }
     }
 
-    private func load() {
+    private func load(discardEnteredChanges: Bool = false) {
         guard !busy else { return }
         guard let store else { error = "The data store is unavailable. Nothing was changed."; return }
+        if discardEnteredChanges { draftSaveTask?.cancel() }
+        let ticket = writer.readTicket(for: draft)
         busy = true
         Task { @MainActor in
             do {
-                let snapshot = try await store.dayReportSnapshot(shiftID)
-                // A tab switch can refresh facts without discarding entered text.
-                if !dirty { draft = snapshot.state.draft }
+                // Finish this editor's queued writes before reading. A debounce
+                // that starts while the read awaits may commit too; reject that
+                // older snapshot and read again instead of rewinding entered text.
+                await writer.waitForPendingWrites()
+                var generation = writer.committedGeneration
+                var snapshot = try await store.dayReportSnapshot(shiftID)
+                while generation != writer.committedGeneration {
+                    await writer.waitForPendingWrites()
+                    generation = writer.committedGeneration
+                    snapshot = try await store.dayReportSnapshot(shiftID)
+                }
+                guard !Task.isCancelled else { busy = false; return }
+                if discardEnteredChanges || writer.canReplaceEnteredDraft(ticket, current: draft) {
+                    writer.adoptSavedDraft(snapshot.state.draft)
+                    draft = snapshot.state.draft
+                } else if writer.base != snapshot.state.draft.normalized {
+                    writer.flagConflict()
+                }
                 state = snapshot.state
                 facts = snapshot.facts
                 shiftOpen = snapshot.isOpen
-                reviewed = false; error = nil
-            } catch { self.error = error.localizedDescription }
+                familyName = snapshot.familyName
+                startedAt = snapshot.startedAt
+                timeZoneIdentifier = snapshot.timeZoneIdentifier
+                reviewed = false
+                error = writer.conflicted ? DayReportError.draftConflict.localizedDescription : nil
+            } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
             busy = false
+            if dirty && !writer.conflicted { scheduleDraftSave() }
         }
     }
 
-    /// Writes still go through the actor. A short debounce avoids a durable save
-    /// for every keystroke; leaving this screen flushes the latest entered values.
+    /// Debounce controls when a value is submitted, not whether an already
+    /// submitted actor write runs. Reverts must queue while any write is pending.
     private func scheduleDraftSave() {
         draftSaveTask?.cancel()
-        guard dirty, let store else { return }
+        guard state != nil, !writer.conflicted,
+              writer.needsSave(draft) || writer.hasPendingWrites, let store else { return }
         let entered = draft
+        let request = writer.request(for: entered)
         draftSaveTask = Task { @MainActor in
             do {
                 try await Task.sleep(for: .milliseconds(500))
                 try Task.checkCancellation()
-                let saved = try await store.saveDayReportDraft(shiftID, draft: entered)
+                let saved = try await writer.save(request) { value, expected in
+                    try await store.saveDayReportDraft(shiftID, draft: value, expectedDraft: expected)
+                }
+                try Task.checkCancellation()
                 if draft == entered { state = saved; error = nil }
             } catch is CancellationError { }
-            catch { self.error = error.localizedDescription }
+            catch { if !Task.isCancelled { self.error = error.localizedDescription } }
         }
     }
 
     private func persistDraftOnExit() {
         guard let store else { return }
         let entered = draft
+        let request = writer.request(for: entered)
         Task { @MainActor in
-            do { state = try await store.saveDayReportDraft(shiftID, draft: entered) }
-            catch { self.error = error.localizedDescription }
+            do {
+                let saved = try await writer.save(request) { value, expected in
+                    try await store.saveDayReportDraft(shiftID, draft: value, expectedDraft: expected)
+                }
+                if !Task.isCancelled && draft == entered { state = saved }
+            } catch is CancellationError { }
+            catch { if !Task.isCancelled { self.error = error.localizedDescription } }
         }
     }
 
-    private func saveDraft() {
+    private func saveDraft() { saveDraft(andLeave: false) }
+
+    private func leaveAfterSaving() {
+        if !dirty { dismiss(); return }
+        saveDraft(andLeave: true)
+    }
+
+    private func saveDraft(andLeave: Bool) {
         draftSaveTask?.cancel()
+        let entered = draft
+        let request = writer.request(for: entered)
         perform { store in
-            let saved = try await store.saveDayReportDraft(shiftID, draft: draft)
-            state = saved; draft = saved.draft
+            let saved = try await writer.save(request) { value, expected in
+                try await store.saveDayReportDraft(shiftID, draft: value, expectedDraft: expected)
+            }
+            try Task.checkCancellation()
+            state = saved
+            if draft == entered { draft = saved.draft }
             let snapshot = try await store.dayReportSnapshot(shiftID)
             facts = snapshot.facts; shiftOpen = snapshot.isOpen
+            familyName = snapshot.familyName; startedAt = snapshot.startedAt
+            timeZoneIdentifier = snapshot.timeZoneIdentifier
             reviewed = false
+            if andLeave { dismiss() }
         }
     }
 
@@ -236,6 +310,8 @@ struct DayReportView: View {
                                                       reviewedDraft: draft, at: Date())
             let snapshot = try await store.dayReportSnapshot(shiftID)
             facts = snapshot.facts; shiftOpen = snapshot.isOpen
+            familyName = snapshot.familyName; startedAt = snapshot.startedAt
+            timeZoneIdentifier = snapshot.timeZoneIdentifier
             reviewed = false
         }
     }
@@ -245,7 +321,9 @@ struct DayReportView: View {
         guard let store else { error = "The data store is unavailable. Nothing was saved."; return }
         busy = true; error = nil
         Task { @MainActor in
-            do { try await action(store) } catch { self.error = error.localizedDescription }
+            do { try await action(store) }
+            catch is CancellationError { }
+            catch { self.error = error.localizedDescription }
             busy = false
         }
     }

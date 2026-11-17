@@ -580,7 +580,8 @@ public enum HandoffHTML {
             }
             out += "</p>"
         }
-        if let open = SleepMath.openSession(in: sessions, forBaby: baby.id) {
+        if let open = SleepMath.continuingSession(
+            in: sessions, forBaby: baby.id, clippedTo: shift, asOf: now) {
             // The single fact a parent most wants at 6am. It sits inside the sleep
             // section and above the stretches, exactly where the text handoff puts
             // it — it used to float above the feeds, which is where the eye looks

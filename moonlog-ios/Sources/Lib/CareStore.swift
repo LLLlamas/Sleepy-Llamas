@@ -341,10 +341,11 @@ actor CareStore {
         guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
         guard let family = shift.family else { throw CareStoreError.familyNotFound }
         return DayReportSnapshot(state: try reportState(for: shift),
-                                 facts: DayReportComposer.facts(family: family, shift: shift), isOpen: shift.isOpen)
+                                 facts: DayReportComposer.facts(family: family, shift: shift), isOpen: shift.isOpen,
+                                 familyName: family.name, startedAt: shift.startedAt, timeZoneIdentifier: shift.timeZoneIdentifier)
     }
 
-    func saveDayReportDraft(_ shiftID: UUID, draft: DayReportDraft) throws -> DayReportState {
+    func saveDayReportDraft(_ shiftID: UUID, draft: DayReportDraft, expectedDraft: DayReportDraft) throws -> DayReportState {
         try write {
             guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
             guard shift.careContext == .day else { throw DayReportPersistenceError.wrongContext }
@@ -353,6 +354,7 @@ actor CareStore {
             guard value.caregiverName.count <= 80,
                   [value.summary, value.eveningNotes, value.questions].allSatisfy({ $0.count <= 2000 })
             else { throw DayReportError.invalidDraft }
+            guard state.draft.normalized == expectedDraft.normalized else { throw DayReportError.draftConflict }
             state.draft = value
             try saveReport(state, on: shift)
             return state

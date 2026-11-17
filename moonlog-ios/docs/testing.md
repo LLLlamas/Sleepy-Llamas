@@ -13,6 +13,22 @@ xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
   -destination "platform=iOS Simulator,name=iPhone 17 Pro" test
 ```
 
+## Fresh pre-release audit follow-up
+
+Against initial PR #3 head `ab3177f45601a6d65dc6ba22d695b37bd4f78b0f`, a fresh
+audit found closed-correction reachability, draft concurrency, sleep-boundary
+meaning and explicit-erase notification blockers. Fixes add seven deterministic
+writer tests, actor optimistic-conflict coverage, sleep-boundary cases and three
+fake notification-driver erase races. The post-fix run passed **318 tests with zero
+failures** (170 Core, 148 app/persistence):
+`/tmp/moonlog-testflight-audit-unit-final.xcresult` and its matching log.
+
+The six focused day UI cases and complete shipping/archive/upload gates are pending
+at this checkpoint; root records those results separately. The earlier 302-unit and
+combined 37-UI results below remain historical rather than being relabelled as new
+release evidence. See `pre-release-audit-2026-11-16.md` for the precise findings,
+implemented fixes and nonblocking limits.
+
 ## November 16 integration validation
 
 The integrated `Moonlog` scheme passed **302 tests with zero failures**: 165 Core

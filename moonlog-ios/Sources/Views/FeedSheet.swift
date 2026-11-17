@@ -43,8 +43,8 @@ struct FeedSheet: View {
         self.reassignment = reassignment
         self.onSave = onSave
         let storedReminder = UserDefaults.standard.integer(forKey: "moonlog.feedReminderMinutes")
-        _reminderMinutes = State(initialValue: editing?.reminderMinutes
-            ?? (FeedReminder.presetMinutes.contains(storedReminder) ? storedReminder : 0))
+        _reminderMinutes = State(initialValue: shift.isOpen ? (editing?.reminderMinutes
+            ?? (FeedReminder.presetMinutes.contains(storedReminder) ? storedReminder : 0)) : 0)
         _at = State(initialValue: editing?.at ?? Date())
         _method = State(initialValue: editing?.method ?? .breast)
         _leftMinutes = State(initialValue: (editing?.leftSeconds ?? 0) / 60)
@@ -111,12 +111,14 @@ struct FeedSheet: View {
                 }
             }
 
+            if shift.isOpen {
             Section("Optional reminder") {
                 ReminderField(label: "Remind me in", minutes: $reminderMinutes)
                 Text("A silent reminder on this device. Focus and notification settings may delay or suppress it.")
                     .font(.footnote).foregroundStyle(palette.faint)
             }
 
+            }
             Section("How") {
                 Picker("Method", selection: $method) {
                     Text("Breast").tag(FeedMethod.breast)
@@ -211,8 +213,8 @@ struct FeedSheet: View {
                 bottleSeconds: method.isBottle && bottleMinutes > 0 ? bottleMinutes * 60 : nil,
                 leftSeconds: !method.isBottle && leftMinutes > 0 ? leftMinutes * 60 : nil,
                 rightSeconds: !method.isBottle && rightMinutes > 0 ? rightMinutes * 60 : nil,
-                reminderMinutes: reminderMinutes))
-        lastReminderMinutes = reminderMinutes
+                reminderMinutes: shift.isOpen ? reminderMinutes : 0))
+        if shift.isOpen { lastReminderMinutes = reminderMinutes }
     }
 }
 

@@ -428,7 +428,8 @@ public enum Handoff {
         // The single fact a parent most wants at 6am, and it leads: the stretches
         // below it end with the same session, so putting it underneath them read as
         // a repetition rather than as the answer.
-        if let open = SleepMath.openSession(in: sessions, forBaby: baby.id) {
+        if let open = SleepMath.continuingSession(
+            in: sessions, forBaby: baby.id, clippedTo: shift, asOf: now) {
             out.append("     \(stillAsleep(open, timeZone: timeZone))")
         }
         // The stretches themselves, not only what they added up to. Sleep was the

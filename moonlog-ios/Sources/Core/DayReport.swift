@@ -59,7 +59,7 @@ public struct DayReportAcknowledgement: Codable, Sendable, Equatable, Identifiab
 
 public enum DayReportError: Error, LocalizedError, CustomStringConvertible, Equatable {
     case caregiverNameRequired, invalidDraft, missingSource, missingRenderedReport
-    case stalePublication, parentNameRequired, invalidParentNote, invalidDate, duplicateIdentifier
+    case draftConflict, stalePublication, parentNameRequired, invalidParentNote, invalidDate, duplicateIdentifier
 
     public var description: String {
         switch self {
@@ -67,6 +67,7 @@ public enum DayReportError: Error, LocalizedError, CustomStringConvertible, Equa
         case .invalidDraft: return "Use up to 80 characters for the caregiver name and 2,000 for each report note."
         case .missingSource: return "The current care log could not be verified. Reload the report and try again."
         case .missingRenderedReport: return "The report could not be prepared. Your draft is still here."
+        case .draftConflict: return "A newer draft was saved elsewhere. Your entered notes are still here. Copy them, or reload the saved draft before editing again."
         case .stalePublication: return "This report has changed. Review and publish the current revision before recording a handoff acknowledgement."
         case .parentNameRequired: return "Add the name of the parent reviewing this report on this phone."
         case .invalidParentNote: return "Use up to 80 characters for the parent name and 2,000 for their note."

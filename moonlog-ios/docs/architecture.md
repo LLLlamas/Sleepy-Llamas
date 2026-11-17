@@ -169,6 +169,25 @@ Receipt is never required to end, publish or share. Remote parent accounts,
 household access, invitations/revocation and cross-device acknowledgements are a
 later architecture phase; private CloudKit mirroring alone would not supply them.
 
+## Pre-release refinement: draft concurrency and closed corrections
+
+The November 16 pre-release audit tightened the report workflow after the initial
+implementation. `saveDayReportDraft` now requires an expected draft and rejects a
+stale whole-draft replacement. `DayReportDraftWriter` serializes one editor's writes
+and stamps intent before asynchronous scheduling; edits and confirmed reloads
+invalidate earlier tokens, even when a revert needs no new save. Old results/errors
+are discarded, and captured read/commit generations prevent refresh from rewinding
+entered text. Back awaits save success; explicit conflict recovery can copy entered
+notes or reload the saved version after confirmation.
+
+Closed care records and their coverage are editable through the shared correction
+host. The report reloads fresh actor snapshots after returning, including primitive
+header/date/timezone values, without discarding unsaved narrative. Derived sleep
+continuation is evaluated at the coverage cutoff rather than copying the raw
+session's open flag. `report-facts-v2` makes older derived copies historical until
+reviewed again. These changes do not reopen a closed shift or mutate published
+snapshots. See `pre-release-audit-2026-11-16.md` for blockers and evidence.
+
 ## The shift lifecycle
 
 Start and end are values the doula **sets or confirms** — never inferred from the

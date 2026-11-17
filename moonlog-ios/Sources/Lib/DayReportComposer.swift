@@ -15,7 +15,7 @@ enum DayReportComposer {
         let provenance = sourceProvenance(family: family, shift: shift)
         let components = provenance + [family.id.uuidString, family.name, shift.id.uuidString,
                           shift.careContext.rawValue, shift.caregiver ?? "",
-                          shift.parentNote ?? "", family.timeZoneIdentifier, "report-facts-v1"]
+                          shift.parentNote ?? "", family.timeZoneIdentifier, "report-facts-v2"]
         // Length prefixes avoid collisions caused by joining free-text fields on
         // a separator they can themselves contain. SHA256 is stable across launches.
         let bytes = components.reduce(into: Data()) { data, component in
@@ -118,4 +118,7 @@ struct DayReportSnapshot: Sendable {
     let state: DayReportState
     let facts: DayReportComposer.Facts
     let isOpen: Bool
+    let familyName: String
+    let startedAt: Date
+    let timeZoneIdentifier: String
 }

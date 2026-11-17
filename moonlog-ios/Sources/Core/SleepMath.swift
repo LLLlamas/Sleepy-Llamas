@@ -13,6 +13,7 @@ public struct SleepStretch: Sendable, Hashable, Identifiable {
     /// Where the stretch stops counting. On an open session this is where the clip
     /// fell — the shift's end, or now — so `isOpen` guards printing it as a waking.
     public let end: Date
+    /// Continuing at the coverage boundary, even if a later wake is now known.
     public let isOpen: Bool
 
     public var seconds: TimeInterval { end.timeIntervalSince(start) }
@@ -38,7 +39,24 @@ public enum SleepMath {
         guard let span = interval(of: session, clippedTo: shift, asOf: now),
               span.duration > 0 else { return nil }
         return SleepStretch(
-            id: session.id, start: span.start, end: span.end, isOpen: session.isOpen)
+            id: session.id, start: span.start, end: span.end,
+            isOpen: session.endAt.map { $0 > span.end } ?? true)
+    }
+
+    /// The sleep continuing when observation stopped. A later recorded wake must
+    /// not rewrite a historical handoff as though the baby woke at the clip.
+    static func continuingSession(
+        in sessions: [SleepSnapshot], forBaby babyID: UUID,
+        clippedTo shift: ShiftWindow, asOf now: Date
+    ) -> SleepSnapshot? {
+        guard let boundary = shift.interval(asOf: now)?.end else { return nil }
+        return sessions.filter { $0.babyID == babyID && $0.startAt <= boundary }
+            .filter { $0.endAt.map { $0 > boundary } ?? true }
+            .min { lhs, rhs in
+                lhs.startAt == rhs.startAt
+                    ? lhs.id.uuidString < rhs.id.uuidString
+                    : lhs.startAt < rhs.startAt
+            }
     }
 
     /// Every stretch one baby slept during the shift, oldest first.

@@ -15,6 +15,9 @@ typealias Undo = @Sendable (CareStore) async throws -> Void
 struct TonightView: View {
     let family: Family
     let shift: Shift
+    /// Past shifts reuse the exact edit/Undo dispatch without offering new care,
+    /// sleep toggles, reminders or a second end-shift action.
+    var correctionsOnly = false
 
     @Environment(\.palette) private var palette
     @Environment(\.modelContext) private var modelContext
@@ -65,17 +68,19 @@ struct TonightView: View {
         // job was done by accident: the confirmation banner's `@State` happened to
         // mutate about two seconds after every write. Deleting the banner would
         // have silently stopped the timeline updating after a log.
+        // Read reminder readiness here too. If the OS returns the same empty
+        // dictionary, a sheet-only State read can stay stuck on its initial spinner.
         let data = Tonight(
-            family: family, shift: shift, now: Date(), generation: refreshToken, reminders: reminders)
+            family: family, shift: shift, now: correctionsOnly ? (shift.endedAt ?? shift.startedAt) : Date(), generation: refreshToken, reminders: reminders, remindersLoaded: remindersLoaded)
         content(data)
-            .navigationTitle(shift.careContext == .day ? "Nanny Log" : "Moonlog")
+            .navigationTitle(correctionsOnly ? "Correct care log" : (shift.careContext == .day ? "Nanny Log" : "Moonlog"))
             .task(id: refreshToken) {
-                reminders = await FeedReminders.pending()
+                reminders = correctionsOnly ? [:] : await FeedReminders.pending()
                 remindersLoaded = true
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
-                    Task { reminders = await FeedReminders.pending(); remindersLoaded = true }
+                    Task { reminders = correctionsOnly ? [:] : await FeedReminders.pending(); remindersLoaded = true }
                 }
             }
             #if DEBUG
@@ -98,7 +103,17 @@ struct TonightView: View {
     private func content(_ data: Tonight) -> some View {
         ScrollView {
             VStack(spacing: 14) {
-                NightHeader(familyName: family.name, timeZone: data.timeZone)
+                if correctionsOnly {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(family.name).font(.headline)
+                        Text("Ended shift · " + Fmt.longDate(shift.startedAt, timeZone: data.timeZone))
+                            .font(.subheadline)
+                        Text("Tap a recorded row to correct it. This does not reopen the shift. A changed care log needs a new reviewed report; saved older copies remain intact.")
+                            .font(.footnote).foregroundStyle(palette.soft)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding().cardSurface(palette)
+                } else {
+                    NightHeader(familyName: family.name, timeZone: data.timeZone)
+                }
                 if let warning = reminderWarning {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("Reminder not set", systemImage: "bell.slash.fill")
@@ -112,6 +127,7 @@ struct TonightView: View {
                     .padding().cardSurface(palette)
                 }
 
+                if !correctionsOnly {
                 ForEach(data.babies) { presentation in
                     BabyStatusCard(
                         baby: presentation,
@@ -125,12 +141,13 @@ struct TonightView: View {
                     )
                 }
 
+                }
                 TimelineSection(
                     entries: data.timeline,
                     timeZone: data.timeZone,
                     names: data.names,
                     accents: data.accents,
-                    title: shift.careContext == .day ? "Today" : "Tonight",
+                    title: correctionsOnly ? "Recorded care — tap to correct" : (shift.careContext == .day ? "Today" : "Tonight"),
                     onEdit: { sheet = $0 })
             }
             .padding(.horizontal, 16)
@@ -142,14 +159,18 @@ struct TonightView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    extraButtons(data)
-                    earlierSleepButtons(data)
+                    if !correctionsOnly {
+                        extraButtons(data)
+                        earlierSleepButtons(data)
+                    }
                     Button("Shift times", systemImage: "clock.arrow.circlepath") {
                         hoursSheet = .correct
                     }
+                    if !correctionsOnly {
                     Divider()
                     Button("End shift", systemImage: "moon.stars", role: .destructive) {
                         hoursSheet = .end
+                    }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -166,7 +187,7 @@ struct TonightView: View {
                 asleep: data.babies.filter(\.isAsleep).map(\.name),
                 plannedEnd: shift.plannedEndAt
             ) { startedAt, endedAt in
-                endShift(startedAt: startedAt, endedAt: endedAt)
+                try await endShift(startedAt: startedAt, endedAt: endedAt)
             }
             .presentationDetents([.medium, .large])
         }
@@ -388,6 +409,7 @@ private extension TonightView {
                     await FeedReminders.cancel(id)
                     guard let restoration else { return nil }
                     return { store in
+                        let epoch = await FeedReminders.schedulingEpoch
                         try await store.restoreEvent(restoration)
                         guard let fireAt = reminderWas, let babyID, let babyName
                         else { return }
@@ -400,7 +422,7 @@ private extension TonightView {
                             eventID: id, babyID: babyID, babyName: babyName,
                             feedAt: loggedAt,
                             afterMinutes: Self.minutes(from: loggedAt, to: fireAt),
-                            timeZone: zone)
+                            timeZone: zone, expectedEpoch: epoch)
                     }
                 }
             }
@@ -410,7 +432,7 @@ private extension TonightView {
 
             switch (kind, baby) {
             case (.feed, let baby?):
-                if remindersLoaded {
+                if correctionsOnly || data.remindersLoaded {
                 FeedSheet(
                     baby: baby, shift: shift.window, unit: family.volumeUnit,
                     editing: feedBefore, reassignment: move, onDelete: delete
@@ -480,6 +502,7 @@ private extension TonightView {
             let from = baby.id
             let fromName = baby.name
             let toName = target.name
+            let epoch = FeedReminders.schedulingEpoch
             // The "are you sure" for this is raised by `LogSheetChrome`, which owns
             // the menu it is chosen from. See the note on `endShift`.
             write(target, "Moved to \(target.name)") { store in
@@ -491,12 +514,13 @@ private extension TonightView {
                 // wrong cot, which is the exact mistake this menu exists to correct.
                 await Self.moveReminder(
                     id, to: targetID, named: toName, feedAt: loggedAt,
-                    afterMinutes: wasMinutes, timeZone: zone)
+                    afterMinutes: wasMinutes, timeZone: zone, expectedEpoch: epoch)
                 return { store in
+                    let undoEpoch = await FeedReminders.schedulingEpoch
                     try await store.reassignEvent(id, toBaby: from)
                     await Self.moveReminder(
                         id, to: from, named: fromName, feedAt: loggedAt,
-                        afterMinutes: wasMinutes, timeZone: zone)
+                        afterMinutes: wasMinutes, timeZone: zone, expectedEpoch: undoEpoch)
                 }
             }
         }
@@ -512,7 +536,7 @@ private extension TonightView {
     /// pending to begin with.
     static func moveReminder(
         _ eventID: UUID, to babyID: UUID?, named babyName: String?,
-        feedAt: Date, afterMinutes: Int?, timeZone: TimeZone
+        feedAt: Date, afterMinutes: Int?, timeZone: TimeZone, expectedEpoch: UInt64
     ) async {
         guard let afterMinutes, let babyID, let babyName else {
             await FeedReminders.cancel(eventID)
@@ -521,7 +545,7 @@ private extension TonightView {
         do {
             try await FeedReminders.schedule(
                 eventID: eventID, babyID: babyID, babyName: babyName,
-                feedAt: feedAt, afterMinutes: afterMinutes, timeZone: timeZone)
+                feedAt: feedAt, afterMinutes: afterMinutes, timeZone: timeZone, expectedEpoch: expectedEpoch)
         } catch {
             await FeedReminders.cancel(eventID)
         }
@@ -603,27 +627,28 @@ private extension TonightView {
     /// the sheet that triggered it is still presented and then dismissing out from
     /// under it, and a confirmation that fails to appear is an end-shift that
     /// silently does nothing.
-    func endShift(startedAt: Date, endedAt: Date?) {
+    func endShift(startedAt: Date, endedAt: Date?) async throws {
         let shiftID = shift.id
         let wasStartedAt = shift.startedAt
+        let wasEndedAt = shift.endedAt
         let movedStart = startedAt != wasStartedAt
         let reminderIDs = shift.liveEvents.filter { $0.kind == .feed }.map(\.id)
-        perform(endedAt == nil ? "Shift times updated" : "Shift ended") { store in
-            // Two writes, not one: `endShift` is the call that means "the doula is
-            // leaving", and it is the one that refuses an already-closed shift.
-            // If the second fails the corrected start still stands — which is the
-            // right way round, since that correction was independently true.
-            if movedStart {
-                try await store.updateShift(shiftID, startedAt: startedAt)
+        let correctingClosed = correctionsOnly
+        try await writeAwaitingSave(nil, correctingClosed || endedAt == nil ? "Shift times updated" : "Shift ended") { store in
+            if correctingClosed {
+                guard movedStart || endedAt != wasEndedAt else { return nil }
+                // updateShift cannot reopen a closed session; its clipping checks
+                // apply to both new endpoints and to the reverse action.
+                try await store.updateShift(shiftID, startedAt: startedAt, endedAt: endedAt)
+                return { try await $0.updateShift(shiftID, startedAt: wasStartedAt, endedAt: wasEndedAt) }
             }
+            if movedStart { try await store.updateShift(shiftID, startedAt: startedAt) }
             guard let endedAt else {
                 guard movedStart else { return nil }
                 return { try await $0.updateShift(shiftID, startedAt: wasStartedAt) }
             }
             try await store.endShift(shiftID, endedAt: endedAt)
             for id in reminderIDs { await FeedReminders.cancel(id) }
-            // No Undo: `updateShift` will not reopen a closed shift, because
-            // `close(at:)` is the only thing keeping `isOpen` honest.
             return nil
         }
     }
@@ -676,12 +701,15 @@ private extension TonightView {
         let babyName: String
         let minutes: Int
         let zone: TimeZone
+        let epoch: UInt64
     }
 
     func reminderPlan<E: LogEntry>(_ entry: E, baby: BabyPresentation?) -> ReminderPlan? {
-        guard let feed = entry as? FeedEntry, feed.reminderMinutes > 0, let baby else { return nil }
+        guard shift.isOpen, !correctionsOnly,
+              let feed = entry as? FeedEntry, feed.reminderMinutes > 0, let baby else { return nil }
         return ReminderPlan(babyID: baby.id, babyName: baby.name,
-                            minutes: feed.reminderMinutes, zone: shiftTimeZone)
+                            minutes: feed.reminderMinutes, zone: shiftTimeZone,
+                            epoch: FeedReminders.schedulingEpoch)
     }
 
     /// Reminder failure never turns a durable feed save into a failed sheet save.
@@ -689,7 +717,7 @@ private extension TonightView {
         do {
             try await FeedReminders.schedule(eventID: id, babyID: plan.babyID,
                 babyName: plan.babyName, feedAt: feedAt, afterMinutes: plan.minutes,
-                timeZone: plan.zone)
+                timeZone: plan.zone, expectedEpoch: plan.epoch)
         } catch {
             // Never leave the old alarm at a time or baby that was just corrected.
             await FeedReminders.cancel(id)
@@ -727,9 +755,10 @@ private extension TonightView {
             if let plan { await scheduleReminder(id, plan, feedAt: entry.at) }
             else { await FeedReminders.cancel(id) }
             return { store in
+                let undoEpoch = await FeedReminders.schedulingEpoch
                 try await store.updateEvent(id, at: before.at) { before.apply(to: $0) }
                 await Self.moveReminder(id, to: babyID, named: babyName,
-                    feedAt: before.at, afterMinutes: wasMinutes, timeZone: zone)
+                    feedAt: before.at, afterMinutes: wasMinutes, timeZone: zone, expectedEpoch: undoEpoch)
             }
         }
     }
@@ -910,6 +939,7 @@ private struct Tonight {
     /// Held only so the value changes when `refreshToken` does. See `body`.
     let generation: Int
     let reminders: [UUID: Date]
+    let remindersLoaded: Bool
     let timeZone: TimeZone
     let babies: [BabyPresentation]
     let timeline: [TimelineEntry]
@@ -922,7 +952,8 @@ private struct Tonight {
 
     func model(for id: UUID) -> Baby? { models[id] }
 
-    init(family: Family, shift: Shift, now: Date, generation: Int, reminders: [UUID: Date]) {
+    init(family: Family, shift: Shift, now: Date, generation: Int, reminders: [UUID: Date], remindersLoaded: Bool) {
+        self.remindersLoaded = remindersLoaded
         self.reminders = reminders
         self.generation = generation
         // The device's zone, not the shift's recorded one. The recorded zone is
@@ -933,9 +964,9 @@ private struct Tonight {
         // boundaries and day-of-life still run on the family's zone
         // (`Family.calendar`); this is display only. Past nights in History keep
         // their recorded zone, which is the right thing for a night already worked.
-        self.timeZone = .current
+        self.timeZone = shift.isOpen ? .current : (TimeZone(identifier: shift.timeZoneIdentifier) ?? .current)
 
-        let roster = family.activeBabies
+        let roster = shift.isOpen ? family.activeBabies : shift.roster(of: family)
         var models: [UUID: Baby] = [:]
         var names: [UUID: String] = [:]
         var accents: [UUID: BabyAccent] = [:]

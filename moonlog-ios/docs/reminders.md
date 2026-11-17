@@ -104,3 +104,52 @@ labels, not the device theme or recorded shift boundaries.
 
 These sources inform implementation and the device checklist. They do not prove
 this app's notifications have delivered on a user's hardware.
+
+## Pre-release audit follow-up, November 16
+
+The erase confirmation now clears pending and delivered OS notifications directly,
+before beginning the asynchronous database erase. Cleanup no longer relies solely
+on a later UI observation task that may not run before the app is suspended. A
+notification lifecycle epoch is captured before each database write or Undo. It
+rejects a caller that resumes after erase and removes an old request if OS
+acceptance returns after erase, without deleting a new family's requests. An injectable fake
+driver exercises both remove-all calls, stale scheduling generations and a gated
+late add; these are scheduling-boundary tests, not device-delivery evidence.
+
+The remaining time to a feed's chosen deadline is now calculated after the awaited
+authorization-status query. A deadline that passes during that query is rejected
+instead of silently adding the query's duration to the reminder.
+
+Settings no longer guarantees a device backup exists or contains app data. It says
+backup inclusion depends on device configuration and the app makes no own backup.
+
+Known nonblocking limits remain: real phone/Watch/Focus verification, notification
+taps opening the selected app household rather than navigating to the referenced
+baby, and pending notice titles not automatically refreshing after a baby rename.
+The actual selected-baby correction path does replace its notice identity/title.
+
+### Focused audit disposition
+
+The source audit found two issues to close before this candidate is uploaded:
+notification content surviving explicit erase, and a later-recorded wake being
+misrepresented as a wake at an earlier coverage cutoff. The first now has direct
+OS cleanup plus epochs captured before database suspension points and checked
+before/after OS adds. The second now describes sleep state at the observation
+boundary in text and HTML; a later real wake does not change that historical state.
+The report semantic fingerprint advances to v2, requiring renewed review rather
+than treating an older interpretation as the current reviewed copy.
+
+Closed-shift correction source review found no additional confirmed blocker:
+new logging, sleep toggles and ending again are hidden; archived children with
+recorded care remain available; reminder controls/default writes are disabled;
+coverage changes await a durable write and keep entered values on failure. The new
+navigation wrapper uses surviving persistent IDs before reading a deleted shift
+or family. Returning through an older history detail after a household is deleted
+from another tab remains a useful adversarial device/UI check, not a reproduced
+crash claim.
+
+The archive script's actual source-marker extraction was checked and includes
+all four new day/reminder hooks. This is not a replacement for the final Release
+binary scan, full simulator gates or real-phone notification checks. Regression
+suites added here still require the owning release runner; this audit did not run
+Xcode, archive, upload, or modify the original working tree.

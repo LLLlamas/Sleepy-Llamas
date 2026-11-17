@@ -37,6 +37,12 @@ struct ShiftDetailView: View {
                             .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget)
                     }.accessibilityIdentifier("history.dayReport")
                 }
+                NavigationLink {
+                    ClosedShiftCorrectionsView(shiftID: shift.id)
+                } label: {
+                    Label("Correct recorded care log", systemImage: "pencil.circle")
+                        .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget)
+                }.accessibilityIdentifier("history.correctFacts")
                 SummaryCards(family: family, shift: shift, now: asOf)
 
                 TimelineSection(

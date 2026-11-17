@@ -32,6 +32,11 @@ final class DayReportPersistenceTests: XCTestCase {
         return DayReportComposer.facts(family: try XCTUnwrap(shift.family), shift: shift)
     }
 
+    private func saveDraft(_ shift: UUID, draft: DayReportDraft) async throws -> DayReportState {
+        let expected = try await store.dayReportState(shift).draft
+        return try await store.saveDayReportDraft(shift, draft: draft, expectedDraft: expected)
+    }
+
     private func publish(_ shift: UUID) async throws -> DayReportState {
         let state = try await store.dayReportState(shift)
         return try await store.publishDayReport(shift, reviewedFingerprint: facts(shift).fingerprint,
@@ -58,7 +63,7 @@ final class DayReportPersistenceTests: XCTestCase {
     func testPublicationRequiresEndedShiftButDraftCanBeSavedDuringCare() async throws {
         let (_, _, shift) = try await fixture(closed: false)
         let entered = DayReportDraft(caregiverName: "Cat", summary: "Play and a walk", questions: "Bring diapers")
-        _ = try await store.saveDayReportDraft(shift, draft: entered)
+        _ = try await saveDraft(shift, draft: entered)
         do { _ = try await publish(shift); XCTFail("running shift published") }
         catch { XCTAssertEqual(error as? DayReportPersistenceError, .endShiftFirst) }
         let retained = try await store.dayReportState(shift)
@@ -69,7 +74,7 @@ final class DayReportPersistenceTests: XCTestCase {
 
     func testPublicationIsImmutableIdempotentAndEmbedsRevisionTimeInBothExports() async throws {
         let (_, _, shift) = try await fixture()
-        _ = try await store.saveDayReportDraft(shift, draft: DayReportDraft(caregiverName: "Cat", summary: "A calm day"))
+        _ = try await saveDraft(shift, draft: DayReportDraft(caregiverName: "Cat", summary: "A calm day"))
         let first = try await publish(shift)
         let again = try await publish(shift)
         let publication = try XCTUnwrap(first.latestPublication)
@@ -77,7 +82,7 @@ final class DayReportPersistenceTests: XCTestCase {
         XCTAssertTrue(publication.plainText.contains("Revision 1"))
         XCTAssertTrue(publication.html.contains("Revision 1"))
         XCTAssertTrue(publication.html.contains(publication.publishedAt.formatted(.iso8601)))
-        _ = try await store.saveDayReportDraft(shift, draft: DayReportDraft(caregiverName: "Cat", summary: "A corrected day"))
+        _ = try await saveDraft(shift, draft: DayReportDraft(caregiverName: "Cat", summary: "A corrected day"))
         let changed = try await store.dayReportState(shift)
         XCTAssertNil(changed.currentPublication(for: try facts(shift).fingerprint))
         XCTAssertEqual(changed.publications.first, publication)
@@ -116,7 +121,7 @@ final class DayReportPersistenceTests: XCTestCase {
         let original = try await store.dayReportState(shift)
         let oldFingerprint = try facts(shift).fingerprint
         let entered = DayReportDraft(caregiverName: "Cat", summary: "Saved new note")
-        _ = try await store.saveDayReportDraft(shift, draft: entered)
+        _ = try await saveDraft(shift, draft: entered)
         do {
             _ = try await store.publishDayReport(shift, reviewedFingerprint: oldFingerprint,
                                                  reviewedDraft: original.draft, at: end.addingTimeInterval(1))
@@ -147,6 +152,23 @@ final class DayReportPersistenceTests: XCTestCase {
         XCTAssertNotEqual(try facts(shift).fingerprint, before)
     }
 
+    func testStaleEditorCannotReplaceNewerWholeDraftOrItsOtherFields() async throws {
+        let (_, _, shift) = try await fixture()
+        let base = try await store.dayReportState(shift).draft
+        var newer = base
+        newer.summary = "The latest summary"
+        newer.eveningNotes = "New handoff information from another editor"
+        _ = try await store.saveDayReportDraft(shift, draft: newer, expectedDraft: base)
+        var stale = base
+        stale.summary = "An older queued edit"
+        do {
+            _ = try await store.saveDayReportDraft(shift, draft: stale, expectedDraft: base)
+            XCTFail("stale draft replaced newer notes")
+        } catch { XCTAssertEqual(error as? DayReportError, .draftConflict) }
+        let retained = try await store.dayReportState(shift)
+        XCTAssertEqual(retained.draft, newer)
+    }
+
     func testUnreadableSavedReportFailsClosedRatherThanReplacingHistory() async throws {
         let (_, _, shiftID) = try await fixture()
         let context = ModelContext(container)
@@ -154,7 +176,7 @@ final class DayReportPersistenceTests: XCTestCase {
         shift.dayReportJSON = "not valid JSON"; try context.save()
         // A fresh writer represents the next launch and cannot inherit a cached model.
         let freshStore = CareStore(modelContainer: container)
-        do { _ = try await freshStore.saveDayReportDraft(shiftID, draft: DayReportDraft(caregiverName: "Cat")); XCTFail("corrupt history replaced") }
+        do { _ = try await freshStore.saveDayReportDraft(shiftID, draft: DayReportDraft(caregiverName: "Cat"), expectedDraft: DayReportDraft()); XCTFail("corrupt history replaced") }
         catch { XCTAssertEqual(error as? DayReportPersistenceError, .unreadable) }
         XCTAssertEqual(shift.dayReportJSON, "not valid JSON")
     }
@@ -184,7 +206,8 @@ final class DayReportPersistenceTests: XCTestCase {
         let shift = try await writer.startShift(familyID: family, startedAt: start, caregiver: "Cat", careContext: .day)
         try await writer.endShift(shift, endedAt: end)
         let draft = DayReportDraft(caregiverName: "Cat", summary: "Saved for tomorrow")
-        _ = try await writer.saveDayReportDraft(shift, draft: draft)
+        let base = try await writer.dayReportState(shift).draft
+        _ = try await writer.saveDayReportDraft(shift, draft: draft, expectedDraft: base)
         let read = ModelContext(disk)
         let model = try XCTUnwrap(read.fetch(FetchDescriptor<Shift>()).first)
         let fingerprint = DayReportComposer.facts(family: try XCTUnwrap(model.family), shift: model).fingerprint
