@@ -2,6 +2,42 @@
 
 Updated 2026-11-16.
 
+## Release candidate: 0.1.0 (1794891089)
+
+PR #3 is merged into `moonlog-ios` at `71c1a13`; the test-only handoff
+synchronization fix is `980fe82`. The release audit fixed ended-shift factual
+corrections, stale draft writes, sleep crossing a handoff boundary, notification
+erase races and feed-edit readiness. See `pre-release-audit-2026-11-16.md`.
+
+The release run passed **318 unit/persistence tests**. The full UI run passed
+**40/41**; its one failure tapped Summary while the end-shift sheet was still
+closing. After changing only that test to wait for dismissal and a tappable tab,
+the focused retry passed with the original content assertions intact. These are
+combined results, not a claim of one entirely green 41-case run.
+
+The signed device archive **0.1.0 (1794891089)** passed verification: no source or
+linker warnings, all 14 DEBUG markers absent from app and Core binaries, matching
+build number, export compliance false, no iCloud entitlement and a valid signature.
+The exact archive is in Xcode Organizer's November 16 archives. It was built from
+`980fe82` with only the scripted build-number stamp applied.
+
+**Upload blocked; this build is not on TestFlight.** Apple's export rejected the
+request with `PLA Update available`: the account holder must accept the latest
+Developer Program License Agreement. It also reported no iOS Distribution
+certificate; retry the existing archive after the agreement is accepted, then
+resolve signing only if that error remains. No certificate or account was changed.
+The last recorded successful upload remains **0.1.0 (1789610519)**.
+
+Retry `./scripts/upload.sh` with this exact archive path:
+
+```text
+~/Library/Developer/Xcode/Archives/2026-11-16/Moonlog 2026-11-16, 23.51.30.xcarchive
+```
+
+Do not rebuild just to retry the upload. Apple acceptance and subsequent TestFlight
+processing/availability must be verified separately. Existing local website edits
+were preserved; this release was built in an isolated checkout.
+
 ## Current working source: reminders and daytime Nanny Log
 
 The newer native implementation now contains the selectively ported feed reminders
@@ -22,7 +58,7 @@ that current revision with a typed name and separate note. Identity is not
 authenticated; receipt is not remote reading or care consent. It never blocks
 ending, publishing or sharing. There are no parent accounts or remote confirmations.
 
-### Validation on November 16
+### Initial MVP validation on November 16 (before release audit)
 
 - **302 unit/persistence tests passed:** 165 `MoonlogCoreTests` and 137
   `MoonlogTests`, zero failures, in the integrated `Moonlog` scheme.
@@ -42,7 +78,9 @@ ending, publishing or sharing. There are no parent accounts or remote confirmati
   is combined coverage, not a claim that one full 37-case run was entirely green.
 - Device notification delivery, Focus behavior and Watch mirroring remain
   unverified. No Watch app or NFC implementation was added. CloudKit stays off.
-- No archive, version/build-number change or TestFlight upload was performed.
+- At that initial MVP validation stage, no archive, version/build-number change or
+  TestFlight upload had been performed. See the release candidate above for the
+  subsequent signed archive and blocked upload.
 
 Unit result: `/tmp/moonlog-nannylog-final-unit.xcresult` and matching log.
 Upgrade evidence: `/tmp/moonlog-nannylog-migration-result.txt` with before/after
@@ -53,7 +91,8 @@ artifacts, not files required by the app. Release evidence is
 `/tmp/moonlog-nannylog-release-final.log`; the current-tree binary check also
 confirmed build number `1789610519` and all 14 DEBUG markers absent.
 
-The last recorded TestFlight upload remains **0.1.0 (1789610519), September 16**;
+At that initial validation stage, the last recorded TestFlight upload was
+**0.1.0 (1789610519), September 16**;
 that historical build does not contain this November work. Current App Store
 Connect availability was not reverified. The previously documented 238 unit and
 32 UI passes describe that earlier source, not the current validation count.
