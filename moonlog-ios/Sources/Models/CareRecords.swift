@@ -17,6 +17,14 @@ final class Shift {
     /// "the time I actually left" gets decided.
     var plannedEndAt: Date? = nil
 
+    /// Legacy shifts remain night care. Context is explicit, never inferred from hours.
+    var careContextRaw: String? = nil
+    var careContext: CareContext { CareContext(rawValue: careContextRaw ?? "") ?? .night }
+
+    /// Versioned handoffs are saved atomically with the shift. Optional for additive
+    /// migration, encrypted because drafts and receipt notes concern a family.
+    @Attribute(.allowsCloudEncryption) var dayReportJSON: String? = nil
+
     @Attribute(.allowsCloudEncryption) var caregiver: String? = nil
 
     /// The doula's own sentences to the parents, written at the end of the night and

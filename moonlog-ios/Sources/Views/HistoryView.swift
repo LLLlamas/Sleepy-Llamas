@@ -29,7 +29,7 @@ struct HistoryView: View {
             if pastNights.isEmpty {
                 EmptyStatePlaceholder(
                     emoji: "🌙",
-                    title: "No finished nights yet",
+                    title: "No finished shifts yet",
                     message: "When you end a shift for \(family.name), it appears here "
                         + "with its totals and handoff.")
             } else {
@@ -42,7 +42,7 @@ struct HistoryView: View {
             }
         }
         .moonBackground(palette)
-        .navigationTitle("Past nights")
+        .navigationTitle("Past shifts")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

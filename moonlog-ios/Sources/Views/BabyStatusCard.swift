@@ -16,6 +16,10 @@ struct BabyPresentation: Identifiable, Equatable {
     let lastFeedAt: Date?
     let lastDiaperAt: Date?
 
+    var feedReminderAt: Date? = nil
+    var reminderFeedAt: Date? = nil
+    static let defaultFeedInterval: TimeInterval = 3 * 3600
+
     var isAsleep: Bool { asleepSince != nil }
 
     /// The instant the current state began, whichever state that is.
@@ -27,10 +31,23 @@ struct BabyPresentation: Identifiable, Equatable {
     /// A future-dated feed (reachable only via sync from a device with a skewed
     /// clock) counts as overdue rather than as "just fed" — treating it as recent is
     /// what silently suppressed this warning in the web version.
-    func feedIsDue(now: Date, after interval: TimeInterval = 3 * 3600) -> Bool {
+    func feedIsDue(now: Date, after interval: TimeInterval = BabyPresentation.defaultFeedInterval) -> Bool {
         guard let lastFeedAt else { return false }
         let elapsed = now.timeIntervalSince(lastFeedAt)
         return elapsed < 0 || elapsed >= interval
+    }
+    var feedDueAfter: TimeInterval {
+        guard let lastFeedAt, let due = feedReminderAt else {
+            return BabyPresentation.defaultFeedInterval
+        }
+        // The pending reminder may belong to an EARLIER feed. Measuring its fire
+        // date against the latest feed subtracts two different events from each
+        // other, which made a baby fed ten minutes ago read as overdue.
+        guard reminderFeedAt == lastFeedAt else {
+            return BabyPresentation.defaultFeedInterval
+        }
+        let interval = due.timeIntervalSince(lastFeedAt)
+        return interval > 0 ? interval : BabyPresentation.defaultFeedInterval
     }
 }
 
@@ -85,6 +102,7 @@ struct BabyStatusCard: View {
                 VStack(alignment: .leading, spacing: 12) {
                     status(now: context.date)
                     lastSeen(now: context.date)
+                    if let due = baby.feedReminderAt { reminderChip(due, now: context.date) }
                 }
             }
             actions
@@ -269,11 +287,27 @@ struct BabyStatusCard: View {
             // `docs/design.md`: colour is never the only signal. It was the only
             // signal here, on the one chip that decides the next action.
             chip("drop.fill", baby.lastFeedAt, now: now,
-                 empty: "no feed yet", label: "Last feed", warn: baby.feedIsDue(now: now))
+                 empty: "no feed yet", label: "Last feed", warn: baby.feedIsDue(now: now, after: baby.feedDueAfter))
             chip(CareGlyph.diaper, baby.lastDiaperAt, now: now,
                  empty: "no change yet", label: "Last diaper", warn: false)
             Spacer()
         }
+    }
+
+    private func reminderChip(_ due: Date, now: Date) -> some View {
+        let remaining = due.timeIntervalSince(now)
+        // `Fmt.duration` says "just now" under a minute, which reads as nonsense
+        // after "in". A reminder this close, or one whose fire date has passed while
+        // the pending list went stale, is simply due.
+        let text = remaining < 60 ? "due now" : "in \(Fmt.duration(remaining))"
+        return HStack(spacing: 5) {
+            Image(systemName: "bell.fill").font(.caption2)
+            Text(text).font(.caption.monospacedDigit())
+        }
+        .foregroundStyle(palette.accent)
+        // Spoken as one phrase: "in 40m" on its own says nothing about what for.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Feed reminder \(text)")
     }
 
     private func chip(

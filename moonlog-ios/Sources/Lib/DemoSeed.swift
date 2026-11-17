@@ -164,6 +164,11 @@ enum DemoSeed {
         leo.family = family
 
         let shift = Shift(startedAt: shiftStart, caregiver: "Cat")
+        if UserDefaults.standard.string(forKey: "moonlogCareContext") == "day" {
+            shift.careContextRaw = CareContext.day.rawValue
+            UserDefaults.standard.set(CareContext.day.rawValue, forKey: "moonlog.lastCareContext")
+            if UserDefaults.standard.bool(forKey: "moonlogDayShiftEnded") { shift.close(at: now) }
+        }
         // So the keepsake page's note section is reachable in a screenshot run.
         shift.parentNote = """
             A settled night overall. Mia took a while to go down after the 9pm feed \
@@ -175,6 +180,9 @@ enum DemoSeed {
 
             Everything's in the log below if you want the detail. Sleep well.
             """
+        if shift.careContext == .day {
+            shift.parentNote = "A calm day with floor play, a stroller walk, and quiet settling before the afternoon nap."
+        }
         shift.attach(to: family)
 
         context.insert(family)

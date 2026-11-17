@@ -28,7 +28,7 @@ struct ShiftHoursSheet: View {
     /// here. See `Shift.plannedEndAt`.
     let plannedEnd: Date?
     /// `nil` for the end means "leave it running".
-    let onSave: (Date, Date?) -> Void
+    let onSave: (Date, Date?) async throws -> Void
 
     @State private var startedAt: Date
     @State private var endedAt: Date
@@ -41,6 +41,7 @@ struct ShiftHoursSheet: View {
     /// presented back on Tonight, it would be a dialog handed across a sheet that is
     /// dismissing, and an end-shift that silently does nothing.
     @State private var confirmingEnd = false
+    @State private var saveError: String?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
@@ -51,7 +52,7 @@ struct ShiftHoursSheet: View {
         window: ShiftWindow,
         asleep: [String] = [],
         plannedEnd: Date? = nil,
-        onSave: @escaping (Date, Date?) -> Void
+        onSave: @escaping (Date, Date?) async throws -> Void
     ) {
         self.purpose = purpose
         self.window = window
@@ -78,9 +79,10 @@ struct ShiftHoursSheet: View {
     }
 
     private var isEnding: Bool { purpose == .end }
+    private var hasEnd: Bool { isEnding || !window.isOpen }
     private var startsInFuture: Bool { startedAt.isMeaningfullyInFuture }
-    private var endsInFuture: Bool { isEnding && endedAt.isMeaningfullyInFuture }
-    private var endsBeforeStart: Bool { isEnding && endedAt < startedAt }
+    private var endsInFuture: Bool { hasEnd && endedAt.isMeaningfullyInFuture }
+    private var endsBeforeStart: Bool { hasEnd && endedAt < startedAt }
 
     private var canSave: Bool {
         !isSaving && !startsInFuture && !endsInFuture && !endsBeforeStart
@@ -99,7 +101,7 @@ struct ShiftHoursSheet: View {
                 }
                 .listRowBackground(palette.raised)
 
-                if isEnding {
+                if hasEnd {
                     Section("Ended") {
                         DatePicker(
                             "End", selection: $endedAt,
@@ -112,7 +114,7 @@ struct ShiftHoursSheet: View {
                     }
                     .listRowBackground(palette.raised)
 
-                    if !asleep.isEmpty {
+                    if isEnding && !asleep.isEmpty {
                         Section {
                             Text("\(asleep.joined(separator: " and ")) still asleep — "
                                  + "that stays in the record. Logging stops until you "
@@ -123,14 +125,19 @@ struct ShiftHoursSheet: View {
                         .listRowBackground(palette.raised)
                     }
                 }
+                if let saveError {
+                    Section { Label(saveError, systemImage: "exclamationmark.triangle").foregroundStyle(palette.stop) }
+                        .listRowBackground(palette.raised)
+                }
             }
+            .disabled(isSaving)
             .scrollContentBackground(.hidden)
             .moonBackground(palette)
             .navigationTitle(isEnding ? "End shift" : "Shift times")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { dismiss() }.disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     // "End", not "End shift": the title already says which shift,
@@ -163,6 +170,7 @@ struct ShiftHoursSheet: View {
                 Text(endWarning)
             }
         }
+        .interactiveDismissDisabled(isSaving)
         .tint(palette.accent)
     }
 
@@ -177,7 +185,7 @@ struct ShiftHoursSheet: View {
         // is the moment the parents' document is wanted, and the alert used to
         // describe only the irreversible half.
         let base = "The shift closes for good. This cannot be undone. "
-            + "The night stays on Summary, with Copy and Share."
+            + "The completed shift stays on Summary for review and sharing."
         guard !asleep.isEmpty else { return base }
         return "\(asleep.joined(separator: " and ")) "
             + (asleep.count == 1 ? "is" : "are") + " still asleep. " + base
@@ -185,8 +193,14 @@ struct ShiftHoursSheet: View {
 
     private func commit() {
         isSaving = true
+        saveError = nil
         Haptics.commit()
-        onSave(startedAt, isEnding ? endedAt : nil)
-        dismiss()
+        Task { @MainActor in
+            do {
+                try await onSave(startedAt, hasEnd ? endedAt : nil)
+                dismiss()
+            } catch { saveError = error.localizedDescription }
+            isSaving = false
+        }
     }
 }

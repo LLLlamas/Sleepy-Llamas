@@ -74,7 +74,7 @@ final class HandoffFlowTests: MoonlogUITestCase {
             NSPredicate(format: "label CONTAINS[c] ' – '")).firstMatch
         XCTAssertTrue(
             aNight.waitForExistence(timeout: 10)
-                || app.staticTexts["No finished nights yet"].exists,
+                || app.staticTexts["No finished shifts yet"].exists,
             "pushed a blank screen")
     }
     /// Summary gave totals and nothing else, so the only place a client could read

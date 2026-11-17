@@ -1,6 +1,6 @@
 # Testing
 
-Two suites:
+Two unit targets, plus the separate UI reachability scheme:
 
 - **`MoonlogCoreTests`** — host-free, milliseconds. Pure logic. This is where the
   web version's real bugs lived, so this is where the coverage is deepest.
@@ -12,6 +12,83 @@ Two suites:
 xcodebuild -project Moonlog.xcodeproj -scheme Moonlog \
   -destination "platform=iOS Simulator,name=iPhone 17 Pro" test
 ```
+
+## Fresh pre-release audit follow-up
+
+Against initial PR #3 head `ab3177f45601a6d65dc6ba22d695b37bd4f78b0f`, a fresh
+audit found closed-correction reachability, draft concurrency, sleep-boundary
+meaning and explicit-erase notification blockers. Fixes add seven deterministic
+writer tests, actor optimistic-conflict coverage, sleep-boundary cases and three
+fake notification-driver erase races. The post-fix run passed **318 tests with zero
+failures** (170 Core, 148 app/persistence):
+`/tmp/moonlog-testflight-audit-unit-final.xcresult` and its matching log.
+
+The six focused day UI cases and complete shipping/archive/upload gates are pending
+at this checkpoint; root records those results separately. The earlier 302-unit and
+combined 37-UI results below remain historical rather than being relabelled as new
+release evidence. See `pre-release-audit-2026-11-16.md` for the precise findings,
+implemented fixes and nonblocking limits.
+
+## November 16 integration validation
+
+The integrated `Moonlog` scheme passed **302 tests with zero failures**: 165 Core
+and 137 app/persistence tests. Local evidence is
+`/tmp/moonlog-nannylog-final-unit.xcresult` and the matching log. The integrated
+app build also succeeded. An unsigned simulator Release build passed with no
+source/linker diagnostics beyond expected App Intents extraction chatter. All 14
+source-derived DEBUG markers were absent from app and embedded Core binaries. The
+archive guard recognizes quoted hooks with or without a leading hyphen. Evidence is
+`/tmp/moonlog-nannylog-release-final.log` and the source-derived checker
+`/tmp/check-moonlog-nanny-release.py`. The final tree includes the keyboard,
+sticky Start, temporary-storage and delete-safety fixes; its build number remains
+`1789610519`. This does not
+establish device signing, archive readiness or upload success.
+
+**37 unique UI scenarios have passing evidence across the full and focused runs.**
+The second full run passed all 32 existing cases and both reminder cases; its raw
+result was 36/37 because a daytime test tapped the center of a Form row rather than
+the rendered switch. The corrected test explicitly taps/asserts the switch, and
+all three daytime cases then passed in the focused rerun. This is combined coverage,
+not a single all-green 37-case run. Evidence:
+`/tmp/moonlog-nannylog-integrated-ui-2.xcresult` and
+`/tmp/moonlog-nannylog-day-ui-final.xcresult`, with matching logs. The focused result
+includes draft survival after relaunch, explicit review, immutable publication,
+optional receipt cancellation, successful typed-name/parent-note receipt and the
+share menu. No message/share destination was selected.
+
+Added coverage includes:
+
+| Area | What is exercised |
+|---|---|
+| `DayReportTests` | Immutable publications, idempotent retries, factual/narrative revision invalidation, optional local receipt, wrong/stale revisions, validation, Codable roundtrip, day-aware rendering and unknown amounts |
+| `DayReportPersistenceTests` | Day/legacy context, remembered hours, open-shift publication rejection, version/time in both exports, changed-source/draft checks, optional-presence digest collision, corrupt JSON failure and disk reopen with draft/publication/receipt |
+| `FeedReminderTests` / `ShiftDefaultsTests` | Physical reminder offsets, invalid input, DST/time-zone boundaries, calendar-based prefill and honest start/end suggestions |
+| `ReminderLifecycleTests` | Family scope, closed/deleted/archived eligibility, notification identity across Undo and wrong-baby correction |
+| `DayReportReachabilityTests` | Today route, active-shift publishing disabled, editable saved notes after relaunch, review reset after edits, immutable copy, optional receipt cancellation/successful local receipt entry and share-menu reachability |
+| `ReminderReachabilityTests` | Denied permission still saves a feed; a scheduling failure after save remains visible after the sheet dismisses |
+
+The real baseline-to-integrated simulator upgrade reused the same installed app
+container without a reset. Before/after SQLite comparison preserved every old
+model column value for 2 families, 3 babies, 3 shifts, 14 events and 4 sleep sessions;
+new nullable report/context fields were NULL for the legacy shifts. This is stronger
+than merely constructing the new schema in memory. Evidence is
+`/tmp/moonlog-nannylog-migration-result.txt` and its temporary store snapshots.
+
+The report's CloudKit-encryption compatibility whitelist intentionally includes
+`Shift.dayReportJSON`; the exact-set assertion stays strict. Adding nullable fields
+does not enable CloudKit or establish remote sharing.
+
+UI tests use synthetic local demo data, record only synthetic local receipts and
+inspect share menus without choosing a destination. They do not send messages or
+claim authenticated parent review. OS
+notification delivery, permission changes on a physical phone, Focus and Watch
+mirroring need real-device checks. The 500 ms draft debounce and leave-screen flush
+are not a guarantee for the last uncommitted edits if the process is abruptly killed.
+Published HTML/text documents are not restorable database backups.
+
+No archive, build-number stamp or upload was performed for these tests. Earlier
+September results and release history remain historical, rather than being carried
+forward as evidence for the November source.
 
 ## The one time rule
 
@@ -112,10 +189,11 @@ seeds a twin night with one baby asleep and one awake, which is the state that e
 the layout, plus a second household — Okafor, one baby, no shift — so the client-family
 picker has something to switch to.
 
-Being `#if DEBUG` is only half the guard. `scripts/archive.sh` greps the Release binary
-for these hooks by name, from an alternation it hard-codes, so a new hook that is not
-added to that alternation ships unguarded *and* the archive still reports clean. Adding
-one means editing that grep in the same change; `moonlogSettingsSheet` is in it.
+Being `#if DEBUG` is only half the guard. `scripts/archive.sh` derives quoted hook
+names from DEBUG source regions, recognizing both plain and hyphen-prefixed names,
+and scans the app plus embedded Core binary. New hooks need no hand-maintained
+alternation. The collector must remain nonempty and include the original marker
+set; the current 14-marker Release check includes the new daytime/reminder hooks.
 
 Some bugs only appear when the thing runs: the CloudKit launch crash and the theme
 latch were both invisible to the test suite.

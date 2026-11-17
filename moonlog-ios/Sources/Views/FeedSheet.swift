@@ -14,6 +14,9 @@ struct FeedSheet: View {
     /// Forwarded to the chrome; set only when editing.
     var reassignment: Reassignment?
 
+    @State private var reminderMinutes: Int
+    @AppStorage("moonlog.feedReminderMinutes") private var lastReminderMinutes = 0
+
     @State private var at: Date
     @State private var method: FeedMethod
     @State private var leftMinutes: Int
@@ -39,6 +42,9 @@ struct FeedSheet: View {
         self.onDelete = onDelete
         self.reassignment = reassignment
         self.onSave = onSave
+        let storedReminder = UserDefaults.standard.integer(forKey: "moonlog.feedReminderMinutes")
+        _reminderMinutes = State(initialValue: shift.isOpen ? (editing?.reminderMinutes
+            ?? (FeedReminder.presetMinutes.contains(storedReminder) ? storedReminder : 0)) : 0)
         _at = State(initialValue: editing?.at ?? Date())
         _method = State(initialValue: editing?.method ?? .breast)
         _leftMinutes = State(initialValue: (editing?.leftSeconds ?? 0) / 60)
@@ -105,6 +111,14 @@ struct FeedSheet: View {
                 }
             }
 
+            if shift.isOpen {
+            Section("Optional reminder") {
+                ReminderField(label: "Remind me in", minutes: $reminderMinutes)
+                Text("A silent reminder on this device. Focus and notification settings may delay or suppress it.")
+                    .font(.footnote).foregroundStyle(palette.faint)
+            }
+
+            }
             Section("How") {
                 Picker("Method", selection: $method) {
                     Text("Breast").tag(FeedMethod.breast)
@@ -198,7 +212,9 @@ struct FeedSheet: View {
                 amountMl: method.isBottle && amountMl > 0 ? amountMl : nil,
                 bottleSeconds: method.isBottle && bottleMinutes > 0 ? bottleMinutes * 60 : nil,
                 leftSeconds: !method.isBottle && leftMinutes > 0 ? leftMinutes * 60 : nil,
-                rightSeconds: !method.isBottle && rightMinutes > 0 ? rightMinutes * 60 : nil))
+                rightSeconds: !method.isBottle && rightMinutes > 0 ? rightMinutes * 60 : nil,
+                reminderMinutes: shift.isOpen ? reminderMinutes : 0))
+        if shift.isOpen { lastReminderMinutes = reminderMinutes }
     }
 }
 
@@ -209,4 +225,5 @@ struct FeedEntry: Sendable {
     let bottleSeconds: Int?
     let leftSeconds: Int?
     let rightSeconds: Int?
+    var reminderMinutes: Int = 0
 }

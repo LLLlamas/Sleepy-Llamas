@@ -95,11 +95,16 @@ struct OnboardingView: View {
 /// second card is needed. Settings keeps its copy; this is a second route, not a move.
 struct StartShiftView: View {
     let familyName: String
+    var shiftWindow: ShiftWindowDefault? = nil
+    var timeZoneIdentifier: String = TimeZone.current.identifier
     /// Who is on the roster right now, in card order. Read for display only — the
     /// names answer "is the second twin here yet" without a trip to Settings.
     let babyNames: [String]
     let onAddBaby: (String, Date) -> Void
-    let onStart: (Date, Date, String?) -> Void
+    let onStart: (Date, Date, String?, CareContext) async throws -> Void
+
+    @AppStorage("moonlog.lastCareContext") private var careContextRaw = CareContext.night.rawValue
+    @State private var startError: String?
 
     @AppStorage("moonlog.lastCaregiver") private var caregiver = ""
     /// Seeded on appear, not at construction. This view is the root whenever no
@@ -127,7 +132,7 @@ struct StartShiftView: View {
         Form {
             Section {
                 VStack(spacing: 6) {
-                    Text("🌙").font(.system(size: 34))
+                    Text(careContextRaw == CareContext.day.rawValue ? "☀️" : "🌙").font(.system(size: 34))
                     Text(familyName).font(.headline).foregroundStyle(palette.ink)
                     Text("No shift running").font(.footnote).foregroundStyle(palette.faint)
                 }
@@ -135,7 +140,29 @@ struct StartShiftView: View {
             }
             .listRowBackground(Color.clear)
 
+            Section("Care context") {
+                Picker("Care context", selection: $careContextRaw) {
+                    Text("Night care").tag(CareContext.night.rawValue)
+                    Text("Day care · Nanny Log").tag(CareContext.day.rawValue)
+                }
+                .accessibilityIdentifier("shift.careContext")
+                Text("Choose the work you're recording. Times and appearance stay under your control.")
+                    .font(.footnote).foregroundStyle(palette.faint)
+            }
+            .listRowBackground(palette.raised)
+
             Section("Shift") {
+                if let window = shiftWindow {
+                    Button("Use usual family hours") {
+                        let now = Date()
+                        let calendar = MoonClock(timeZoneIdentifier: timeZoneIdentifier).calendar
+                        startedAt = ShiftDefaults.suggestedStart(window, now: now, calendar: calendar) ?? now
+                        plannedEndAt = ShiftDefaults.suggestedEnd(window, after: startedAt, calendar: calendar)
+                    }
+                    .accessibilityIdentifier("shift.usualHours")
+                    Text("A suggestion to review, in \(timeZoneIdentifier). Starting a shift records only the times you confirm.")
+                        .font(.footnote).foregroundStyle(palette.faint)
+                }
                 DatePicker("Start", selection: $startedAt,
                            displayedComponents: [.date, .hourAndMinute])
                 if isFuture {
@@ -166,27 +193,45 @@ struct StartShiftView: View {
             }
             .listRowBackground(palette.raised)
 
-            Section {
-                Button("Start shift") {
-                    guard !isStarting else { return }
-                    isStarting = true
-                    onStart(
-                        startedAt,
-                        plannedEndAt,
-                        caregiver.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            ? nil : caregiver)
-                }
-                .disabled(isFuture || endsBeforeStart || isStarting)
-                .frame(maxWidth: .infinity)
-            }
-            .listRowBackground(palette.raised)
         }
         .scrollContentBackground(.hidden)
         .moonBackground(palette)
-        .onAppear {
-            startedAt = Date()
-            plannedEndAt = Date().addingTimeInterval(Self.defaultLength)
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                guard !isStarting else { return }
+                isStarting = true
+                Task {
+                    defer { isStarting = false }
+                    do {
+                        try await onStart(startedAt, plannedEndAt,
+                            caregiver.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : caregiver,
+                            CareContext(rawValue: careContextRaw) ?? .night)
+                    } catch { startError = error.localizedDescription }
+                }
+            } label: {
+                Text(isStarting ? "Starting…" : "Start shift")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isFuture || endsBeforeStart || isStarting)
+            .padding().background(.bar)
         }
+        .onAppear {
+            let now = Date()
+            let calendar = MoonClock(timeZoneIdentifier: timeZoneIdentifier).calendar
+            // Default hours prefill a visible, editable plan, never a recorded shift.
+            startedAt = now
+            plannedEndAt = shiftWindow.map {
+                ShiftDefaults.suggestedEnd($0, after: now, calendar: calendar)
+            } ?? now.addingTimeInterval(Self.defaultLength)
+        }
+        .environment(\.timeZone, TimeZone(identifier: timeZoneIdentifier) ?? .current)
+        .alert("Couldn't start shift", isPresented: Binding(
+            get: { startError != nil }, set: { if !$0 { startError = nil } })) {
+            Button("OK", role: .cancel) { startError = nil }
+        } message: { Text(startError ?? "") }
         .sheet(isPresented: $addingBaby) {
             AddBabySheet(familyName: familyName, onAdd: onAddBaby)
                 .presentationDetents([.medium])

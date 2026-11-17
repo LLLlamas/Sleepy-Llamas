@@ -68,7 +68,8 @@ public enum Handoff {
         sessions: [SleepSnapshot],
         unit: VolumeUnit,
         timeZone: TimeZone,
-        asOf now: Date
+        asOf now: Date,
+        context: CareContext = .night
     ) -> String {
         var lines: [String] = []
         let end = shift.endedAt ?? now
@@ -79,7 +80,7 @@ public enum Handoff {
             .map { window in allEvents.filter { window.contains($0.at) } } ?? []
 
         lines.append(
-            header(babies: babies, shift: shift, end: end, timeZone: timeZone))
+            header(babies: babies, shift: shift, end: end, timeZone: timeZone, context: context))
         if let caregiver, !caregiver.isEmpty {
             lines.append("Cared for by \(caregiver)")
         }
@@ -87,7 +88,7 @@ public enum Handoff {
         // this one is pasted into Messages, where anything longer is scrolled past
         // to reach the numbers.
         lines.append("")
-        lines.append(greeting(babies: babies, shift: shift))
+        lines.append(greeting(babies: babies, shift: shift, context: context))
 
         for baby in babies {
             let totals = Totals.compute(
@@ -100,7 +101,7 @@ public enum Handoff {
             }
             // A blank line between blocks: pasted into Messages at 6am, an
             // unbroken wall of text is not read.
-            lines.append(contentsOf: feedBlock(baby, totals, events, unit, timeZone))
+            lines.append(contentsOf: feedBlock(baby, totals, events, unit, timeZone, context))
             lines.append("")
             lines.append(contentsOf: diaperBlock(baby, totals, events, timeZone))
             lines.append("")
@@ -141,9 +142,9 @@ public enum Handoff {
         lines.append("")
         if let caregiver, !caregiver.isEmpty {
             lines.append("With care,")
-            lines.append("\(caregiver) 🌙")
+            lines.append("\(caregiver) \(context == .day ? "☀️" : "🌙")")
         } else {
-            lines.append("🌙 logged with Moonlog")
+            lines.append("\(context == .day ? "☀️" : "🌙") logged with Moonlog")
         }
         return lines.joined(separator: "\n")
     }
@@ -151,7 +152,7 @@ public enum Handoff {
     // MARK: - Blocks
 
     private static func header(
-        babies: [HandoffBaby], shift: ShiftWindow, end: Date, timeZone: TimeZone
+        babies: [HandoffBaby], shift: ShiftWindow, end: Date, timeZone: TimeZone, context: CareContext
     ) -> String {
         // An open shift must not read as a finished one. The PWA framed this as
         // "summary through <time>" and that honesty was dropped in the port.
@@ -164,7 +165,7 @@ public enum Handoff {
         // The date written out rather than abbreviated. "Fri, Sep 4" is the register
         // of a list of past nights; this is the first line of a letter about one.
         return """
-        🌙 \(title(babies))
+        \(context == .day ? "☀️" : "🌙") \(title(babies, context: context))
         \(Fmt.longDate(shift.startedAt, timeZone: timeZone))
         \(line)
         """
@@ -173,14 +174,15 @@ public enum Handoff {
     /// "Mia's night · Day 6" / "Mia & Leo's night". The day of life only rides on
     /// the title when there is one baby to own it; with twins each block carries
     /// its own, because they are not always the same number.
-    static func title(_ babies: [HandoffBaby]) -> String {
+    static func title(_ babies: [HandoffBaby], context: CareContext = .night) -> String {
+        let period = context == .day ? "day" : "night"
         let names = babies.map(\.name)
         switch names.count {
-        case 0: return "The night"
-        case 1: return "\(names[0])'s night · Day \(babies[0].dayOfLife)"
+        case 0: return "The \(period)"
+        case 1: return "\(names[0])'s \(period) · Day \(babies[0].dayOfLife)"
         default:
             let head = names.dropLast().joined(separator: ", ")
-            return "\(head) & \(names[names.count - 1])'s night"
+            return "\(head) & \(names[names.count - 1])'s \(period)"
         }
     }
 
@@ -190,19 +192,20 @@ public enum Handoff {
     /// "Good morning" is only true of a finished night. This page can legitimately
     /// be shared at 1am, mid-shift, and greeting the parents with the wrong time of
     /// day is the sort of small wrongness that makes a document feel generated.
-    static func greeting(babies: [HandoffBaby], shift: ShiftWindow) -> String {
+    static func greeting(babies: [HandoffBaby], shift: ShiftWindow, context: CareContext = .night) -> String {
+        let period = context == .day ? "day" : "night"
         let names = babies.map(\.name)
         let whose: String
         switch names.count {
-        case 0: whose = "the night"
-        case 1: whose = "\(names[0])'s night"
+        case 0: whose = "the \(period)"
+        case 1: whose = "\(names[0])'s \(period)"
         default:
             let head = names.dropLast().joined(separator: ", ")
-            whose = "\(head) & \(names[names.count - 1])'s night"
+            whose = "\(head) & \(names[names.count - 1])'s \(period)"
         }
         return shift.isOpen
             ? "Here is \(whose) so far, just as it happened."
-            : "Good morning. Here is \(whose), just as it happened."
+            : "\(context == .day ? "Here is" : "Good morning. Here is") \(whose), just as it happened."
     }
 
     /// How long the doula was on watch. An open shift has not finished, so it says
@@ -221,7 +224,7 @@ public enum Handoff {
 
     private static func feedBlock(
         _ baby: HandoffBaby, _ totals: ShiftTotals,
-        _ events: [EventSnapshot], _ unit: VolumeUnit, _ timeZone: TimeZone
+        _ events: [EventSnapshot], _ unit: VolumeUnit, _ timeZone: TimeZone, _ context: CareContext
     ) -> [String] {
         var out = ["🍼  Feeds · \(totals.feeds)"
             + (feedSummary(totals, unit: unit).map { "  (\($0))" } ?? "")]
@@ -230,8 +233,9 @@ public enum Handoff {
             .sorted { $0.at < $1.at }
         for feed in feeds {
             out.append("     \(Fmt.shortClock(feed.at, timeZone: timeZone))  "
-                + warmFeed(feed, unit: unit))
+                + warmFeed(feed, unit: unit, context: context))
         }
+        if context == .day, let completeness = feedCompleteness(feeds) { out.append("     " + completeness) }
         if feeds.isEmpty { out.append("     \(nothingLogged("feeds"))") }
         return out
     }
@@ -259,7 +263,7 @@ public enum Handoff {
     /// Internal rather than private so `HandoffHTML` describes a feed with exactly
     /// these words. Two documents about the same night that phrase it differently
     /// is how the parents end up asking which one is right.
-    static func warmFeed(_ feed: EventSnapshot, unit: VolumeUnit) -> String {
+    static func warmFeed(_ feed: EventSnapshot, unit: VolumeUnit, context: CareContext = .night) -> String {
         var method = "feed"
         // One dash, then commas. A bottle with an amount and a duration used to
         // join on the dash as well — "bottle, breastmilk — 3 oz — 20m" — which put
@@ -267,6 +271,10 @@ public enum Handoff {
         var details: [String] = []
         switch feed.feedMethod {
         case .breast, .none:
+            if context == .day && feed.feedMethod == nil {
+                details.append("method not recorded")
+                break
+            }
             let left = feed.leftSeconds ?? 0
             let right = feed.rightSeconds ?? 0
             if left > 0 && right > 0 {
@@ -287,14 +295,29 @@ public enum Handoff {
                 ? "bottle, formula" : "bottle, breastmilk"
             if let ml = feed.amountMl, ml > 0 {
                 details.append(Fmt.amount(ml: ml, unit: unit))
+            } else if context == .day {
+                details.append(feed.amountMl == nil ? "amount not recorded" : Fmt.amount(ml: feed.amountMl ?? 0, unit: unit))
             }
             if let s = feed.feedDurationSeconds, s > 0 {
                 details.append(Fmt.duration(TimeInterval(s)))
             }
         case .unknown:
-            break
+            if context == .day { details.append("method not recorded") }
         }
         return details.isEmpty ? method : "\(method) — \(details.joined(separator: ", "))"
+    }
+
+    /// Completeness is stated separately from arithmetic: an unmeasured bottle
+    /// contributes no invented volume, and a partial total must say it is partial.
+    static func feedCompleteness(_ feeds: [EventSnapshot]) -> String? {
+        let missing = feeds.filter { $0.feedMethod?.isBottle == true && $0.amountMl == nil }.count
+        let unknown = feeds.filter { $0.feedMethod == nil || $0.feedMethod == .unknown }.count
+        var parts: [String] = []
+        if missing > 0 {
+            parts.append("Bottle amount not recorded for \(missing) feed\(missing == 1 ? "" : "s"). Volume totals include recorded amounts only.")
+        }
+        if unknown > 0 { parts.append("Method not recorded for \(unknown) feed\(unknown == 1 ? "" : "s").") }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     /// What a note actually says. Shared with `HandoffHTML` so the keepsake page and
@@ -405,7 +428,8 @@ public enum Handoff {
         // The single fact a parent most wants at 6am, and it leads: the stretches
         // below it end with the same session, so putting it underneath them read as
         // a repetition rather than as the answer.
-        if let open = SleepMath.openSession(in: sessions, forBaby: baby.id) {
+        if let open = SleepMath.continuingSession(
+            in: sessions, forBaby: baby.id, clippedTo: shift, asOf: now) {
             out.append("     \(stillAsleep(open, timeZone: timeZone))")
         }
         // The stretches themselves, not only what they added up to. Sleep was the

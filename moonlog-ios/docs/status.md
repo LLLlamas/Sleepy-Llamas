@@ -1,18 +1,70 @@
 # Status
 
-Updated 2026-09-16.
+Updated 2026-11-16.
 
-**238 unit tests green** (122 `MoonlogCoreTests`, 116 `MoonlogTests`) plus **32
-reachability tests** in `MoonlogUITests`. No Release warnings.
+## Current working source: reminders and daytime Nanny Log
 
-**0.1.0 is on TestFlight and is safe to work a real shift on** — local-only, no
-CloudKit, no debug hooks. `docs/testflight.md` has the build list and the upload
-path.
+The newer native implementation now contains the selectively ported feed reminders
+and remembered family shift-hour defaults, plus explicit day/night care context and
+reviewed daytime handoffs. Existing night logging, Note reachability, live-record
+access and atomic writes remain the base; the older reminder branch did not replace
+later files wholesale.
 
-**A green suite is not working software.** `Totals.compute` was fully tested with no
-call path from the app; the Note button and the handoff's Copy/Share shipped
-built-but-unreachable. That is what the reachability suite is for — run it before
-every archive, and add a case whenever a control moves.
+Day shifts have a reachable editable EOD report: caregiver summary, handoff notes,
+questions/supplies, factual care-log review and explicit publication after the shift
+ends. Drafts debounce-save through CareStore and attempt a flush on leaving. The
+report flow labels the existing temporary-memory fallback as session only.
+Publishing freezes a local revision with text/HTML, version and date. Subsequent
+factual or narrative changes require another review; old copies remain intact.
+
+The owner chose optional same-phone parent handoff. A parent may record receipt of
+that current revision with a typed name and separate note. Identity is not
+authenticated; receipt is not remote reading or care consent. It never blocks
+ending, publishing or sharing. There are no parent accounts or remote confirmations.
+
+### Validation on November 16
+
+- **302 unit/persistence tests passed:** 165 `MoonlogCoreTests` and 137
+  `MoonlogTests`, zero failures, in the integrated `Moonlog` scheme.
+- The integrated app build succeeded. The actual baseline-to-new-binary simulator
+  upgrade preserved every old model column value for **2 families, 3 babies,
+  3 shifts, 14 events and 4 sleep sessions** without a reset. New optional
+  `dayReportJSON` and care-context columns remained NULL for legacy shifts.
+- An unsigned simulator **Release build passed**, with no source/linker diagnostics
+  beyond expected App Intents extraction chatter. All **14 source-derived DEBUG
+  markers** were absent from app and embedded Core binaries, including hooks quoted
+  with a leading hyphen. This is not a device archive or signing/upload check.
+- **37 unique UI scenarios verified across full and focused runs:** all 32
+  existing scenarios and both reminder scenarios passed in the second full run.
+  That raw run was 36/37; a daytime test targeted the row center rather than the
+  rendered switch. After correcting the locator, all three day scenarios passed
+  the focused rerun, including a successful optional local parent receipt. This
+  is combined coverage, not a claim that one full 37-case run was entirely green.
+- Device notification delivery, Focus behavior and Watch mirroring remain
+  unverified. No Watch app or NFC implementation was added. CloudKit stays off.
+- No archive, version/build-number change or TestFlight upload was performed.
+
+Unit result: `/tmp/moonlog-nannylog-final-unit.xcresult` and matching log.
+Upgrade evidence: `/tmp/moonlog-nannylog-migration-result.txt` with before/after
+SQLite snapshots in the same temporary validation workspace. UI evidence is
+`/tmp/moonlog-nannylog-integrated-ui-2.xcresult` and
+`/tmp/moonlog-nannylog-day-ui-final.xcresult`, with matching logs. These are local run
+artifacts, not files required by the app. Release evidence is
+`/tmp/moonlog-nannylog-release-final.log`; the current-tree binary check also
+confirmed build number `1789610519` and all 14 DEBUG markers absent.
+
+The last recorded TestFlight upload remains **0.1.0 (1789610519), September 16**;
+that historical build does not contain this November work. Current App Store
+Connect availability was not reverified. The previously documented 238 unit and
+32 UI passes describe that earlier source, not the current validation count.
+
+See `nanny-log-plan.md`, `nanny-log-research.md` and `nanny-log-audit.md` for the
+implementation contract, fresh primary-source research and addressed findings.
+Restorable export/import, secure cross-device sharing and recovery of the last
+uncommitted draft keystrokes after abrupt termination remain separate work.
+
+**A green suite is not working software.** The reachability suite still drives the
+actual controls because this app previously shipped correct but unreachable logic.
 
 ## Built
 
@@ -229,18 +281,20 @@ surfaces a throw as an alert; the actor returns snapshots, never `@Model` object
 
 | What | When | Why |
 |---|---|---|
-| iCloud capability + container + Background Modes | **deferred** | Only if CloudKit is actually wanted. The store is in the phone's own backup already, so nothing is waiting on this. `docs/cloudkit.md` is kept whole for that day. |
+| iCloud capability + container + Background Modes | **deferred** | Local-only remains intentional. Device backups may include the store depending on configuration; the app has no restorable export/import. Remote parent access needs its own sharing/authorization design. See `docs/cloudkit.md`. |
 | NFC Tag Reading on the App ID | **backlog** | Developer portal, if NFC is picked up. Scoped in `docs/next-features.md`; nothing is being built. |
 
-Signing, the App Store Connect record and field encryption are all done.
+Signing and the App Store Connect setup are documented from the earlier release.
+This work did not enable CloudKit, archive a new binary or upload a release.
 
 ## Open questions
 
 - **Day 0 vs Day 1.** Currently clinical — birth day is Day 1. One constant to change.
 - **Wake lock**, deliberately absent. A screen held awake all night costs battery for
   no benefit. Revisit only if it proves annoying.
-- **Overdue-feed alerts only render in the foreground.** A notification or Live
-  Activity would have to be a decision, not an accident.
+- **Overdue-feed cues and reminders are different.** The foreground cue remains;
+  optional user-set local feed reminders now exist. Actual device delivery and Focus
+  behavior still need validation. Live Activities and critical alarms are not built.
 - **Undo's window is six seconds**, untested against a real night.
 
 ## DEBUG screenshot hooks
@@ -263,9 +317,11 @@ xcrun simctl launch <device> com.sleepyllamas.moonlog \
 `-moonlogSettingsSheet` fires from a `.task` on `SettingsView`, so it needs
 `-moonlogTab settings` alongside it.
 
-**Every new hook must also be added to `scripts/archive.sh`.** The Release-binary
-greps are a hand-maintained alternation; a hook missing from it is a hook the guard
-will happily ship.
+The archive guard derives marker names from quoted launch hooks inside `#if DEBUG`
+source regions, accepting names with or without a leading hyphen, then checks both
+the app and embedded Core binary. New hooks need no hand-maintained alternation;
+they must remain DEBUG-gated. The collector is required to stay nonempty and retain
+the original marker set so a broken scan fails closed.
 
 To look at the keepsake page — a string assertion cannot tell you whether a document
 is legible, and a `file://` URL will not open in the simulator's Safari:

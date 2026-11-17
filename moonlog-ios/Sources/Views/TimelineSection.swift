@@ -59,6 +59,7 @@ struct TimelineSection: View {
                                 row(entry)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("timeline.record.\(entry.id.uuidString)")
                         } else {
                             row(entry)
                         }
