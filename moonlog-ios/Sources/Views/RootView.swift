@@ -15,6 +15,9 @@ struct RootView: View {
     /// `preferredColorScheme` below covers only the explicit override.
     @Environment(\.colorScheme) private var systemScheme
     @Environment(\.careStore) private var store
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("moonlog.lastCareContext") private var careContextRaw = CareContext.night.rawValue
 
     @Query(filter: #Predicate<Family> { !$0.isArchived }, sort: \Family.createdAt)
     private var families: [Family]
@@ -24,6 +27,9 @@ struct RootView: View {
     /// it on every body pass, so the work grew by one element per night, forever.
     @Query(filter: #Predicate<Shift> { $0.isOpen }, sort: \Shift.startedAt, order: .reverse)
     private var openShifts: [Shift]
+
+    @Query(filter: #Predicate<Baby> { !$0.isArchived }, sort: \Baby.sortOrder)
+    private var reminderBabies: [Baby]
 
     /// Which client household is on screen. A raw string because `@AppStorage`
     /// cannot hold a `UUID`; it is resolved against `families` on every render, so
@@ -67,8 +73,24 @@ struct RootView: View {
         return families.first { $0.id == id }
     }
 
+    /// Include roster and open-shift identities so destructive Settings writes also
+    /// clear notification content without waiting for a future cold launch.
+    private var reminderIdentity: String {
+        // Query membership changes trigger cleanup without traversing a deleted
+        // family's stale relationship arrays. Persistent identity remains safe to
+        // read even during SwiftData's invalidation/observation merge window.
+        let ids = families.map { String(describing: $0.persistentModelID) }
+            + reminderBabies.map { String(describing: $0.persistentModelID) }
+            + openShifts.map { String(describing: $0.persistentModelID) }
+        return ids.sorted().joined(separator: ",")
+    }
+
     var body: some View {
         tabs(currentFamily)
+            .task(id: reminderIdentity) { await FeedReminders.reconcile(in: modelContext.container) }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await FeedReminders.reconcile(in: modelContext.container) } }
+            }
             .tint(palette.accent)
             .environment(\.moonTheme, theme)
             // Only forced for an explicit override. Applying it in the
@@ -90,6 +112,7 @@ struct RootView: View {
     @ViewBuilder
     private func tabs(_ family: Family?) -> some View {
         let shift = family.flatMap(openShift(for:))
+        let careContext = shift?.careContext ?? CareContext(rawValue: careContextRaw) ?? .night
 
         // With no family there is exactly one screen worth being on, and it is the
         // one that offers to make one. Without this, erasing everything from
@@ -99,8 +122,8 @@ struct RootView: View {
             get: { families.isEmpty ? "tonight" : tab },
             set: { tab = $0 })
         ) {
-            stack("Moonlog") { tonight(family, shift) }
-                .tabItem { Label("Tonight", systemImage: "moon.stars.fill") }
+            stack(careContext == .day ? "Nanny Log" : "Moonlog") { tonight(family, shift) }
+                .tabItem { Label(careContext == .day ? "Today" : "Tonight", systemImage: careContext == .day ? "sun.max.fill" : "moon.stars.fill") }
                 .tag("tonight")
 
             stack("Summary") { summary(family, shift) }
@@ -153,18 +176,19 @@ struct RootView: View {
                 } else {
                     StartShiftView(
                         familyName: family.name,
+                        shiftWindow: family.defaultShiftWindow,
+                        timeZoneIdentifier: family.timeZoneIdentifier,
                         babyNames: family.activeBabies.map(\.name),
                         onAddBaby: { name, birthAt in
                             run { _ = try await $0.addBaby(
                                 to: family.id, name: name, birthAt: birthAt) }
                         }
-                    ) { startedAt, plannedEndAt, caregiver in
+                    ) { startedAt, plannedEndAt, caregiver, context in
+                        guard let store else { throw EntrySaveError.unavailable }
+                        _ = try await store.startShift(
+                            familyID: family.id, startedAt: startedAt,
+                            plannedEndAt: plannedEndAt, caregiver: caregiver, careContext: context)
                         Haptics.commit()
-                        run {
-                            _ = try await $0.startShift(
-                                familyID: family.id, startedAt: startedAt,
-                                plannedEndAt: plannedEndAt, caregiver: caregiver)
-                        }
                     }
                 }
             }

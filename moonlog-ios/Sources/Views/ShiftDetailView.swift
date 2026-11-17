@@ -29,6 +29,14 @@ struct ShiftDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
+                if shift.careContext == .day {
+                    NavigationLink {
+                        DayReportView(family: family, shift: shift)
+                    } label: {
+                        Label("Edit & review end-of-day report", systemImage: "doc.text.magnifyingglass")
+                            .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget)
+                    }.accessibilityIdentifier("history.dayReport")
+                }
                 SummaryCards(family: family, shift: shift, now: asOf)
 
                 TimelineSection(
@@ -52,9 +60,10 @@ struct ShiftDetailView: View {
             .padding(.bottom, MoonLayout.tabBarClearance)
         }
         .moonBackground(palette)
-        .navigationTitle(Fmt.nightOf(shift.startedAt, timeZone: zone))
+        .navigationTitle(shift.careContext == .day ? "Day care · " + Fmt.longDate(shift.startedAt, timeZone: zone) : Fmt.nightOf(shift.startedAt, timeZone: zone))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if shift.careContext == .night {
             ToolbarItem(placement: .topBarTrailing) {
                 // A menu, so the page is only composed when it is actually wanted —
                 // a `ShareLink` in the bare toolbar rebuilds its document on every
@@ -76,6 +85,7 @@ struct ShiftDetailView: View {
                     try? await Task.sleep(for: .seconds(2))
                     copied = false
                 }
+            }
             }
         }
         .sheet(isPresented: $editingNote) {
@@ -147,7 +157,7 @@ enum HandoffComposer {
             sessions: shift.liveSleepSessions.compactMap(\.snapshot),
             unit: family.volumeUnit,
             timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
-            asOf: now)
+            asOf: now, context: shift.careContext)
     }
 
     /// The keepsake page. Same roster, same records, same clipping as `text` — the
@@ -162,7 +172,7 @@ enum HandoffComposer {
             sessions: shift.liveSleepSessions.compactMap(\.snapshot),
             unit: family.volumeUnit,
             timeZone: TimeZone(identifier: shift.timeZoneIdentifier) ?? .current,
-            asOf: now)
+            asOf: now, context: shift.careContext)
     }
 
     /// What the share sheet calls the file. Slashes and colons are the two that turn
@@ -170,7 +180,7 @@ enum HandoffComposer {
     static func filename(family: Family, shift: Shift) -> String {
         let zone = TimeZone(identifier: shift.timeZoneIdentifier) ?? .current
         let who = family.activeBabies.map(\.name).joined(separator: " & ")
-        let night = Fmt.nightOf(shift.startedAt, timeZone: zone)
+        let night = shift.careContext == .day ? "Day care — " + Fmt.longDate(shift.startedAt, timeZone: zone) : Fmt.nightOf(shift.startedAt, timeZone: zone)
         let raw = who.isEmpty ? night : "\(who) — \(night)"
         return raw
             .replacingOccurrences(of: "/", with: "-")
@@ -229,7 +239,7 @@ struct PastNightsSection: View {
         let end = shift.endedAt ?? shift.startedAt
         return HStack {
             VStack(alignment: .leading, spacing: 3) {
-                Text(Fmt.nightOf(shift.startedAt, timeZone: zone))
+                Text(shift.careContext == .day ? "Day care · " + Fmt.longDate(shift.startedAt, timeZone: zone) : Fmt.nightOf(shift.startedAt, timeZone: zone))
                     .font(.subheadline)
                     .foregroundStyle(palette.ink)
                 Text("\(Fmt.clock(shift.startedAt, timeZone: zone)) – "

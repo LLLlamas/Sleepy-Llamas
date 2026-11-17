@@ -86,7 +86,7 @@ final class ReachabilityTests: MoonlogUITestCase {
     /// and only a screenshot caught it. This asserts the destination has content.
     func testPastNightsPushesAScreenWithSomethingOnIt() {
         launch(["-moonlogTab", "settings"])
-        reveal(app.buttons["Past nights"]).tap()
+        reveal(app.buttons["Past shifts"]).tap()
 
         // Asserted on the destination's own **content**, not on its navigation bar.
         // A bar can render over a screen with nothing on it, which is exactly the
@@ -99,7 +99,7 @@ final class ReachabilityTests: MoonlogUITestCase {
             NSPredicate(format: "label CONTAINS[c] ' – '")).firstMatch
         XCTAssertTrue(
             aNight.waitForExistence(timeout: 10)
-                || app.staticTexts["No finished nights yet"].exists,
+                || app.staticTexts["No finished shifts yet"].exists,
             "pushed a blank screen")
     }
 

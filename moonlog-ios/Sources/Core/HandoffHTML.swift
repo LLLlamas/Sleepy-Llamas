@@ -32,7 +32,8 @@ public enum HandoffHTML {
         sessions: [SleepSnapshot],
         unit: VolumeUnit,
         timeZone: TimeZone,
-        asOf now: Date
+        asOf now: Date,
+        context: CareContext = .night
     ) -> String {
         // Clipped exactly as the text version clips, so a back-dated record is
         // excluded from both lists and both counts rather than one of each.
@@ -42,8 +43,8 @@ public enum HandoffHTML {
         var body = ""
         body += headerHTML(
             babies: babies, shift: shift, caregiver: caregiver,
-            timeZone: timeZone, now: now)
-        body += letterHTML(babies: babies, shift: shift, note: note, caregiver: caregiver)
+            timeZone: timeZone, now: now, context: context)
+        body += letterHTML(babies: babies, shift: shift, note: note, caregiver: caregiver, context: context)
 
         for baby in babies {
             let totals = Totals.compute(
@@ -52,7 +53,7 @@ public enum HandoffHTML {
             body += babyHTML(
                 baby, totals: totals, events: events, sessions: sessions,
                 shift: shift, unit: unit, timeZone: timeZone, now: now,
-                namesBaby: babies.count > 1)
+                namesBaby: babies.count > 1, context: context)
         }
 
         // Records logged against a baby the roster cannot name — a `Baby` deleted
@@ -75,8 +76,8 @@ public enum HandoffHTML {
             """
         }
 
-        body += footerHTML()
-        return document(title: documentTitle(babies: babies, shift: shift, timeZone: timeZone),
+        body += footerHTML(context: context)
+        return document(title: documentTitle(babies: babies, shift: shift, timeZone: timeZone, context: context),
                         body: body)
     }
 
@@ -399,10 +400,10 @@ public enum HandoffHTML {
     // MARK: - Sections
 
     private static func documentTitle(
-        babies: [HandoffBaby], shift: ShiftWindow, timeZone: TimeZone
+        babies: [HandoffBaby], shift: ShiftWindow, timeZone: TimeZone, context: CareContext
     ) -> String {
         let who = babies.map(\.name).joined(separator: " & ")
-        let night = Fmt.nightOf(shift.startedAt, timeZone: timeZone)
+        let night = context == .day ? Fmt.longDate(shift.startedAt, timeZone: timeZone) : Fmt.nightOf(shift.startedAt, timeZone: timeZone)
         return who.isEmpty ? night : "\(who) · \(night)"
     }
 
@@ -412,7 +413,7 @@ public enum HandoffHTML {
     /// them to line up.
     private static func headerHTML(
         babies: [HandoffBaby], shift: ShiftWindow, caregiver: String?,
-        timeZone: TimeZone, now: Date
+        timeZone: TimeZone, now: Date, context: CareContext
     ) -> String {
         let who = babies.map(\.name).joined(separator: " & ")
         let end = shift.endedAt ?? now
@@ -432,7 +433,7 @@ public enum HandoffHTML {
         <header class="almanac">
           <div class="stars" aria-hidden="true">\(stars)</div>
           <p class="crest">\(icon([moonPath]))Moonlog · Sleepy Llamas</p>
-          <h1>\(esc(who.isEmpty ? "The night" : who))</h1>
+          <h1>\(esc(who.isEmpty ? (context == .day ? "The day" : "The night") : who))</h1>
           <p class="datestamp">\(esc(Fmt.longDate(shift.startedAt, timeZone: timeZone)))</p>
           <p class="shift-line"><span class="who">\(esc(span))</span>
         """
@@ -452,14 +453,15 @@ public enum HandoffHTML {
     /// inside the letter rather than above it — it is the middle of what she is
     /// saying, not a preface to it.
     private static func letterHTML(
-        babies: [HandoffBaby], shift: ShiftWindow, note: String?, caregiver: String?
+        babies: [HandoffBaby], shift: ShiftWindow, note: String?, caregiver: String?, context: CareContext
     ) -> String {
+        let introduction = context == .day
+            ? "Everything below was recorded during this care shift: the feeds, changes, naps and notes. Totals cover this shift, not a full day."
+            : "Everything below was written down as the night went: the feeds, the changes, the stretches of sleep, and anything worth remembering. Pour the coffee and read it slowly — the night was watched over."
         var out = """
         <section class="letter">\
-        <p><span class="lede">☽</span> \(esc(Handoff.greeting(babies: babies, shift: shift)))</p>\
-        <p>Everything below was written down as the night went: the feeds, the changes, \
-        the stretches of sleep, and anything worth remembering. Pour the coffee and \
-        read it slowly — the night was watched over.</p>
+        <p><span class="lede">\(context == .day ? "☀" : "☽")</span> \(esc(Handoff.greeting(babies: babies, shift: shift, context: context)))</p>\
+        <p>\(esc(introduction))</p>
         """
         let body = note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if body.isEmpty {
@@ -496,7 +498,7 @@ public enum HandoffHTML {
         unit: VolumeUnit,
         timeZone: TimeZone,
         now: Date,
-        namesBaby: Bool
+        namesBaby: Bool, context: CareContext
     ) -> String {
         var out = "<section class=\"card\">"
         // A single baby is already named in the page title, but the day of life is
@@ -513,7 +515,7 @@ public enum HandoffHTML {
 
         // Four tiles, because these are the four questions actually asked. Notes
         // were counted for the doula on the Summary screen and for nobody here.
-        let sleepValue = totals.stretches > 0 ? Fmt.spanned(totals.sleepSeconds) : "none"
+        let sleepValue = totals.stretches > 0 ? Fmt.spanned(totals.sleepSeconds) : (context == .day ? "not logged" : "none")
         let feedSub = Handoff.feedSummary(totals, unit: unit)
         out += """
         <div class="tiles">
@@ -534,8 +536,12 @@ public enum HandoffHTML {
             "Feeds", tag: feeds.isEmpty ? nil : "\(totals.feeds) in all", pip: "feeds")
         out += entryList(
             feeds.map {
-                (Fmt.shortClock($0.at, timeZone: timeZone), Handoff.warmFeed($0, unit: unit))
+                (Fmt.shortClock($0.at, timeZone: timeZone), Handoff.warmFeed($0, unit: unit, context: context))
             }, emptyText: Handoff.nothingLogged("feeds"))
+
+        if context == .day, let completeness = Handoff.feedCompleteness(feeds) {
+            out += "<p class=\"muted\">\(esc(completeness))</p>"
+        }
 
         // The count and the colour first — that is the shape of the night, and it
         // was for a long time all this section had. The rows underneath are the
@@ -636,11 +642,12 @@ public enum HandoffHTML {
     /// The closing line. The signature is at the top, where a letter puts it after
     /// the greeting; this is the page's last word to a family that will open it
     /// again in a year.
-    private static func footerHTML() -> String {
-        """
+    private static func footerHTML(context: CareContext) -> String {
+        let closing = context == .day ? "The day is logged, ready for your handoff." : "Rest easy — the night is logged and the morning is yours."
+        return """
         <footer class="closer">
         <hr class="goldrule" aria-hidden="true">
-        <p class="keepsake">Rest easy — the night is logged and the morning is yours.</p>
+        <p class="keepsake">\(esc(closing))</p>
         <p class="gen">\(icon([moonPath]))Logged with Moonlog · Sleepy Llamas</p>
         </footer>
         """

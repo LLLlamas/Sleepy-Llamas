@@ -52,12 +52,12 @@ struct SummaryView: View {
                     emoji: "📋",
                     title: "No shift running",
                     message: "Start a shift and the night's totals appear here. "
-                        + "Finished nights are under Settings › Past nights.")
+                        + "Finished shifts are under Settings › Past shifts.")
             }
         }
         .moonBackground(palette)
         .toolbar {
-            if let shift = shown {
+            if let shift = shown, shift.careContext == .night {
                 ToolbarItem(placement: .topBarTrailing) {
                     // Inside a menu, so each document is composed when it is chosen
                     // rather than on every body evaluation — which also keeps a
@@ -135,6 +135,16 @@ struct SummaryView: View {
         ScrollView {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
+                    if shift.careContext == .day {
+                        NavigationLink {
+                            DayReportView(family: family, shift: shift)
+                        } label: {
+                            Label("Edit & review end-of-day report", systemImage: "doc.text.magnifyingglass")
+                                .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("summary.dayReport")
+                    }
+                    if shift.careContext == .night {
                     Button {
                         editingNote = true
                     } label: {
@@ -148,10 +158,11 @@ struct SummaryView: View {
                     if let note = shift.parentNote, !note.isEmpty {
                         Text(note).font(.body).foregroundStyle(palette.ink)
                     }
+                    }
                     NavigationLink {
                         HistoryView(family: family)
                     } label: {
-                        Label("Past nights", systemImage: "clock.arrow.circlepath")
+                        Label("Past shifts", systemImage: "clock.arrow.circlepath")
                             .frame(maxWidth: .infinity, minHeight: MoonLayout.tapTarget, alignment: .leading)
                     }
                     .accessibilityIdentifier("summary.pastNights")
@@ -192,7 +203,7 @@ struct SummaryView: View {
             accents: Dictionary(
                 (family.babies ?? []).map { ($0.id, $0.accent) },
                 uniquingKeysWith: { first, _ in first }),
-            title: "The night, logged")
+            title: shift.careContext == .day ? "The day, logged" : "The night, logged")
     }
 }
 

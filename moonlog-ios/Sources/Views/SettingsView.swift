@@ -337,7 +337,7 @@ struct SettingsView: View {
             NavigationLink {
                 HistoryView(family: family)
             } label: {
-                Label("Past nights", systemImage: "calendar")
+                Label("Past shifts", systemImage: "calendar")
             }
             .foregroundStyle(palette.ink)
         }

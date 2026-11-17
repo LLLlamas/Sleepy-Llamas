@@ -112,6 +112,63 @@ that sets a relationship and its id together, rather than around it.
 optional `Date` comparisons have a poor track record, and these are the queries that
 decide whether the app can log at all. Maintained by `close(at:)`.
 
+## Day and night contexts, reminders and reviewed EOD reports
+
+One app and one care record support both contexts. `Shift.careContextRaw` is
+optional and resolves to night for legacy rows; the start screen explicitly chooses
+day or night. Day mode labels the logging tab Today and the screen Nanny Log.
+Context is independent of theme and does not infer hours, start a shift or end one.
+The family can remember its usual wall-clock start/end minutes, as optional fields
+saved in the same successful start transaction. Calendar-based prefill remains a
+suggestion the caregiver reviews.
+
+`FeedReminder` and `ShiftDefaults` are Foundation-only Core rules. The app's
+`FeedReminders` adapter is the UserNotifications boundary: one device-local request
+per feed UUID, optional silent notification permission, retime/cancel and lifecycle
+reconciliation. It uses a fresh read context to identify eligible feeds across all
+active families/open shifts, so ending one family does not erase another's request.
+A feed write and its notification outcome are separate; denied permission or a
+scheduling failure does not undo a valid recorded feed. OS request state is not a
+cloud record or a guaranteed delivery/read receipt.
+
+`DayReportState` is a Codable/Sendable value in Core: editable draft, immutable
+publication history and optional revision-bound acknowledgements. The owning
+`Shift.dayReportJSON` is an optional field marked for CloudKit field encryption,
+not a new model or an enabled cloud service. Existing rows have no report JSON.
+All reads/writes go through CareStore; invalid saved JSON fails closed instead of
+being replaced with a blank report.
+
+The editor debounces draft writes for 500 ms and attempts a final flush on leaving;
+Save draft provides an explicit retry path. In normal on-disk storage mode,
+successful saves survive reopen. The existing temporary-memory fallback is
+explicitly labelled as session only in the report editor and published-copy view.
+Abrupt termination before a pending write finishes is not a full draft-recovery
+system. Publishing requires day context, an ended shift, a valid time, the saved
+draft the caregiver reviewed, and a matching current factual digest. The actor
+returns value snapshots to the editor, which carries immutable IDs/header values
+instead of relying on retained model objects after asynchronous operations.
+
+`DayReportComposer` canonically orders raw record/roster provenance and encodes
+optional presence explicitly, then hashes length-prefixed fields with SHA-256.
+The digest includes record IDs, values, coverage, context and units, with an explicit
+semantic facts version. It excludes continuously ticking time and presentation-only
+HTML/CSS. Source changes or edited narrative make the old publication noncurrent;
+its frozen text, HTML, version/date and receipts remain available in history.
+Unchanged publication retries return the original version.
+
+Day Summary and historical shift detail link to the reviewed report. Their legacy
+night-only raw-share/note routes are not an alternate daytime export. Text and HTML
+sharing use the selected immutable snapshot; invoking a share sheet does not prove
+sending, delivery or reading. Day handoffs use neutral day language, qualify partial
+bottle totals and label unrecorded observations honestly.
+
+Parent receipt is optional and recorded on the same phone for a specific current
+revision. A typed name is not authenticated identity, care consent or agreement
+with every recorded fact. Parent notes remain separate from caregiver observations.
+Receipt is never required to end, publish or share. Remote parent accounts,
+household access, invitations/revocation and cross-device acknowledgements are a
+later architecture phase; private CloudKit mirroring alone would not supply them.
+
 ## The shift lifecycle
 
 Start and end are values the doula **sets or confirms** — never inferred from the

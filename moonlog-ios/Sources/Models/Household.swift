@@ -44,6 +44,15 @@ final class Family {
     /// blob that CloudKit merges last-writer-wins.
     var optionalKindsRaw: String = ""
 
+    /// Optional additive fields: existing households retain the original defaults.
+    var defaultShiftStartMinute: Int? = nil
+    var defaultShiftEndMinute: Int? = nil
+
+    var defaultShiftWindow: ShiftWindowDefault? {
+        guard let start = defaultShiftStartMinute, let end = defaultShiftEndMinute else { return nil }
+        return ShiftWindowDefault(startMinute: start, endMinute: end)
+    }
+
     @Relationship(deleteRule: .cascade, inverse: \Baby.family)
     var babies: [Baby]? = []
 

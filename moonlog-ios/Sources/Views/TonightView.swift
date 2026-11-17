@@ -39,6 +39,10 @@ struct TonightView: View {
     /// Bumped after every write. See the note in `body` — this is what re-derives
     /// the screen, and it used to be an accident.
     @State private var refreshToken = 0
+    @State private var reminders: [UUID: Date] = [:]
+    @State private var remindersLoaded = false
+    @State private var reminderWarning: String?
+    @Environment(\.scenePhase) private var scenePhase
     /// Non-nil presents the shift-hours sheet, for correcting the start or ending.
     @State private var hoursSheet: ShiftHoursSheet.Purpose?
     /// Non-nil presents the "are you sure" for whichever action asked for one. One
@@ -62,8 +66,18 @@ struct TonightView: View {
         // mutate about two seconds after every write. Deleting the banner would
         // have silently stopped the timeline updating after a log.
         let data = Tonight(
-            family: family, shift: shift, now: Date(), generation: refreshToken)
+            family: family, shift: shift, now: Date(), generation: refreshToken, reminders: reminders)
         content(data)
+            .navigationTitle(shift.careContext == .day ? "Nanny Log" : "Moonlog")
+            .task(id: refreshToken) {
+                reminders = await FeedReminders.pending()
+                remindersLoaded = true
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    Task { reminders = await FeedReminders.pending(); remindersLoaded = true }
+                }
+            }
             #if DEBUG
             // Test affordances, never reachable in a real run — same rationale as
             // DemoSeed.
@@ -85,6 +99,18 @@ struct TonightView: View {
         ScrollView {
             VStack(spacing: 14) {
                 NightHeader(familyName: family.name, timeZone: data.timeZone)
+                if let warning = reminderWarning {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Reminder not set", systemImage: "bell.slash.fill")
+                            .font(.headline).foregroundStyle(palette.warn)
+                        Text(warning).font(.footnote).foregroundStyle(palette.ink)
+                            .accessibilityIdentifier("reminder.warning")
+                        Button("Dismiss reminder notice") { reminderWarning = nil }
+                            .frame(minHeight: 44)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding().cardSurface(palette)
+                }
 
                 ForEach(data.babies) { presentation in
                     BabyStatusCard(
@@ -104,6 +130,7 @@ struct TonightView: View {
                     timeZone: data.timeZone,
                     names: data.names,
                     accents: data.accents,
+                    title: shift.careContext == .day ? "Today" : "Tonight",
                     onEdit: { sheet = $0 })
             }
             .padding(.horizontal, 16)
@@ -342,29 +369,56 @@ private extension TonightView {
             }
             // Read before the write, not inside it: afterwards these would be the
             // values we just saved, and Undo would restore nothing.
+            let reminderWas = data.reminders[id]
             let kind = event.kind
-            let feedBefore = event.feedEntry
+            let feedBefore = seededFeedEntry(event, reminderAt: reminderWas)
             let diaperBefore = event.diaperEntry
             let noteBefore = event.noteEntry
             let extraBefore = event.extraEntry
             let restoration = event.restoration
+            let loggedAt = event.at
+            let zone = shiftTimeZone
+            let babyID = baby?.id
+            let babyName = baby?.name
             let delete: () -> Void = {
                 write(baby, "Entry deleted") { store in
                     try await store.deleteEvent(id)
+                    // Unconditional: whatever alarm this record had goes with it.
+                    // A pending notification for a deleted feed points at nothing.
+                    await FeedReminders.cancel(id)
                     guard let restoration else { return nil }
-                    return { try await $0.restoreEvent(restoration) }
+                    return { store in
+                        try await store.restoreEvent(restoration)
+                        guard let fireAt = reminderWas, let babyID, let babyName
+                        else { return }
+                        // `restoreEvent` brings the record back under its original
+                        // id, which is the identifier the reminder was filed under —
+                        // so the alarm comes back to the same record, not a
+                        // lookalike. `try?` for the same reason as an edit's undo:
+                        // if that time has now passed there is nothing to restore.
+                        try? await FeedReminders.schedule(
+                            eventID: id, babyID: babyID, babyName: babyName,
+                            feedAt: loggedAt,
+                            afterMinutes: Self.minutes(from: loggedAt, to: fireAt),
+                            timeZone: zone)
+                    }
                 }
             }
-            let move = reassignment(of: id, from: baby, data: data)
+            let move = reassignment(
+                of: id, from: baby, loggedAt: loggedAt, reminderWas: reminderWas,
+                data: data)
 
             switch (kind, baby) {
             case (.feed, let baby?):
+                if remindersLoaded {
                 FeedSheet(
                     baby: baby, shift: shift.window, unit: family.volumeUnit,
                     editing: feedBefore, reassignment: move, onDelete: delete
                 ) {
-                    try await saveEdit(id, baby: baby, "Feed", from: feedBefore, to: $0)
+                    try await saveEdit(id, baby: baby, "Feed", from: feedBefore, to: $0,
+                                       reminderWas: reminderWas)
                 }
+                } else { ProgressView("Loading reminder…") }
             case (.diaper, let baby?):
                 DiaperSheet(
                     baby: baby, shift: shift.window,
@@ -396,26 +450,80 @@ private extension TonightView {
         }
     }
 
+    /// `event.feedEntry` reads the record, and the record knows nothing about a
+    /// reminder — the notification centre is the only place one exists. The edit
+    /// sheet seeds its picker from this entry, so without the offset put back here
+    /// it would open reading "off" for a feed that has a reminder pending, and
+    /// saving would silently cancel it.
+    func seededFeedEntry(_ event: LogEvent, reminderAt: Date?) -> FeedEntry {
+        var entry = event.feedEntry
+        entry.reminderMinutes = reminderAt.map { Self.minutes(from: event.at, to: $0) } ?? 0
+        return entry
+    }
+
     /// The wrong-twin remedy this app is named for. `nil` in a one-baby family,
     /// where there is nowhere to move a record to.
     func reassignment(
-        of id: UUID, from baby: BabyPresentation?, data: Tonight
+        of id: UUID, from baby: BabyPresentation?, loggedAt: Date, reminderWas: Date?,
+        data: Tonight
     ) -> Reassignment? {
         // A pump belongs to no baby, so there is nothing to have got wrong.
         guard let baby else { return nil }
         let others = data.babies.filter { $0.id != baby.id }
         guard !others.isEmpty else { return nil }
+        let zone = shiftTimeZone
+        let wasMinutes = reminderWas.map { Self.minutes(from: loggedAt, to: $0) }
         return Reassignment(
             targets: others.map { ReassignTarget(id: $0.id, name: $0.name) }
         ) { targetID in
             guard let target = data.babies.first(where: { $0.id == targetID }) else { return }
             let from = baby.id
+            let fromName = baby.name
+            let toName = target.name
             // The "are you sure" for this is raised by `LogSheetChrome`, which owns
             // the menu it is chosen from. See the note on `endShift`.
             write(target, "Moved to \(target.name)") { store in
                 try await store.reassignEvent(id, toBaby: targetID)
-                return { try await $0.reassignEvent(id, toBaby: from) }
+                // The reminder moves with the record — same identifier, so this
+                // rewrites the pending request's title and thread rather than adding
+                // a second one. A notification naming the twin this feed no longer
+                // belongs to is worse than no notification: it sends her to the
+                // wrong cot, which is the exact mistake this menu exists to correct.
+                await Self.moveReminder(
+                    id, to: targetID, named: toName, feedAt: loggedAt,
+                    afterMinutes: wasMinutes, timeZone: zone)
+                return { store in
+                    try await store.reassignEvent(id, toBaby: from)
+                    await Self.moveReminder(
+                        id, to: from, named: fromName, feedAt: loggedAt,
+                        afterMinutes: wasMinutes, timeZone: zone)
+                }
             }
+        }
+    }
+
+    /// Re-files a pending reminder under a different baby, or gives up on it.
+    ///
+    /// Not `try` — a move must not be blocked, and must not be left un-undoable, by
+    /// an alarm. But it must not survive misaddressed either, so a failure cancels
+    /// rather than leaves the old title in place. Both realistic failures land on
+    /// the right end state anyway: the fire time having passed means there was
+    /// nothing left to deliver, and notifications being off means nothing was
+    /// pending to begin with.
+    static func moveReminder(
+        _ eventID: UUID, to babyID: UUID?, named babyName: String?,
+        feedAt: Date, afterMinutes: Int?, timeZone: TimeZone
+    ) async {
+        guard let afterMinutes, let babyID, let babyName else {
+            await FeedReminders.cancel(eventID)
+            return
+        }
+        do {
+            try await FeedReminders.schedule(
+                eventID: eventID, babyID: babyID, babyName: babyName,
+                feedAt: feedAt, afterMinutes: afterMinutes, timeZone: timeZone)
+        } catch {
+            await FeedReminders.cancel(eventID)
         }
     }
 
@@ -481,9 +589,9 @@ private extension TonightView {
     }
 
     var presetTags: [String] {
-        (family.noteTags ?? [])
-            .sorted { $0.sortOrder < $1.sortOrder }
-            .map(\.label)
+        let saved = (family.noteTags ?? []).sorted { $0.sortOrder < $1.sortOrder }.map(\.label)
+        let day = shift.careContext == .day ? ["Play", "Outing", "Comfort", "Supplies"] : []
+        return day + saved.filter { !day.contains($0) }
     }
 
     /// Both times come from the sheet, never from the clock. Correcting the start
@@ -499,6 +607,7 @@ private extension TonightView {
         let shiftID = shift.id
         let wasStartedAt = shift.startedAt
         let movedStart = startedAt != wasStartedAt
+        let reminderIDs = shift.liveEvents.filter { $0.kind == .feed }.map(\.id)
         perform(endedAt == nil ? "Shift times updated" : "Shift ended") { store in
             // Two writes, not one: `endShift` is the call that means "the doula is
             // leaving", and it is the one that refuses an already-closed shift.
@@ -512,6 +621,7 @@ private extension TonightView {
                 return { try await $0.updateShift(shiftID, startedAt: wasStartedAt) }
             }
             try await store.endShift(shiftID, endedAt: endedAt)
+            for id in reminderIDs { await FeedReminders.cancel(id) }
             // No Undo: `updateShift` will not reopen a closed shift, because
             // `close(at:)` is the only thing keeping `isOpen` honest.
             return nil
@@ -561,30 +671,74 @@ private extension TonightView {
     /// is caught now rather than in the morning handoff.
     /// Logging anything. The Undo is the same for every kind: the record did not
     /// exist a moment ago, so removing it is exactly the state before.
+    struct ReminderPlan {
+        let babyID: UUID
+        let babyName: String
+        let minutes: Int
+        let zone: TimeZone
+    }
+
+    func reminderPlan<E: LogEntry>(_ entry: E, baby: BabyPresentation?) -> ReminderPlan? {
+        guard let feed = entry as? FeedEntry, feed.reminderMinutes > 0, let baby else { return nil }
+        return ReminderPlan(babyID: baby.id, babyName: baby.name,
+                            minutes: feed.reminderMinutes, zone: shiftTimeZone)
+    }
+
+    /// Reminder failure never turns a durable feed save into a failed sheet save.
+    func scheduleReminder(_ id: UUID, _ plan: ReminderPlan, feedAt: Date) async {
+        do {
+            try await FeedReminders.schedule(eventID: id, babyID: plan.babyID,
+                babyName: plan.babyName, feedAt: feedAt, afterMinutes: plan.minutes,
+                timeZone: plan.zone)
+        } catch {
+            // Never leave the old alarm at a time or baby that was just corrected.
+            await FeedReminders.cancel(id)
+            reminderWarning = "The feed was saved. Its reminder was not set. Check notification settings and choose a future reminder time."
+        }
+    }
+
     func logNew<E: LogEntry>(
         _ kind: EventKind, baby: BabyPresentation?, _ entry: E, said: String? = nil
     ) async throws {
+        let plan = reminderPlan(entry, baby: baby)
         try await writeAwaitingSave(baby, said ?? "\(kind.noun) logged") { store in
             let id = try await store.logEvent(
                 kind: kind, at: entry.at, shiftID: shift.id, babyID: baby?.id
             ) { entry.apply(to: $0) }
-            return { try await $0.deleteEvent(id) }
-        }
-    }
-
-    /// Saving a correction. The reversal is the identical call with the payload
-    /// read before the write, which is why both live here rather than four times
-    /// over in the sheets.
-    func saveEdit<E: LogEntry>(
-        _ id: UUID, baby: BabyPresentation?, _ noun: String, from before: E, to entry: E
-    ) async throws {
-        try await writeAwaitingSave(baby, "\(noun) updated") { store in
-            try await store.updateEvent(id, at: entry.at) { entry.apply(to: $0) }
-            return {
-                try await $0.updateEvent(id, at: before.at) { before.apply(to: $0) }
+            if let plan { await scheduleReminder(id, plan, feedAt: entry.at) }
+            return { store in
+                try await store.deleteEvent(id)
+                await FeedReminders.cancel(id)
             }
         }
     }
+
+    func saveEdit<E: LogEntry>(
+        _ id: UUID, baby: BabyPresentation?, _ noun: String, from before: E, to entry: E,
+        reminderWas: Date? = nil
+    ) async throws {
+        let plan = reminderPlan(entry, baby: baby)
+        let babyID = baby?.id
+        let babyName = baby?.name
+        let zone = shiftTimeZone
+        let wasMinutes = reminderWas.map { Self.minutes(from: before.at, to: $0) }
+        try await writeAwaitingSave(baby, "\(noun) updated") { store in
+            try await store.updateEvent(id, at: entry.at) { entry.apply(to: $0) }
+            if let plan { await scheduleReminder(id, plan, feedAt: entry.at) }
+            else { await FeedReminders.cancel(id) }
+            return { store in
+                try await store.updateEvent(id, at: before.at) { before.apply(to: $0) }
+                await Self.moveReminder(id, to: babyID, named: babyName,
+                    feedAt: before.at, afterMinutes: wasMinutes, timeZone: zone)
+            }
+        }
+    }
+
+    static func minutes(from feedAt: Date, to fireAt: Date) -> Int {
+        Int((fireAt.timeIntervalSince(feedAt) / 60).rounded())
+    }
+
+    var shiftTimeZone: TimeZone { .current }
 
     /// Sheets await this result so errors leave their entered values available to retry.
     func writeAwaitingSave(
@@ -755,6 +909,7 @@ private extension TonightView {
 private struct Tonight {
     /// Held only so the value changes when `refreshToken` does. See `body`.
     let generation: Int
+    let reminders: [UUID: Date]
     let timeZone: TimeZone
     let babies: [BabyPresentation]
     let timeline: [TimelineEntry]
@@ -767,7 +922,8 @@ private struct Tonight {
 
     func model(for id: UUID) -> Baby? { models[id] }
 
-    init(family: Family, shift: Shift, now: Date, generation: Int) {
+    init(family: Family, shift: Shift, now: Date, generation: Int, reminders: [UUID: Date]) {
+        self.reminders = reminders
         self.generation = generation
         // The device's zone, not the shift's recorded one. The recorded zone is
         // whatever the phone was in when the client family was added, and there is
@@ -786,6 +942,8 @@ private struct Tonight {
         var lastFeed: [UUID: Date] = [:]
         var lastFeedEntry: [UUID: FeedEntry] = [:]
         var lastDiaper: [UUID: Date] = [:]
+        var nextReminder: [UUID: Date] = [:]
+        var reminderFeed: [UUID: Date] = [:]
         var snapshots: [SleepSnapshot] = []
 
         models.reserveCapacity(roster.count)
@@ -803,6 +961,10 @@ private struct Tonight {
             guard let babyID = event.babyIDRaw else { continue }
             switch event.kind {
             case .feed:
+                if let due = reminders[event.id], due < nextReminder[babyID] ?? .distantFuture {
+                    nextReminder[babyID] = due
+                    reminderFeed[babyID] = event.at
+                }
                 if event.at > lastFeed[babyID] ?? .distantPast {
                     lastFeed[babyID] = event.at
                     lastFeedEntry[babyID] = event.feedEntry
@@ -840,7 +1002,8 @@ private struct Tonight {
                 asleepSince: SleepMath.openSession(in: snapshots, forBaby: baby.id)?.startAt,
                 awakeSince: SleepMath.lastWake(in: snapshots, forBaby: baby.id),
                 lastFeedAt: lastFeed[baby.id],
-                lastDiaperAt: lastDiaper[baby.id])
+                lastDiaperAt: lastDiaper[baby.id],
+                feedReminderAt: nextReminder[baby.id], reminderFeedAt: reminderFeed[baby.id])
         }
     }
 

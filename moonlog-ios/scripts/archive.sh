@@ -45,7 +45,7 @@ trap restore_stamp EXIT
 # caught it. Reading the source instead means a new hook cannot be forgotten.
 #
 # The awk pass tracks `#if`/`#else`/`#endif` nesting and collects "moonlogXxx"
-# string literals that are inside a DEBUG region — `#else` branches are *not*
+# launch-key string literals (with or without a leading hyphen) inside a DEBUG region — `#else` branches are *not*
 # debug-only and are skipped.
 MARKERS=$(find Sources -name '*.swift' -print0 | xargs -0 awk '
   FNR == 1 { depth = 0; dbg = 0 }
@@ -58,8 +58,10 @@ MARKERS=$(find Sources -name '*.swift' -print0 | xargs -0 awk '
   /^[[:space:]]*#endif/         { if (dbg == depth) dbg = 0; depth--; next }
   dbg > 0 {
       line = $0
-      while (match(line, /"moonlog[A-Za-z]+"/)) {
-          print substr(line, RSTART + 1, RLENGTH - 2)
+      while (match(line, /"-?moonlog[A-Za-z]+"/)) {
+          marker = substr(line, RSTART + 1, RLENGTH - 2)
+          sub(/^-/, "", marker)
+          print marker
           line = substr(line, RSTART + RLENGTH)
       }
   }

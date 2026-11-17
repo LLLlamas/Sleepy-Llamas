@@ -4,6 +4,41 @@ Newest first. Each entry records what was decided, why, and what would reverse i
 
 ---
 
+## One app, reviewed day handoffs, optional receipt on the same phone
+**2026-11-16**
+
+Daytime Nanny Log uses the native app's existing families, children, care records and
+writer. A day/night context belongs to each shift and is explicitly chosen; legacy
+shifts remain night. Appearance and clock time do not silently change that context.
+The older reminder branch is a source for a selective feature port, not a replacement
+for the later reliability and reachability fixes.
+
+A caregiver's EOD note is editable; a published report is not. Publishing is an
+explicit review action after the shift ends, producing a locally saved text/HTML
+snapshot with version and timestamp. Publication does not send anything. Subsequent
+factual or narrative edits require a new review/revision, retaining older copies and
+making their receipts historical. Canonical factual provenance, including identities
+and optional-value presence, defines change; stylesheet changes and ticking clocks
+do not. Repeating unchanged publication is idempotent.
+
+The owner chose **optional same-phone handoff first**. A parent can type a name and
+note and record receipt of that exact revision on the caregiver's phone. This is
+not authenticated remote identity, automatic reading, clinical consent or approval
+of all facts. Receipt never gates ending, publication or sharing. Separate parent
+accounts and secure remote access need a later sharing/authorization design.
+
+Drafts save through the existing actor with a short debounce and a leave-screen
+flush, with an explicit save/retry control. This closes ordinary navigation loss;
+it does not promise recovery of the last uncommitted keystrokes after termination.
+Notification permission/scheduling also stays separate from recorded care: a failed
+optional reminder cannot make a valid feed disappear.
+
+*Reverses if:* a pilot demonstrates the need for secure cross-device collaboration,
+in which case add identity, household access and revision-aware receipts together.
+Do not infer collaboration by enabling the currently disabled private CloudKit path.
+
+---
+
 ## A shift is booked with both its hours, and the roster is on that screen
 **2026-09-16**
 

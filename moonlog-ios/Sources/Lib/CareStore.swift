@@ -183,6 +183,16 @@ actor CareStore {
         }
     }
 
+    func setDefaultShiftWindow(_ window: ShiftWindowDefault, familyID: UUID) throws {
+        try write {
+            guard (0..<1440).contains(window.startMinute), (0..<1440).contains(window.endMinute)
+            else { throw CareStoreError.invalidNumber }
+            guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
+            family.defaultShiftStartMinute = window.startMinute
+            family.defaultShiftEndMinute = window.endMinute
+        }
+    }
+
     func setOptionalKinds(_ kinds: [EventKind], familyID: UUID) throws {
         return try write {
             guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
@@ -265,7 +275,8 @@ actor CareStore {
         familyID: UUID,
         startedAt: Date,
         plannedEndAt: Date? = nil,
-        caregiver: String?
+        caregiver: String?,
+        careContext: CareContext = .night
     ) throws -> UUID {
         return try write {
             guard let family = try family(familyID) else { throw CareStoreError.familyNotFound }
@@ -282,6 +293,13 @@ actor CareStore {
                 caregiver: caregiver,
                 timeZoneIdentifier: family.timeZoneIdentifier
             )
+            shift.careContextRaw = careContext.rawValue
+            if let plannedEndAt {
+                let start = family.calendar.dateComponents([.hour, .minute], from: startedAt)
+                let end = family.calendar.dateComponents([.hour, .minute], from: plannedEndAt)
+                family.defaultShiftStartMinute = (start.hour ?? 0) * 60 + (start.minute ?? 0)
+                family.defaultShiftEndMinute = (end.hour ?? 0) * 60 + (end.minute ?? 0)
+            }
             shift.attach(to: family)
             modelContext.insert(shift)
             return shift.id
@@ -310,6 +328,94 @@ actor CareStore {
             let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
             shift.parentNote = (trimmed?.isEmpty ?? true) ? nil : trimmed
         }
+    }
+
+    // MARK: - Reviewed day handoffs
+
+    func dayReportState(_ shiftID: UUID) throws -> DayReportState {
+        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+        return try reportState(for: shift)
+    }
+
+    func dayReportSnapshot(_ shiftID: UUID) throws -> DayReportSnapshot {
+        guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+        guard let family = shift.family else { throw CareStoreError.familyNotFound }
+        return DayReportSnapshot(state: try reportState(for: shift),
+                                 facts: DayReportComposer.facts(family: family, shift: shift), isOpen: shift.isOpen)
+    }
+
+    func saveDayReportDraft(_ shiftID: UUID, draft: DayReportDraft) throws -> DayReportState {
+        try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard shift.careContext == .day else { throw DayReportPersistenceError.wrongContext }
+            var state = try reportState(for: shift)
+            let value = draft.normalized
+            guard value.caregiverName.count <= 80,
+                  [value.summary, value.eveningNotes, value.questions].allSatisfy({ $0.count <= 2000 })
+            else { throw DayReportError.invalidDraft }
+            state.draft = value
+            try saveReport(state, on: shift)
+            return state
+        }
+    }
+
+    func publishDayReport(_ shiftID: UUID, reviewedFingerprint: String, reviewedDraft: DayReportDraft, at date: Date) throws -> DayReportState {
+        try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard shift.careContext == .day else { throw DayReportPersistenceError.wrongContext }
+            guard !shift.isOpen else { throw DayReportPersistenceError.endShiftFirst }
+            guard let family = shift.family else { throw CareStoreError.familyNotFound }
+            try rejectFuture(date)
+            guard let endedAt = shift.endedAt, date >= endedAt else { throw DayReportError.invalidDate }
+            let facts = DayReportComposer.facts(family: family, shift: shift)
+            guard facts.fingerprint == reviewedFingerprint else { throw DayReportError.stalePublication }
+            var state = try reportState(for: shift)
+            guard state.draft.normalized == reviewedDraft.normalized else { throw DayReportError.stalePublication }
+            let previousVersion = state.latestPublication?.version ?? 0
+            guard previousVersion < Int.max else { throw DayReportError.invalidDraft }
+            let version = previousVersion + 1
+            try state.publish(sourceFingerprint: facts.fingerprint,
+                              plainText: DayReportComposer.text(family: family, shift: shift, draft: state.draft,
+                                                                version: version, publishedAt: date),
+                              html: DayReportComposer.html(family: family, shift: shift, draft: state.draft,
+                                                          version: version, publishedAt: date), at: date)
+            try saveReport(state, on: shift)
+            return state
+        }
+    }
+
+    func acknowledgeDayReport(_ shiftID: UUID, publicationID: UUID, version: Int,
+                              parentName: String, note: String, at date: Date) throws -> DayReportState {
+        try write {
+            guard let shift = try shift(shiftID) else { throw CareStoreError.shiftNotFound }
+            guard shift.careContext == .day else { throw DayReportPersistenceError.wrongContext }
+            guard let family = shift.family else { throw CareStoreError.familyNotFound }
+            guard !shift.isOpen else { throw DayReportPersistenceError.endShiftFirst }
+            try rejectFuture(date)
+            var state = try reportState(for: shift)
+            try state.acknowledge(publicationID: publicationID, version: version,
+                                  sourceFingerprint: DayReportComposer.facts(family: family, shift: shift).fingerprint,
+                                  parentName: parentName, note: note, at: date)
+            try saveReport(state, on: shift)
+            return state
+        }
+    }
+
+    private func reportState(for shift: Shift) throws -> DayReportState {
+        guard let saved = shift.dayReportJSON else {
+            return DayReportState(draft: DayReportDraft(caregiverName: shift.caregiver ?? "",
+                                                       summary: shift.parentNote ?? ""))
+        }
+        guard let bytes = saved.data(using: .utf8),
+              let state = try? JSONDecoder().decode(DayReportState.self, from: bytes)
+        else { throw DayReportPersistenceError.unreadable }
+        return state
+    }
+
+    private func saveReport(_ state: DayReportState, on shift: Shift) throws {
+        let bytes = try JSONEncoder().encode(state)
+        guard let value = String(data: bytes, encoding: .utf8) else { throw DayReportPersistenceError.unreadable }
+        shift.dayReportJSON = value
     }
 
     /// Corrects a shift's own hours after the fact. Both ends belong to the doula,
